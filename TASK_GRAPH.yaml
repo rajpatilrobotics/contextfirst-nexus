@@ -44,7 +44,7 @@ tasks:
     title: Dependency and verification bootstrap
     stage: foundation
     wave: 1
-    status: ready
+    status: integrated
     risk: high
     dependencies: []
     packet: tasks/TASK-001.md
@@ -74,7 +74,7 @@ tasks:
     title: Shared TypeScript and Zod contracts
     stage: foundation
     wave: 2
-    status: pending
+    status: ready
     risk: high
     dependencies: [TASK-001]
     packet: tasks/TASK-002.md
