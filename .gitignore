@@ -1,0 +1,19 @@
+# dependencies
+/node_modules
+
+# Next.js build output
+/.next
+/out
+
+# local environment files
+.env*
+!.env.example
+
+# Vercel project link
+/.vercel
+
+# macOS
+.DS_Store
+
+# logs
+*.log
