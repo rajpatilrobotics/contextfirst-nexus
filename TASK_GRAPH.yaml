@@ -1,0 +1,553 @@
+schema_version: "1.0.0"
+project: contextfirst-nexus
+graph_status: awaiting_documentation_approval
+task_count: 26
+
+authority:
+  repository_rules: AGENTS.md
+  execution_plans: PLANS.md
+  context_router: docs/CONTEXT_INDEX.md
+  integration_rules: docs/ORCHESTRATION_AND_INTEGRATION.md
+  shared_contracts: docs/CONTRACTS.md
+  safety_policy: docs/SAFETY_AND_DATA.md
+
+scheduler:
+  strategy: rolling_ready_queue
+  initial_active_worktree_limit: 3
+  maximum_active_worktree_limit_after_readiness_check: 4
+  ready_rule: all dependencies must be integrated into the coordinator branch
+  launch_rule: create each worktree from the latest coordinator branch and give it exactly one task packet
+  ownership_rule: no active tasks may own overlapping paths
+  ownership_transfer_rule: a later task may receive a path only when it transitively depends on the earlier owner, both packets declare the transfer, and the two tasks are never active concurrently
+  integration_rule: integrate one verified task at a time in dependency order
+  stop_rule: do not launch implementation until the documentation package is approved and pushed
+  allowed_statuses:
+    - pending
+    - ready
+    - active
+    - review
+    - integrated
+    - blocked
+
+coordinator_owned_paths:
+  - AGENTS.md
+  - PLANS.md
+  - TASK_GRAPH.yaml
+  - decision-log.md
+  - plan.md
+  - PROJECT_BRIEF.md
+  - docs/
+  - tasks/
+
+tasks:
+  - id: TASK-001
+    title: Dependency and verification bootstrap
+    stage: foundation
+    wave: 1
+    status: pending
+    risk: high
+    dependencies: []
+    packet: tasks/TASK-001.md
+    outcome: Install every approved dependency, configure all verification tools and scripts, and copy the pinned PDF.js worker locally without adding application behavior.
+    owns:
+      - package.json
+      - package-lock.json
+      - tsconfig.json
+      - next-env.d.ts
+      - eslint.config.mjs
+      - vitest.config.ts
+      - playwright.config.ts
+      - components.json
+      - postcss.config.mjs
+      - scripts/copy-pdfjs-assets.mjs
+      - public/vendor/pdfjs/
+      - tests/setup/
+    verifies:
+      - npm ci
+      - npm run assets:pdfjs
+      - test -f public/vendor/pdfjs/pdf.worker.min.mjs
+      - npm run typecheck
+      - npm run lint
+      - npm run build
+
+  - id: TASK-002
+    title: Shared TypeScript and Zod contracts
+    stage: foundation
+    wave: 2
+    status: pending
+    risk: high
+    dependencies: [TASK-001]
+    packet: tasks/TASK-002.md
+    outcome: Implement every frozen versioned enum, union, schema, identifier, provider contract, API contract, state contract, review contract, and export contract.
+    owns:
+      - lib/contracts/
+      - tests/contracts/shared/
+    verifies:
+      - npm run typecheck
+      - npx vitest run tests/contracts/shared
+
+  - id: TASK-003
+    title: Synthetic case, evaluation definitions, and guidance pack
+    stage: foundation
+    wave: 3
+    status: pending
+    risk: high
+    dependencies: [TASK-001, TASK-002]
+    packet: tasks/TASK-003.md
+    outcome: Create the seven visibly synthetic PDFs, canonical fixture manifest and digest, stable source IDs, missing-page state, instruction-containment segment, evaluation definitions, and reviewed local guidance cards.
+    owns:
+      - fixtures/cases/
+      - fixtures/evals/definitions/
+      - fixtures/guidance/
+      - public/fixtures/cfn-demo-001/
+      - scripts/generate-synthetic-fixtures.mjs
+      - lib/fixtures/
+      - lib/guidance/
+      - tests/fixtures/
+      - tests/unit/guidance/
+    verifies:
+      - node scripts/generate-synthetic-fixtures.mjs --check
+      - npx vitest run tests/fixtures tests/unit/guidance
+      - npm run typecheck
+
+  - id: TASK-004
+    title: Design foundations and UI primitives
+    stage: foundation
+    wave: 3
+    status: pending
+    risk: medium
+    dependencies: [TASK-001, TASK-002]
+    packet: tasks/TASK-004.md
+    outcome: Implement the frozen visual tokens, responsive styles, accessible UI primitives, and separate status representations without legal scores or color-only meaning.
+    owns:
+      - app/globals.css
+      - components/ui/
+      - components/status/
+      - lib/presentation/
+      - tests/components/ui/
+      - tests/unit/presentation/
+    verifies:
+      - npx vitest run tests/components/ui tests/unit/presentation
+      - npm run typecheck
+      - npm run lint
+      - npm run build
+
+  - id: TASK-005
+    title: PDF source service and coverage engine
+    stage: domain
+    wave: 4
+    status: pending
+    risk: high
+    dependencies: [TASK-001, TASK-002, TASK-003]
+    packet: tasks/TASK-005.md
+    outcome: Implement browser-only PDF.js extraction, canonical segment alignment, page status, coverage issues, worker cleanup, and explicit no-OCR failure behavior.
+    owns:
+      - lib/documents/
+      - tests/unit/documents/
+    verifies:
+      - npx vitest run tests/unit/documents
+      - npm run typecheck
+
+  - id: TASK-006
+    title: Masking, redaction mapping, and leak scanning
+    stage: domain
+    wave: 4
+    status: pending
+    risk: high
+    dependencies: [TASK-001, TASK-002, TASK-003]
+    packet: tasks/TASK-006.md
+    outcome: Implement supported identifier detection, human-reviewed masking, deterministic replacement tokens, browser-local range maps, and provider and export leak scans.
+    owns:
+      - lib/redaction/
+      - tests/unit/redaction/
+    verifies:
+      - npx vitest run tests/unit/redaction
+      - npm run typecheck
+
+  - id: TASK-007
+    title: Citation validation and source resolution
+    stage: domain
+    wave: 5
+    status: pending
+    risk: high
+    dependencies: [TASK-001, TASK-002, TASK-003, TASK-006]
+    packet: tasks/TASK-007.md
+    outcome: Implement exact codepoint matching, unique normalized lookup, bounded repeated-exact choices, unsafe-ambiguity quarantine, unavailable-source handling, and redacted-to-original browser highlighting.
+    owns:
+      - lib/citations/
+      - tests/unit/citations/
+    verifies:
+      - npx vitest run tests/unit/citations
+      - npm run typecheck
+
+  - id: TASK-008
+    title: Review policy and dependency engine
+    stage: domain
+    wave: 4
+    status: pending
+    risk: high
+    dependencies: [TASK-001, TASK-002, TASK-003]
+    packet: tasks/TASK-008.md
+    outcome: Implement candidate assembly, qualified timeline and Nexus records, individual review actions, context gaps, cycle rejection, downstream invalidation, and the complete hero transition.
+    owns:
+      - lib/review/
+      - tests/unit/review/
+    verifies:
+      - npx vitest run tests/unit/review
+      - npm run typecheck
+
+  - id: TASK-009
+    title: Export gate and canonical manifest
+    stage: domain
+    wave: 6
+    status: pending
+    risk: high
+    dependencies: [TASK-002, TASK-005, TASK-006, TASK-007, TASK-008]
+    packet: tasks/TASK-009.md
+    outcome: Implement every export blocker, gate freshness, full and safe-share projections, minimum necessity, single-run provenance, and deterministic canonical JSON.
+    owns:
+      - lib/export/core/
+      - tests/unit/export/core/
+    verifies:
+      - npx vitest run tests/unit/export/core
+      - npm run typecheck
+
+  - id: TASK-010
+    title: Case reducer, audit, persistence, and replay
+    stage: domain
+    wave: 7
+    status: pending
+    risk: high
+    dependencies: [TASK-002, TASK-003, TASK-005, TASK-006, TASK-007, TASK-008, TASK-009]
+    packet: tasks/TASK-010.md
+    outcome: Implement central commands, browser-owned live-analysis lifecycle and recovery linkage, citation-resolution persistence, revision and idempotency checks, explanatory audit history, narrow session storage, Reset Case cleanup, deterministic replay, and the prepared checkpoint.
+    owns:
+      - lib/state/
+      - lib/analysis/replay.ts
+      - fixtures/replay/
+      - tests/unit/state/
+      - tests/unit/replay/
+    verifies:
+      - npx vitest run tests/unit/state tests/unit/replay
+      - npm run typecheck
+
+  - id: TASK-011
+    title: Shared AI boundary and provider registry
+    stage: providers
+    wave: 5
+    status: pending
+    risk: high
+    dependencies: [TASK-001, TASK-002, TASK-003, TASK-006]
+    packet: tasks/TASK-011.md
+    outcome: Implement the static provider registry and fail-closed version-controlled admission record, disclosures, canonical server reconstruction, prompt, request policy, safe errors, safe logging, exact fixture binding, and environment template.
+    owns:
+      - .env.example
+      - prompts/
+      - lib/ai/server/index.ts
+      - lib/ai/server/types.ts
+      - lib/ai/server/admission.ts
+      - lib/ai/server/registry.ts
+      - lib/ai/server/canonical-input.ts
+      - lib/ai/server/request-policy.ts
+      - lib/ai/server/errors.ts
+      - lib/security/provider-boundary.ts
+      - lib/security/safe-logging.ts
+      - tests/unit/ai/shared/
+    verifies:
+      - npx vitest run tests/unit/ai/shared
+      - npm run typecheck
+
+  - id: TASK-012
+    title: OpenAI analysis adapter
+    stage: providers
+    wave: 6
+    status: pending
+    risk: high
+    dependencies: [TASK-011]
+    packet: tasks/TASK-012.md
+    outcome: Implement one server-only Responses API call using the frozen OpenAI release, medium reasoning, strict structured output, store false, no tools, disabled hidden retries, abort handling, and normalized provenance.
+    owns:
+      - lib/ai/server/adapters/openai.ts
+      - tests/unit/ai/openai-adapter.test.ts
+    verifies:
+      - npx vitest run tests/unit/ai/openai-adapter.test.ts
+      - npm run typecheck
+
+  - id: TASK-013
+    title: Gemini analysis adapter
+    stage: providers
+    wave: 6
+    status: pending
+    risk: high
+    dependencies: [TASK-011]
+    packet: tasks/TASK-013.md
+    outcome: Implement one native stateless Gemini structured request, unpaid synthetic-only enforcement, no tools or files, abort handling, safe error mapping, and normalized provenance.
+    owns:
+      - lib/ai/server/adapters/gemini.ts
+      - tests/unit/ai/gemini-adapter.test.ts
+    verifies:
+      - npx vitest run tests/unit/ai/gemini-adapter.test.ts
+      - npm run typecheck
+
+  - id: TASK-014
+    title: Mistral analysis adapter
+    stage: providers
+    wave: 6
+    status: pending
+    risk: high
+    dependencies: [TASK-011]
+    packet: tasks/TASK-014.md
+    outcome: Implement one native non-streaming Mistral JSON Schema request for the frozen exact snapshot, medium reasoning, disabled SDK retries, unpaid synthetic-only enforcement, and normalized safe errors.
+    owns:
+      - lib/ai/server/adapters/mistral.ts
+      - tests/unit/ai/mistral-adapter.test.ts
+    verifies:
+      - npx vitest run tests/unit/ai/mistral-adapter.test.ts
+      - npm run typecheck
+
+  - id: TASK-015
+    title: Analysis route and deterministic post-validation
+    stage: integration
+    wave: 7
+    status: pending
+    risk: high
+    dependencies: [TASK-007, TASK-008, TASK-011, TASK-012, TASK-013, TASK-014]
+    packet: tasks/TASK-015.md
+    outcome: Implement safe capability discovery, the strict live-analysis route, single selected-provider orchestration, timeout handling, proposal normalization, citation and policy validation, quarantine, and safe recovery-option derivation.
+    owns:
+      - app/api/analyze/route.ts
+      - lib/ai/server/orchestrator.ts
+      - lib/ai/server/evaluation-entry.ts
+      - lib/ai/server/post-validate.ts
+      - lib/ai/server/recovery.ts
+      - lib/ai/server/normalize.ts
+      - tests/contracts/api/
+      - tests/unit/ai/orchestration/
+    verifies:
+      - npx vitest run tests/contracts/api tests/unit/ai/orchestration
+      - npm run typecheck
+      - npm run build
+
+  - id: TASK-016
+    title: Evaluation harness and admission reporting
+    stage: quality
+    wave: 8
+    status: pending
+    risk: high
+    dependencies: [TASK-003, TASK-007, TASK-008, TASK-009, TASK-010, TASK-015]
+    packet: tasks/TASK-016.md
+    outcome: Implement deterministic evaluation across all frozen variants, raw versus validated result separation, provider provenance, versioned admission reports with canonical digests, blocking admission gates, optional live runs, and no aggregate accuracy score without changing runtime admission.
+    owns:
+      - lib/evaluation/
+      - fixtures/evals/results/
+      - scripts/run-evaluation.mjs
+      - tests/unit/evaluation/
+    verifies:
+      - npm run eval -- --mode deterministic
+      - npx vitest run tests/unit/evaluation
+      - npm run typecheck
+
+  - id: TASK-017
+    title: Global shell and landing experience
+    stage: interface
+    wave: 8
+    status: pending
+    risk: medium
+    dependencies: [TASK-004, TASK-010]
+    packet: tasks/TASK-017.md
+    outcome: Implement global metadata, product boundaries, the persistent synthetic banner, case layout, step navigation, case status, Reset Case entry, and responsive shell.
+    owns:
+      - app/layout.tsx
+      - app/page.tsx
+      - app/case/demo/layout.tsx
+      - components/shell/
+      - tests/components/shell/
+    verifies:
+      - npx vitest run tests/components/shell
+      - npm run build
+
+  - id: TASK-018
+    title: Purpose, provider selection, and recovery UI
+    stage: interface
+    wave: 9
+    status: pending
+    risk: high
+    dependencies: [TASK-004, TASK-010, TASK-015, TASK-017]
+    packet: tasks/TASK-018.md
+    outcome: Implement the complete Case Purpose Brief, explicit provider and replay selection, provider disclosures, acknowledgements, unavailable states, a single browser run controller, and operational recovery without automatic fallback.
+    owns:
+      - app/case/demo/purpose/page.tsx
+      - features/purpose/
+      - features/analysis/provider-selection/
+      - features/analysis/provider-recovery/
+      - features/analysis/run-controller/
+      - tests/components/purpose/
+      - tests/components/provider/
+    verifies:
+      - npx vitest run tests/components/purpose tests/components/provider
+      - npm run build
+
+  - id: TASK-019
+    title: Intake, masking, processing, and coverage UI
+    stage: interface
+    wave: 10
+    status: pending
+    risk: high
+    dependencies: [TASK-004, TASK-005, TASK-006, TASK-010, TASK-017, TASK-018]
+    packet: tasks/TASK-019.md
+    outcome: Implement document cards, browser processing, stage progress, coverage manifest, masking review, safe default source view, intentional reveal, analysis prerequisites, and the explicit controller-backed Start analysis flow.
+    owns:
+      - app/case/demo/intake/page.tsx
+      - features/documents/
+      - tests/components/documents/
+    verifies:
+      - npx vitest run tests/components/documents
+      - npm run build
+
+  - id: TASK-020
+    title: Timeline and source drawer
+    stage: interface
+    wave: 9
+    status: pending
+    risk: medium
+    dependencies: [TASK-004, TASK-005, TASK-007, TASK-010, TASK-017]
+    packet: tasks/TASK-020.md
+    outcome: Implement qualified chronological presentation, conflicts, uncertainty, exact citation links, desktop non-modal source access, mobile modal source access, highlighting, and focus restoration.
+    owns:
+      - features/review/timeline/
+      - features/review/source/
+      - tests/components/review/timeline/
+      - tests/components/review/source/
+    verifies:
+      - npx vitest run tests/components/review/timeline tests/components/review/source
+      - npm run typecheck
+
+  - id: TASK-021
+    title: Review workspace and hero interaction
+    stage: interface
+    wave: 11
+    status: pending
+    risk: high
+    dependencies: [TASK-004, TASK-008, TASK-010, TASK-017, TASK-019, TASK-020]
+    packet: tasks/TASK-021.md
+    outcome: Compose the review route with timeline, Nexus, three lanes, candidate cards, context gaps, queue, dependency feedback, audit access, individual actions, and the complete evidence-withdrawal demonstration.
+    owns:
+      - app/case/demo/review/page.tsx
+      - features/review/candidate/
+      - features/review/nexus/
+      - features/review/lanes/
+      - features/review/queue/
+      - features/review/dependency/
+      - features/review/context-gaps/
+      - tests/components/review/candidate/
+      - tests/components/review/nexus/
+      - tests/components/review/lanes/
+      - tests/components/review/queue/
+      - tests/components/review/dependency/
+      - tests/components/review/context-gaps/
+    verifies:
+      - npx vitest run tests/components/review/candidate tests/components/review/nexus tests/components/review/lanes tests/components/review/queue tests/components/review/dependency tests/components/review/context-gaps
+      - npm run build
+
+  - id: TASK-022
+    title: Export experience and local renderers
+    stage: interface
+    wave: 9
+    status: pending
+    risk: high
+    dependencies: [TASK-004, TASK-009, TASK-010, TASK-017]
+    packet: tasks/TASK-022.md
+    outcome: Implement blocked export behavior, remediation links, minimum-necessary selection, semantic preview, structured JSON, lazy PDF generation, manifest parity, local downloads, and required labels.
+    owns:
+      - app/case/demo/export/page.tsx
+      - features/export/
+      - lib/export/renderers/
+      - tests/unit/export/renderers/
+      - tests/components/export/
+    verifies:
+      - npx vitest run tests/unit/export/renderers tests/components/export
+      - npm run build
+
+  - id: TASK-023
+    title: Trust, audit, Safety Lab, and guidance UI
+    stage: interface
+    wave: 10
+    status: pending
+    risk: medium
+    dependencies: [TASK-003, TASK-004, TASK-010, TASK-016, TASK-017, TASK-026]
+    packet: tasks/TASK-023.md
+    outcome: Implement the Trust page, System Card, truthful static admission and linked report evidence, measured fixture results, attempted-run history, prepared-checkpoint provenance, guidance cards, Audit History, and safe unsafe-output reporting.
+    owns:
+      - app/trust/page.tsx
+      - features/trust/
+      - tests/components/trust/
+    verifies:
+      - npx vitest run tests/components/trust
+      - npm run build
+
+  - id: TASK-024
+    title: Security, accessibility, and end-to-end integration
+    stage: quality
+    wave: 12
+    status: pending
+    risk: high
+    dependencies: [TASK-015, TASK-016, TASK-018, TASK-019, TASK-021, TASK-022, TASK-023, TASK-026]
+    packet: tasks/TASK-024.md
+    outcome: Add restrictive headers, safe global errors, boundary scans, complete browser flows, accessibility scans, direct gate-bypass tests, log and secret checks, keyboard behavior, and provider-recovery verification.
+    owns:
+      - next.config.ts
+      - app/error.tsx
+      - app/global-error.tsx
+      - app/loading.tsx
+      - app/not-found.tsx
+      - lib/security/http-headers.ts
+      - scripts/verify-boundaries.mjs
+      - tests/e2e/
+      - tests/a11y/
+      - tests/security/
+    verifies:
+      - npx vitest run tests/security
+      - npx playwright test tests/e2e
+      - npm run test:a11y
+      - npm run verify
+      - npm run build
+
+  - id: TASK-025
+    title: Performance, release readiness, and deployment rehearsal
+    stage: release
+    wave: 13
+    status: pending
+    risk: high
+    dependencies: [TASK-024]
+    packet: tasks/TASK-025.md
+    outcome: Measure the frozen budgets, update truthful setup guidance, prepare the release checklist, run five prepared-checkpoint rehearsals, verify the stable production URL, and keep public live analysis disabled until separately approved.
+    owns:
+      - README.md
+      - RELEASE_CHECKLIST.md
+      - scripts/measure-performance.mjs
+      - tests/performance/
+      - vercel.json
+    verifies:
+      - npm run verify
+      - npm run test:e2e
+      - npm run test:a11y
+      - npm run measure:performance -- --mode prepared-checkpoint
+      - npm run build
+      - PLAYWRIGHT_BASE_URL=https://contextfirst-nexus.vercel.app npx playwright test tests/e2e/demo-rehearsal.spec.ts --repeat-each=5
+
+  - id: TASK-026
+    title: Static provider admission handoff
+    stage: providers
+    wave: 9
+    status: pending
+    risk: high
+    dependencies: [TASK-016]
+    packet: tasks/TASK-026.md
+    outcome: Review versioned provider evaluation reports and record the fail-closed static runtime admission handoff without dynamic promotion, provider calls, or cloud changes.
+    owns:
+      - lib/ai/server/admission.ts
+      - tests/unit/ai/admission/
+    verifies:
+      - npx vitest run tests/unit/ai/admission tests/unit/ai/shared tests/contracts/api
+      - npm run typecheck
+      - npm run build
