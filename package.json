@@ -2,22 +2,53 @@
   "name": "contextfirst-nexus",
   "version": "0.1.0",
   "private": true,
+  "engines": {
+    "node": ">=22.13.0 <27"
+  },
   "scripts": {
     "dev": "next dev",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint .",
+    "test:unit": "vitest run tests/unit --passWithNoTests",
+    "test:contracts": "vitest run tests/contracts --passWithNoTests",
+    "test:components": "vitest run tests/components --passWithNoTests",
+    "test:e2e": "npm run build && playwright test tests/e2e --pass-with-no-tests",
+    "test:a11y": "npm run build && playwright test tests/a11y --pass-with-no-tests",
+    "eval": "vitest run tests/evals --passWithNoTests",
+    "assets:pdfjs": "node scripts/copy-pdfjs-assets.mjs",
     "build": "next build",
-    "start": "next start"
+    "start": "next start",
+    "verify": "npm run typecheck && npm run lint && npm run test:unit && npm run test:contracts && npm run test:components && npm run build"
   },
   "dependencies": {
+    "@google/genai": "2.11.0",
+    "@mistralai/mistralai": "2.4.1",
+    "@react-pdf/renderer": "4.5.1",
+    "lucide-react": "1.24.0",
     "next": "16.2.10",
+    "openai": "6.47.0",
+    "pdfjs-dist": "6.1.200",
     "react": "19.2.7",
-    "react-dom": "19.2.7"
+    "react-dom": "19.2.7",
+    "server-only": "0.0.1",
+    "zod": "4.4.3"
   },
   "devDependencies": {
+    "@axe-core/playwright": "4.12.1",
     "@tailwindcss/postcss": "4.3.2",
+    "@testing-library/jest-dom": "6.9.1",
+    "@testing-library/react": "16.3.2",
+    "@testing-library/user-event": "14.6.1",
     "@types/node": "26.1.1",
     "@types/react": "19.2.17",
     "@types/react-dom": "19.2.3",
+    "@playwright/test": "1.61.1",
+    "eslint": "10.7.0",
+    "eslint-config-next": "16.2.10",
+    "jsdom": "29.1.1",
+    "shadcn": "4.13.0",
     "tailwindcss": "4.3.2",
-    "typescript": "5.9.3"
+    "typescript": "5.9.3",
+    "vitest": "4.1.10"
   }
 }
