@@ -381,12 +381,26 @@ Changing a frozen decision requires:
 - Reason: Broad independent fields could encode impossible providers, releases, modes, error stages, or model-controlled strings in safe browser-visible state.
 - Authority: `docs/CONTRACTS.md`, `docs/SAFETY_AND_DATA.md`, `docs/TESTING_AND_EVALUATION.md`
 
+### DEC-044: Implementation SDK pins and Mistral advisory check
+
+- Date: 2026-07-16
+- Status: Approved for implementation
+- Verified at: `2026-07-15T19:03:16Z`
+- Decision: TASK-001 must pin `openai@6.47.0`, `@google/genai@2.11.0`, and `@mistralai/mistralai@2.4.1` exactly. These were the latest stable, non-prerelease versions consistently reported by the official release repositories and the npm registry at verification time.
+- OpenAI evidence: Official release `v6.47.0`, published 2026-07-14, commit and npm `gitHead` `62554053803dea45bf949699c7ea9d1a414df615`; npm integrity `sha512-xYr+R9woSzWxVxeiqkkNbHhv89tZDEI6eBMbrdPnv3poh+mijHvbhS35a+3o6xHa411/ns8j5ENY3So9DCXWYw==`; npm tarball `https://registry.npmjs.org/openai/-/openai-6.47.0.tgz`; official releases `https://github.com/openai/openai-node/releases`; npm package `https://www.npmjs.com/package/openai/v/6.47.0`.
+- Google evidence: Official release `v2.11.0`, published 2026-07-09, release commit `136ea26`; npm did not expose a `gitHead`; npm integrity `sha512-d2Csf29vS0GfHc52H0MG25ccY4FKvvbDgqDlEovLrPLF8sPegWr/GGO+LMOy85/1SnX0iV0zDAW7R8SsvWg8Vg==`; npm tarball `https://registry.npmjs.org/@google/genai/-/genai-2.11.0.tgz`; official library guidance `https://ai.google.dev/gemini-api/docs/libraries`; official releases `https://github.com/googleapis/js-genai/releases`; npm package `https://www.npmjs.com/package/@google/genai/v/2.11.0`.
+- Mistral evidence: Official release `v2.4.1`, published 2026-07-03, commit and npm `gitHead` `47d69a6d5436102841e2035eec9c0451caa5d531`; npm integrity `sha512-vNpR2GR76aW7fK8Dcu1NRx3fdSPO1QruRDo4GbfXfkro2mvp194xIAvJ2BP4ZykzyWtJoDmBe+Qsk9D443aqlg==`; npm tarball `https://registry.npmjs.org/@mistralai/mistralai/-/mistralai-2.4.1.tgz`; official releases `https://github.com/mistralai/client-ts/releases`; npm package `https://www.npmjs.com/package/@mistralai/mistralai/v/2.4.1`.
+- Node compatibility: The frozen project range is `>=22.13.0 <27`, the deployment target remains Node 24, and verification ran on local Node `v26.0.0`. `@google/genai@2.11.0` declares Node `>=20.0.0`; the OpenAI and Mistral npm metadata returned no stricter `engines` field. All three approved pins are compatible with the frozen project range.
+- Advisory result: `GHSA-jgg6-4rpr-wfh7` identifies only `@mistralai/mistralai` versions `2.2.2`, `2.2.3`, and `2.2.4` as affected. Selected version `2.4.1` is later and is not affected by this advisory. Official advisory: `https://github.com/mistralai/client-ts/security/advisories/GHSA-jgg6-4rpr-wfh7`.
+- Local advisory scan: `npm ls @mistralai/mistralai @mistralai/mistralai-azure @mistralai/mistralai-gcp` reported an empty installed tree. The approved advisory pattern produced no match in `package-lock.json`. No affected Mistral package is currently installed or locked in the repository.
+- Limitation: This version and advisory decision does not replace TASK-001 lockfile review, `npm audit`, later dependency scanning, application-level security testing, or re-verification before deployment.
+- Authority: `tasks/TASK-001.md`, `docs/ARCHITECTURE.md`, `docs/MODEL_ROUTING.md`, `docs/SOURCE_REGISTER.md`, official provider release repositories, npm registry metadata, and `GHSA-jgg6-4rpr-wfh7`.
+
 ## 8. Pending implementation-time records
 
 These are not product-choice reopeners. They must be recorded before dependent implementation or deployment:
 
-- Exact installed versions for the official OpenAI, Google GenAI, and Mistral SDKs.
-- Confirmation that the selected Mistral SDK version is not affected by the registered advisory.
+- Confirmation after TASK-001 that the installed SDK versions and lockfile exactly match the DEC-044 approved pins.
 - Actual provider account tier, model availability, training-use setting, retention limitation, and region used by every enabled release.
 - Canonical fixture and redacted-derivative digests.
 - Measured development and held-out results for each exact live release configuration.

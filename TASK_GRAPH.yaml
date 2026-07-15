@@ -1,6 +1,6 @@
 schema_version: "1.0.0"
 project: contextfirst-nexus
-graph_status: awaiting_documentation_approval
+graph_status: approved_for_implementation
 task_count: 26
 
 authority:
@@ -44,7 +44,7 @@ tasks:
     title: Dependency and verification bootstrap
     stage: foundation
     wave: 1
-    status: pending
+    status: ready
     risk: high
     dependencies: []
     packet: tasks/TASK-001.md

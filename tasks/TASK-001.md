@@ -2,7 +2,7 @@
 
 ## 1. Task metadata
 
-- Status: Pending
+- Status: Ready
 - Readiness rule: Only the coordinator may mark this task Ready after all dependencies, approvals, and exact package-version decisions are integrated.
 - Stage: foundation
 - Wave: 1
