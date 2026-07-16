@@ -474,7 +474,7 @@ tasks:
     title: Trust, audit, Safety Lab, and guidance UI
     stage: interface
     wave: 10
-    status: blocked
+    status: ready
     risk: medium
     dependencies: [TASK-003, TASK-004, TASK-010, TASK-016, TASK-017, TASK-026, TASK-031]
     packet: tasks/TASK-023.md
@@ -646,7 +646,7 @@ tasks:
     title: Audit and guidance truth bridge
     stage: integration
     wave: 10
-    status: ready
+    status: integrated
     risk: high
     dependencies: [TASK-003, TASK-009, TASK-010, TASK-016, TASK-026, TASK-027, TASK-030]
     packet: tasks/TASK-031.md
