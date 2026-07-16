@@ -455,7 +455,7 @@ tasks:
     title: Export experience and local renderers
     stage: interface
     wave: 9
-    status: ready
+    status: integrated
     risk: high
     dependencies: [TASK-004, TASK-009, TASK-010, TASK-017, TASK-021, TASK-027, TASK-028, TASK-030, TASK-031, TASK-032, TASK-033]
     packet: tasks/TASK-022.md
@@ -491,7 +491,7 @@ tasks:
     title: Security, accessibility, and end-to-end integration
     stage: quality
     wave: 12
-    status: blocked
+    status: ready
     risk: high
     dependencies: [TASK-015, TASK-016, TASK-018, TASK-019, TASK-021, TASK-022, TASK-023, TASK-026]
     packet: tasks/TASK-024.md
