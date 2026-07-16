@@ -309,7 +309,7 @@ tasks:
     title: Analysis route and deterministic post-validation
     stage: integration
     wave: 7
-    status: pending
+    status: ready
     risk: high
     dependencies: [TASK-007, TASK-008, TASK-011, TASK-012, TASK-013, TASK-014]
     packet: tasks/TASK-015.md
