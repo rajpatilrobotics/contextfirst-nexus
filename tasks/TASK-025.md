@@ -60,7 +60,7 @@ Read in this order before editing:
 - `RELEASE_CHECKLIST.md`
 - `scripts/measure-performance.mjs`
 - `tests/performance/`
-- `vercel.json`
+- `tests/e2e/demo-rehearsal.spec.ts`
 
 Within `package.json`, TASK-025 may add exactly this one entry to the existing
 `scripts` object:
@@ -75,6 +75,18 @@ remain unchanged, and no dependency may be added, removed, or updated. Before
 handoff, parse and inspect `package.json` and its diff to verify that the exact
 binding exists and that it is the only package-file change.
 
+`tests/e2e/demo-rehearsal.spec.ts` may contain only the prepared synthetic
+checkpoint rehearsal. It must use relative application routes so it works with
+local Playwright and with an explicitly approved `PLAYWRIGHT_BASE_URL`. It must
+make no live-provider call, use no credential, start no automatic recovery,
+bypass no safety gate, and preserve the blocked-export and evidence-withdrawal
+moments in every rehearsal.
+
+No other `tests/e2e/` file may change. `playwright.config.ts`, application code,
+fixtures, providers, and deployment configuration remain read-only.
+`vercel.json` is currently absent and must remain absent because no Vercel or
+deployment change is approved.
+
 No other path may be created, edited, renamed, moved, or deleted.
 
 ## 7. Read-only context allowed
@@ -86,7 +98,7 @@ No other path may be created, edited, renamed, moved, or deleted.
 - `fixtures/`
 - `public/`
 - `prompts/`
-- `tests/e2e/`
+- all `tests/e2e/` paths except the exclusively owned `tests/e2e/demo-rehearsal.spec.ts`
 - `tests/a11y/`
 - `tests/security/`
 - `scripts/verify-boundaries.mjs`
@@ -94,6 +106,7 @@ No other path may be created, edited, renamed, moved, or deleted.
 - `.gitignore`
 - `.vercel/README.txt`
 - `package-lock.json`
+- `playwright.config.ts`
 - `tsconfig.json`
 - shared lint, Vitest, Playwright, Next.js, and test setup files
 
@@ -102,7 +115,8 @@ These paths are read-only. Never read or report secret values from `.env.local`,
 ## 8. Out of scope
 
 - Fixing application, feature, domain, contract, fixture, state, provider, renderer, accessibility, security, or test defects outside the Exclusive write scope.
-- Adding, removing, or updating dependencies; changing `package-lock.json`; changing any `package.json` field or script other than adding the exact `measure:performance` binding in Section 6; or changing framework configuration outside `vercel.json`, environment templates, provider registry entries, models, prompts, fixtures, stable IDs, or evaluation results.
+- Adding, removing, or updating dependencies; changing `package-lock.json`; changing any `package.json` field or script other than adding the exact `measure:performance` binding in Section 6; or changing framework or deployment configuration, including creating `vercel.json`, environment templates, provider registry entries, models, prompts, fixtures, stable IDs, or evaluation results.
+- Editing any other `tests/e2e/` file, `playwright.config.ts`, application code, fixtures, providers, or deployment configuration.
 - Running live-provider evaluation or unmocked model calls without a separate current call-count, cost estimate, credential authorization, and explicit user spend approval.
 - Enabling public live analysis, changing credentials, rotating keys, pooling keys, changing provider accounts, quotas, billing, training settings, retention settings, or model access.
 - Deploying, pushing, linking a new Vercel project, changing the deployment target, modifying production environment settings, or changing firewall or rate controls without separate explicit user approval.
@@ -132,6 +146,8 @@ These paths are read-only. Never read or report secret values from `.env.local`,
 - Before public claims or provider enablement, current official challenge, provider model, pricing, quota, data-use, retention, SDK advisory, Next.js, Vercel, PDF, export, testing, and WCAG sources are rechecked. If a fact changed, stop for coordinated authority updates instead of editing frozen truth locally.
 - Actual deployment, production-setting changes, stable-URL access, public live analysis, credentials, spend, push, and commit are separate approval gates. Approval for one does not authorize another.
 - The exact `package.json` script binding is `"measure:performance": "node scripts/measure-performance.mjs"`. Every pre-existing script remains byte-for-byte unchanged, `package-lock.json` remains unchanged, and dependencies remain identical.
+- `tests/e2e/demo-rehearsal.spec.ts` uses only relative routes and the prepared synthetic checkpoint, makes no live-provider call, uses no credential, starts no automatic recovery, bypasses no safety gate, and preserves blocked-export plus withdrawal moments locally or under an explicitly approved `PLAYWRIGHT_BASE_URL`.
+- `vercel.json` remains absent. This task does not create or edit deployment configuration.
 
 ## 10. Implementation steps
 
@@ -140,10 +156,11 @@ These paths are read-only. Never read or report secret values from `.env.local`,
 3. Add performance tests that validate measurement selection, warm-up exclusion, sample count, p95 calculation, threshold reporting, failed-budget behavior, checkpoint and replay provenance, and machine-readable results without using artificial sleeps as proof of application performance.
 4. Update README with exact local setup, supported Node range, synthetic demo flow, replay and live-provider boundaries, server-only environment names, verification commands, Reset Case, known limitations, and truthful public claims. Do not include a credential value.
 5. Create `RELEASE_CHECKLIST.md` with evidence-linked deterministic, accessibility, security, privacy, performance, rehearsal, public-copy, dependency, provider, manual, approval, deployment, rollback, and handoff checks. Record failures and not-run items explicitly.
-6. Only if separate explicit user approval covers deployment configuration, update `vercel.json` to the minimum frozen configuration needed by the existing project while keeping public live analysis disabled. Otherwise leave `vercel.json` unchanged and report the approval blocker.
-7. Run the local verification commands and prepared-checkpoint measurements. Record actual results rather than expected results.
-8. Only after separate explicit user approval for deployment or production verification and coordinator confirmation of the approved deployed build, run the exact stable-URL five-rehearsal command. Do not deploy or change production settings implicitly as part of this step.
-9. Perform all manual checks, update the release checklist from actual evidence, and inspect the final diff for unowned paths, secrets, private data, unstable claims, hidden failures, public-live enablement, provider calls, unsupported readiness claims, and accidental deployment changes.
+6. Add `tests/e2e/demo-rehearsal.spec.ts` with only the prepared synthetic checkpoint rehearsal and every Section 6 restriction. Exercise it locally with relative routes; do not access the stable URL.
+7. Confirm `vercel.json` is absent and keep it absent. Record Vercel and deployment configuration as unapproved and `NOT RUN`.
+8. Run the local verification commands and prepared-checkpoint measurements. Record actual results rather than expected results.
+9. Only after separate explicit user approval for deployment or production verification and coordinator confirmation of the approved deployed build, run the exact stable-URL five-rehearsal command. Until then, keep it `NOT RUN` and do not access the URL.
+10. Perform all manual checks, update the release checklist from actual evidence, and inspect the final diff for unowned paths, secrets, private data, unstable claims, hidden failures, public-live enablement, provider calls, unsupported readiness claims, and accidental deployment changes.
 
 ## 11. Acceptance criteria
 
@@ -152,10 +169,11 @@ These paths are read-only. Never read or report secret values from `.env.local`,
 - README gives a beginner-safe setup for the existing npm project and supported Node range, identifies the synthetic-only demo and replay labels, documents only server-side provider configuration names, and states that public live analysis and real data are not enabled.
 - README contains no secret, private URL, account, billing, production-readiness, real-case, legal-validation, accessibility-conformance, zero-retention, anonymity, or provider-superiority claim.
 - `package.json` contains the exact `measure:performance` binding, every pre-existing script is byte-for-byte unchanged, `package-lock.json` is unchanged, and no dependency changed.
+- `tests/e2e/demo-rehearsal.spec.ts` is the only changed E2E path and proves the prepared synthetic checkpoint flow with relative routes, no live provider or credential, no automatic recovery, no safety-gate bypass, and preserved blocked-export and withdrawal moments.
 - `RELEASE_CHECKLIST.md` maps each release gate to actual evidence and clearly distinguishes Passed, Failed, and Not run results plus required separate approvals.
 - The checklist records the complete deterministic suite, golden and withdrawal flows, two export kinds, PDF or JSON parity, PII and log scans, accessibility automation and manual checks, performance budgets, system-card accuracy, dependency review, and public claims review.
 - Public live analysis remains disabled in every owned release artifact. Replay remains visibly labelled and no release step automatically switches provider or replay.
-- Any approved `vercel.json` change preserves the existing project architecture, Node target, safe route behavior, restrictive headers, replay path, and disabled public live analysis without introducing secrets or a new target.
+- `vercel.json` remains absent and no deployment configuration changes.
 - Actual deployment or any production-setting change occurs only under separate explicit user approval. This task never treats packet assignment, local verification, commit permission, or deployment rehearsal permission as interchangeable.
 - The stable URL is not accessed before separate approval. After approval and confirmed deployment, the exact stable-URL command completes five consecutive prepared-checkpoint rehearsals and every run finishes within 2 minutes 45 seconds with blocked export and dependency recalculation intact.
 - The stable production page and System Card match the actual build, provider enablement, release configurations, service tiers, retention limitations, replay state, checkpoint provenance, synthetic labels, and known limitations.
@@ -174,7 +192,7 @@ npm run build
 PLAYWRIGHT_BASE_URL=https://contextfirst-nexus.vercel.app npx playwright test tests/e2e/demo-rehearsal.spec.ts --repeat-each=5
 ```
 
-The final stable-URL command is mandatory for a Complete handoff but must run only after separate explicit user approval for deployment or production verification and confirmation that the approved build is deployed. If approval is absent, do not run it, do not visit the URL, and report the task as Partial or Blocked.
+The final stable-URL command is mandatory for a Complete handoff but remains `NOT RUN` until separate explicit user approval for deployment or production verification and confirmation that the approved build is deployed. If approval is absent, do not run it, do not visit the URL, and report the task as Partial or Blocked.
 
 ## 13. Manual checks
 
@@ -184,7 +202,7 @@ The final stable-URL command is mandatory for a Complete handoff but must run on
 4. Run the prepared checkpoint through the complete judged sequence with a stopwatch. Confirm Purpose and synthetic disclosure, coverage and masking, exact source, meaningful review, two early blockers, evidence withdrawal, reachable invalidation, renewed review, local export, audit, and one Safety Lab result remain visible and the flow finishes within 2 minutes 45 seconds.
 5. Rehearse full-practitioner and minimum-necessary safe-share as separate off-camera purposes. Confirm both generate PDF and JSON from one manifest, contain the four labels, and preserve redaction and provenance without automatic transmission.
 6. Inspect `RELEASE_CHECKLIST.md` line by line against command output and manual evidence. Confirm no check is marked complete from intention, no failed or not-run item is hidden, and each approval gate identifies what it does and does not authorize.
-7. Inspect the production configuration only if its separate approval was granted. Confirm the existing Vercel target and Node runtime are preserved, public live analysis is disabled, no secret is in `vercel.json`, and replay remains available.
+7. Confirm `vercel.json` remains absent and record Vercel changes, deployment, and production-setting checks as unapproved and `NOT RUN`.
 8. Only after separate approval and confirmed deployment, open `https://contextfirst-nexus.vercel.app` and run five consecutive prepared-checkpoint rehearsals. Confirm the stable URL serves the approved build, every rehearsal finishes within 2 minutes 45 seconds, no live provider transmission occurs, and no run loses the blocked-export or withdrawal moment.
 9. On the approved stable build, compare the visible System Card, footer or release identity, synthetic labels, provider availability, retention limitations, replay and checkpoint provenance, and known limitations with the actual release checklist. Stop on any mismatch.
 10. Inspect final Git status and diff. Confirm only the six owned paths changed, the exact `measure:performance` script is the only package-file change, `package-lock.json` and dependencies are unchanged, no credential or private data appears, no public-live setting was enabled, no stable-URL result was recorded without approval, and no deployment or push occurred implicitly.
@@ -201,7 +219,7 @@ Return a self-contained handoff containing:
 
 - `Task: TASK-025, Performance, release readiness, and deployment rehearsal` and outcome `Complete`, `Partial`, or `Blocked`.
 - Every changed path, listed exactly.
-- The measurement, README, release-checklist, approved configuration, and rehearsal behavior now observable.
+- The measurement, README, release-checklist, confirmed deployment-configuration absence, and rehearsal behavior now observable.
 - Confirmation that synthetic-only data, prepared replay labels, no provider transmission in checkpoint mode, public-live-disabled default, separate approval gates, no secrets, truthful claims, and no hidden failures were preserved.
 - Each acceptance criterion with its result.
 - Each required command and manual check with `PASS`, `FAIL`, or `NOT RUN` and a reason for any unrun check.
@@ -217,10 +235,10 @@ Stop and notify the coordinator if:
 - TASK-024 is not integrated, its release checks are incomplete, or the base has an unresolved critical safety, security, privacy, accessibility, or end-to-end failure.
 - The task graph and this packet disagree about title, dependency, owned paths, or verification commands.
 - Any required package script, performance hook, checkpoint fixture, stable rehearsal spec, or frozen runtime interface is absent and would require an unowned file change.
-- Completing the task requires editing application code, tests outside `tests/performance/`, contracts, fixtures, providers, state, package files, lockfiles, shared configuration, environment templates, or another unowned path.
+- Completing the task requires editing application code, tests outside `tests/performance/` and the exact owned `tests/e2e/demo-rehearsal.spec.ts`, contracts, fixtures, providers, state, package files other than the exact Section 6 script binding, lockfiles, shared configuration, environment templates, or another unowned path.
 - A current official source contradicts a frozen provider, framework, deployment, accessibility, security, or public-claim fact. Report the exact conflict for coordinated document and decision updates.
 - A new dependency, environment variable, provider call, credential, account check, live-evaluation spend, cloud service, deployment target, or production setting appears necessary.
-- Separate explicit user approval is absent for any deployment, production-setting change, `vercel.json` change that alters deployed behavior, stable-URL access, public live analysis, credential action, spend, commit, or push that the next step would require.
+- Separate explicit user approval is absent for any deployment, production-setting change, deployment-configuration change, stable-URL access, public live analysis, credential action, spend, commit, or push that the next step would require.
 - The approved build is not confirmed at `https://contextfirst-nexus.vercel.app`; do not run the stable-URL check against an unknown or stale deployment.
 - Any performance budget, rehearsal, deterministic check, accessibility check, security check, provider disclosure, System Card fact, or release claim fails or mismatches. Preserve the evidence and do not mark release ready.
 - Any real or private data, credential, private URL other than the frozen public stable URL, raw provider diagnostic, secret-like value, unsupported readiness claim, or hidden failure appears.

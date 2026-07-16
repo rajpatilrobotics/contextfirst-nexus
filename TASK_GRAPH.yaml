@@ -539,7 +539,7 @@ tasks:
       - RELEASE_CHECKLIST.md
       - scripts/measure-performance.mjs
       - tests/performance/
-      - vercel.json
+      - tests/e2e/demo-rehearsal.spec.ts
     verifies:
       - npm run verify
       - npm run test:e2e
