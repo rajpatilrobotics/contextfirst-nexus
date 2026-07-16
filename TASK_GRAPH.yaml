@@ -184,7 +184,7 @@ tasks:
     title: Review policy and dependency engine
     stage: domain
     wave: 4
-    status: ready
+    status: integrated
     risk: high
     dependencies: [TASK-001, TASK-002, TASK-003]
     packet: tasks/TASK-008.md
@@ -200,7 +200,7 @@ tasks:
     title: Export gate and canonical manifest
     stage: domain
     wave: 6
-    status: pending
+    status: ready
     risk: high
     dependencies: [TASK-002, TASK-005, TASK-006, TASK-007, TASK-008]
     packet: tasks/TASK-009.md
