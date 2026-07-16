@@ -8,22 +8,23 @@
 - Wave: bridge before TASK-016 resumes.
 - Risk: high.
 - Suggested branch: `task-029-evaluation-digest-runner-bridge`.
-- Depends on: TASK-001, TASK-003, TASK-011, TASK-028.
+- Depends on: TASK-001, TASK-003, TASK-011, TASK-018, TASK-028.
 - Graph outcome: Correct all canonical evaluation digests, align the server-side definition-set binding, and point `npm eval` at the real TASK-016 harness entry without creating a placeholder harness or changing runtime provider admission.
 
 ## 2. Goal
 
-Make every generated evaluation packet, control fixture, and definition-set digest exactly reproducible from the frozen contract projections; bind the AI boundary to the regenerated artifact; and prepare the package script to invoke the real TASK-016 evaluation harness once TASK-016 creates it.
+Make every generated evaluation packet, control fixture, and definition-set digest exactly reproducible from the frozen contract projections; bind the AI boundary to the regenerated artifact; prepare the package script to invoke the real TASK-016 evaluation harness once TASK-016 creates it; and narrowly repair the pre-existing TypeScript typing in two TASK-018 tests without changing their behavior or any production code.
 
 ## 3. Why this task exists
 
-TASK-016 preflight confirmed three digest-projection defects and one runner-wiring defect. Packet digests currently add fields outside `EvaluationInputPacketDigestProjection`, control fixtures hash only `controlPayload`, the definition-set digest uses the wrong projection shape and normalization, and `npm eval` points at an empty test path with `--passWithNoTests`. These shared inputs must be corrected before the evaluation harness can produce trustworthy evidence.
+TASK-016 preflight confirmed three digest-projection defects and one runner-wiring defect. Packet digests currently add fields outside `EvaluationInputPacketDigestProjection`, control fixtures hash only `controlPayload`, the definition-set digest uses the wrong projection shape and normalization, and `npm eval` points at an empty test path with `--passWithNoTests`. TASK-029 preflight also exposed pre-existing TypeScript failures in two integrated TASK-018 test files because fetch, transport-table, and purpose-save mocks infer signatures too loosely. The shared evaluation inputs and those test-only typing defects must be corrected before the evaluation harness can produce trustworthy verification evidence.
 
 ## 4. Dependencies and base requirement
 
 - TASK-001 must be integrated and provide exclusive package-script ownership history and the installed verification toolchain.
 - TASK-003 must be integrated and provide all 14 frozen evaluation definitions, canonical fixture binding, approved-redacted-input binding, generator, and generated definition artifact.
 - TASK-011 must be integrated and provide the server-only AI boundary constant and shared-AI regression suite.
+- TASK-018 must be integrated and provide the browser run controller, `RunControllerOptions`, canonical Purpose form callback, and the two focused component tests transferred for typing repair.
 - TASK-028 must be integrated and provide the latest canonical generator and fixture baseline while preserving source-content and provider bindings.
 - Start from the coordinator branch after TASK-029 is marked Ready and its packet and graph update are pushed.
 - TASK-016 remains blocked until TASK-029 is integrated and verified. TASK-019 and TASK-022 are independent and unchanged.
@@ -36,7 +37,7 @@ Read these sources before editing, in this order:
 1. `AGENTS.md` in full.
 2. `tasks/TASK-029.md` in full.
 3. `PLANS.md` in full.
-4. The TASK-029 entry and TASK-001, TASK-003, TASK-011, TASK-016, and TASK-028 entries in `TASK_GRAPH.yaml`.
+4. The TASK-029 entry and TASK-001, TASK-003, TASK-011, TASK-016, TASK-018, and TASK-028 entries in `TASK_GRAPH.yaml`.
 5. `docs/CONTEXT_INDEX.md` in full.
 6. `docs/CONTRACTS.md`: the canonical JSON rules and complete `EvaluationInputPacket`, `EvaluationInputPacketDigestProjection`, `EvaluationControlFixture`, `EvaluationControlFixtureDigestProjection`, `EvaluationDefinition`, `EvaluationDefinitionSetDigestProjection`, `EvaluationVariantId`, and `EvaluationAdmissionGateName` sections.
 7. `docs/DEMO_AND_FIXTURES.md`: evaluation definition, fixture-binding, digest, and frozen variant sections.
@@ -45,7 +46,7 @@ Read these sources before editing, in this order:
 10. `docs/MODEL_ROUTING.md`: frozen release binding and static admission sections.
 11. `docs/SAFETY_AND_DATA.md` in full.
 12. `docs/ORCHESTRATION_AND_INTEGRATION.md`: Sections 4 through 9, 12, 13, and 16.
-13. `tasks/TASK-001.md`, `tasks/TASK-003.md`, `tasks/TASK-011.md`, `tasks/TASK-016.md`, and `tasks/TASK-028.md`, with attention to original ownership and frozen invariants.
+13. `tasks/TASK-001.md`, `tasks/TASK-003.md`, `tasks/TASK-011.md`, `tasks/TASK-016.md`, `tasks/TASK-018.md`, and `tasks/TASK-028.md`, with attention to original ownership and frozen invariants.
 14. The current contents and Git status of every path in Section 6.
 
 ## 6. Exclusive write scope
@@ -56,6 +57,8 @@ Read these sources before editing, in this order:
 - `lib/ai/server/types.ts`
 - `tests/unit/fixtures/`
 - `tests/unit/ai/shared/`
+- `tests/components/provider/run-controller.test.ts`
+- `tests/components/purpose/purpose-form.test.tsx`
 
 No other path may be created, edited, renamed, generated, moved, or deleted by this task.
 
@@ -66,9 +69,10 @@ The coordinator explicitly transfers corrective ownership as follows:
 - From TASK-001 to TASK-029: `package.json` for the `eval` script only.
 - From TASK-003 to TASK-029: `fixtures/evals/definitions/` and the evaluation-definition generation contract.
 - From TASK-011 to TASK-029: `lib/ai/server/types.ts` and `tests/unit/ai/shared/` for the definition-set binding only.
+- From TASK-018 to TASK-029: `tests/components/provider/run-controller.test.ts` and `tests/components/purpose/purpose-form.test.tsx` for the narrow test-only TypeScript repair only.
 - From TASK-028 to TASK-029: `scripts/generate-synthetic-fixtures.mjs` and `tests/unit/fixtures/`.
 
-TASK-001, TASK-003, TASK-011, and TASK-028 are integrated and must not be active while TASK-029 runs. This is a bounded ownership transfer for digest and runner wiring only, not concurrent shared ownership.
+TASK-001, TASK-003, TASK-011, TASK-018, and TASK-028 are integrated and must not be active while TASK-029 runs. This is a bounded ownership transfer for digest, runner wiring, and the two test-only typing repairs, not concurrent shared ownership.
 
 ## 8. Read-only context allowed
 
@@ -80,6 +84,8 @@ TASK-001, TASK-003, TASK-011, and TASK-028 are integrated and must not be active
 - `lib/ai/server/registry.ts`
 - `lib/ai/server/canonical-input.ts`
 - `lib/ai/server/evaluation-entry.ts`
+- `features/analysis/run-controller/`
+- `features/purpose/`
 - `scripts/run-evaluation.mjs` if it exists after TASK-016; TASK-029 must not create or edit it.
 - `package-lock.json`
 - `tsconfig.json`
@@ -170,10 +176,22 @@ Add focused tests proving:
 - `package.json` targets `node scripts/run-evaluation.mjs` and contains neither `tests/evals` nor `--passWithNoTests` in the `eval` script.
 - Tests use an independent canonical recomputation path or explicit projection helpers whose behavior is exercised for key order and bound-field sensitivity; they must not merely compare a value to itself.
 
+### 13.1 Narrow TASK-018 test-typing repair
+
+- In `tests/components/provider/run-controller.test.ts`, give every fetch mock the exact non-null `RunControllerOptions["fetchImpl"]` signature so `RequestInfo | URL`, optional `RequestInit`, the request body, and the `Promise<Response | null | undefined>` result are safely typed.
+- Type the transport-failure table explicitly with the canonical transport reason type and exact fetch callback type so its async callbacks do not infer recursive or implicit `any`.
+- Preserve the existing start-before-POST, one-request, request-body privacy, terminal-union mapping, transport-failure, no-invented-run, pending-state, and replay assertions.
+- In `tests/components/purpose/purpose-form.test.tsx`, give each `onSave` mock the exact `CasePurposeBrief` callback signature accepted by `CasePurposeBriefFormProps`.
+- Prove the expected mock call exists before accessing its captured `CasePurposeBrief`; use a safe guard or equivalent typed narrowing rather than unchecked indexed access.
+- Preserve every existing Purpose form submission, exclusion, acknowledgement, identity, creation-time, revision, release-change, and accessibility expectation.
+- Do not use explicit or implicit `any`, `@ts-ignore`, `@ts-expect-error`, assertion removal, expectation weakening, unsafe mock-call access, production-code edits, or unrelated test rewrites.
+- Keep every original TASK-029 digest, regeneration, AI-boundary, and `npm eval` requirement unchanged.
+
 ## 14. Out of scope
 
 - Creating or implementing the TASK-016 evaluation harness, runner, evidence, admission reports, result artifacts, live guard, or provider calls.
 - Editing `scripts/run-evaluation.mjs`, `lib/evaluation/`, `fixtures/evals/results/`, `tests/unit/evaluation/`, provider adapters, admission records, registry, route, prompt, contracts, package lockfile, or shared configuration.
+- Editing `features/analysis/run-controller/`, `features/purpose/`, or any other production path to accommodate test typing.
 - Changing runtime admission status, selectability, provider order, model or release identity, disclosure, inference settings, fixture binding, environment values, credentials, billing, quota, deployment, or cloud configuration.
 - Changing canonical fixture or redacted-input digests, substantive evaluation definitions, expected answers, split, denominator, control behavior, or failure visibility merely to make a digest or later evaluation pass.
 - Adding a dependency, fake runner, placeholder output, aggregate score, broad cleanup, optional refactor, or production hardening.
@@ -185,8 +203,9 @@ Add focused tests proving:
 3. Regenerate the owned evaluation-definition artifact and verify frozen fixture and redacted-input digests remain exact.
 4. Update the one AI-boundary digest constant to the regenerated definition-set value.
 5. Change only the package `eval` script to the exact TASK-016 runner command.
-6. Add the Section 13 regressions under the owned test paths.
-7. Run only the exact Section 17 verification, inspect the owned-path diff, and prepare the handoff.
+6. Add the digest regressions in Section 13 under the original owned unit-test paths.
+7. Apply only the Section 13.1 type annotations and safe mock-call narrowing in the two transferred TASK-018 test files, preserving every existing behavior assertion.
+8. Run only the exact Section 17 verification, inspect the owned-path diff, and prepare the handoff.
 
 ## 16. Acceptance criteria
 
@@ -196,6 +215,7 @@ Add focused tests proving:
 - Canonical fixture and approved-redacted-input digests remain unchanged.
 - The AI-boundary definition-set constant exactly matches the generated artifact without changing admission or selectability.
 - `npm eval` points exactly to the future TASK-016 runner and contains no empty-test success bypass.
+- Both transferred TASK-018 tests use exact production callback signatures, safely narrow captured calls, contain no `any` or suppression, and preserve all existing expectations without production changes.
 - No fake runner or placeholder result exists.
 - Only Section 6 paths change and every Section 17 command passes.
 
@@ -204,11 +224,12 @@ Add focused tests proving:
 ```text
 node scripts/generate-synthetic-fixtures.mjs --check
 npx vitest run tests/unit/fixtures tests/unit/ai/shared
+npx vitest run tests/components/provider/run-controller.test.ts tests/components/purpose/purpose-form.test.tsx
 npm run typecheck
 npm run build
 ```
 
-All four commands must pass. Do not run `npm run eval` or any live-provider command.
+All five commands must pass. Do not run `npm run eval` or any live-provider command.
 
 ## 18. Manual checks
 
@@ -218,7 +239,10 @@ All four commands must pass. Do not run `npm run eval` or any live-provider comm
 4. Confirm canonical fixture and approved-redacted-input digests are unchanged.
 5. Confirm the AI-boundary constant equals the artifact and all admission/selectability values are unchanged.
 6. Confirm `package.json` contains exactly the new `eval` command and no fake runner file was created.
-7. Inspect for credentials, real-person data, raw provider content, hidden passing results, aggregate scores, or unsupported provider claims. None may be present.
+7. Confirm the run-controller fetch mocks and transport table use the exact callback and reason types, and that request-body and transport assertions are unchanged.
+8. Confirm the Purpose `onSave` mocks use the exact `CasePurposeBrief` callback and safely prove each captured call exists before access, with all original expectations unchanged.
+9. Search the two transferred tests for `any`, TypeScript suppression comments, removed assertions, weakened expectations, or production-code workarounds. None may be present.
+10. Inspect for credentials, real-person data, raw provider content, hidden passing results, aggregate scores, or unsupported provider claims. None may be present.
 
 ## 19. Commit permission and message
 
@@ -231,6 +255,7 @@ All four commands must pass. Do not run `npm run eval` or any live-provider comm
 - List every changed file and confirm each is within Section 6.
 - Report old/new packet, control-fixture, definition-set, and AI-boundary digest evidence plus unchanged canonical fixture and redacted-input digests.
 - Report the exact `eval` script and confirm no runner or placeholder was created.
+- Report the exact fetch, transport-table, and Purpose-save mock typing used, plus confirmation that the original test behavior and expectations remain unchanged.
 - Report every Section 17 command and Section 18 manual check.
 - Identify any unrun check, blocker, assumption, or coordinator follow-up.
 - Include a commit SHA only if the coordinator authorized the exact Section 19 commit; otherwise report `Not committed`.
@@ -243,6 +268,7 @@ Stop and report to the coordinator if:
 - A correct digest requires a field, order, or projection that conflicts with the frozen contracts.
 - Any canonical fixture, approved-redacted-input, source-content, provider-binding, substantive definition, expected answer, split, or denominator would change.
 - Implementation requires any write outside Section 6, including the future runner, evaluation results, admission, registry, contracts, package lockfile, configuration, or provider code.
+- Repairing the two transferred tests would require a production-code change, `any`, a TypeScript suppression, unsafe captured-call access, assertion removal, expectation weakening, or behavior change.
 - A fake runner, placeholder result, empty-test bypass, live provider call, credential, billing action, or selectability change appears necessary.
 - Existing user changes overlap an owned path and cannot be preserved safely.
 - Verification exposes an unrelated failure that cannot be resolved inside the exclusive scope without broad refactoring or hardening.

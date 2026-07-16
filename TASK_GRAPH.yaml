@@ -604,7 +604,7 @@ tasks:
     wave: 10
     status: ready
     risk: high
-    dependencies: [TASK-001, TASK-003, TASK-011, TASK-028]
+    dependencies: [TASK-001, TASK-003, TASK-011, TASK-018, TASK-028]
     packet: tasks/TASK-029.md
     outcome: Correct all canonical evaluation digests, align the server-side definition-set binding, and point npm eval at the real TASK-016 harness entry without creating a placeholder harness or changing runtime provider admission.
     owns:
@@ -614,9 +614,12 @@ tasks:
       - lib/ai/server/types.ts
       - tests/unit/fixtures/
       - tests/unit/ai/shared/
+      - tests/components/provider/run-controller.test.ts
+      - tests/components/purpose/purpose-form.test.tsx
     verifies:
       - node scripts/generate-synthetic-fixtures.mjs --check
       - npx vitest run tests/unit/fixtures tests/unit/ai/shared
+      - npx vitest run tests/components/provider/run-controller.test.ts tests/components/purpose/purpose-form.test.tsx
       - npm run typecheck
       - npm run build
 
