@@ -9,6 +9,7 @@ import {
   RequiredExcludedDecisions,
   type AnalysisRun,
   type CaseCandidate,
+  type CaseCommand,
   type CaseState,
   type Citation,
   type CoverageReviewDecision,
@@ -20,7 +21,8 @@ import {
 } from "../../../../lib/contracts";
 import { cfnDemoFixture } from "../../../../lib/fixtures";
 import { bundledGuidancePack } from "../../../../lib/guidance";
-import { assembleCandidates, reviewCandidate, withdrawCandidate } from "../../../../lib/review";
+import { LIMITATION_TEXT, assembleCandidates, reviewCandidate } from "../../../../lib/review";
+import { applyCaseCommand } from "../../../../lib/state";
 
 const NOW = "2026-07-16T00:00:00.000Z";
 const HASH = cfnDemoFixture.canonicalFixtureDigest;
@@ -316,6 +318,23 @@ function blockerCodes(state: CaseState, selection: ExportSelection = fullSelecti
   return evaluateExportGate(state, selection, { now: NOW }).blockers.map((blocker: ExportBlocker) => blocker.code);
 }
 
+function commandMeta(state: CaseState, commandId: string): CaseCommand["meta"] {
+  return {
+    commandId,
+    idempotencyKey: `idem-${commandId}`,
+    expectedCaseRevision: state.caseRevision,
+    actor: "current_practitioner",
+    createdAt: NOW,
+  };
+}
+
+function applyStateCommand(state: CaseState, command: CaseCommand) {
+  const result = applyCaseCommand(state, command);
+  expect(result.ok, result.ok ? undefined : result.reason).toBe(true);
+  if (!result.ok) throw new Error(result.reason);
+  return result.state;
+}
+
 describe("TASK-009 export core", () => {
   it("creates a deterministic ready manifest from the reviewed synthetic handoff state", () => {
     const state = baseState();
@@ -333,7 +352,7 @@ describe("TASK-009 export core", () => {
     expect(first.schemaVersion).toBe("1.0.0");
     expect(first.reviewedExportStateHashProjectionVersion).toBe("1.0.0");
     expect(JSON.stringify(first)).toBe(JSON.stringify(second));
-    expect(first.includedCandidates.map((candidate) => candidate.candidateId)).toContain("CAND-PASSPORT-DEBT");
+    expect(first.includedCandidates.map((candidate) => candidate.candidateId)).toContain("CAND-CTRL-PASSPORT");
     expect(first.reviewedGaps.map((gap) => gap.candidateId)).toContain("CAND-SENDER-0402");
     expect(first.citations.every((citation) => citation.validationStatus === "exact_match" || citation.validationStatus === "manually_resolved")).toBe(true);
     expect(JSON.stringify(first)).not.toContain("rawText");
@@ -405,31 +424,76 @@ describe("TASK-009 export core", () => {
       minimumNecessarySelection: {
         confirmed: true,
         intendedRecipientCategory: "legal_aid_team",
-        selectedCandidateIds: ["CAND-PASSPORT-DEBT", "CAND-PASSPORT-DEBT"],
+        selectedCandidateIds: ["CAND-CTRL-PASSPORT", "CAND-CTRL-PASSPORT"],
         excludedCandidateIds: ["CAND-TASK-0402"],
       },
     };
     const manifest = createExportManifest(state, selection, { now: NOW });
 
-    expect(normalizeExportSelection(selection).minimumNecessarySelection!.selectedCandidateIds).toEqual(["CAND-PASSPORT-DEBT"]);
+    expect(normalizeExportSelection(selection).minimumNecessarySelection!.selectedCandidateIds).toEqual(["CAND-CTRL-PASSPORT"]);
     expect(exportSelectionDigest(selection)).toBe(manifest.exportSelectionDigest);
-    expect(manifest.includedCandidates.map((candidate) => candidate.candidateId)).toEqual(["CAND-PASSPORT-DEBT"]);
+    expect(manifest.includedCandidates.map((candidate) => candidate.candidateId)).toEqual(["CAND-CTRL-PASSPORT"]);
     expect(manifest.includedCandidates.map((candidate) => candidate.candidateId)).not.toContain("CAND-TASK-0402");
     expect(manifest.citations.map((citation) => citation.citationId)).not.toContain("CIT-D05-P1-S05");
   });
 
-  it("withdrawal of CAND-TASK-0402 invalidates downstream readiness", () => {
-    const state = baseState();
-    const result = withdrawCandidate(state.candidates, "CAND-TASK-0402", "Withdraw task evidence.", state.reviews);
-    const nextState = {
-      ...state,
-      candidates: result.candidates,
-      reviews: [...state.reviews, result.decision],
-      dependencyChanges: [result.dependencyChange],
-    };
+  it("restores the exact Step 3 gate and manifest after canonical renewed review", () => {
+    let state = baseState();
+    state = applyStateCommand(state, {
+      type: "withdraw_candidate",
+      meta: commandMeta(state, "cmd-step-2-withdraw"),
+      candidateId: "CAND-TASK-0402",
+      reason: "Withdraw task evidence.",
+    });
 
-    expect(blockerCodes(nextState)).toEqual(expect.arrayContaining(["DEPENDENCY_UNRESOLVED", "REVIEW_INCOMPLETE"]));
-    expect(result.dependencyChange.exportReadinessRevoked).toBe(true);
+    expect(blockerCodes(state)).toEqual(["DEPENDENCY_UNRESOLVED", "REVIEW_INCOMPLETE"]);
+    expect(state.dependencyChanges).toHaveLength(1);
+    expect(state.dependencyChanges[0]).toMatchObject({
+      changedEntityId: "CAND-TASK-0402",
+      exportReadinessRevoked: true,
+    });
+
+    state = applyStateCommand(state, {
+      type: "review_candidate",
+      meta: commandMeta(state, "cmd-step-3-compelled"),
+      intent: { candidateId: "NEXUS-COMPELLED-TASKS", action: "accept", reason: null },
+    });
+    state = applyStateCommand(state, {
+      type: "review_candidate",
+      meta: commandMeta(state, "cmd-step-3-offence"),
+      intent: {
+        candidateId: "NEXUS-OFFENCE-TIMING",
+        action: "accept_as_limitation",
+        limitationText: LIMITATION_TEXT,
+        reason: "The assigned-task dependency was withdrawn.",
+      },
+    });
+
+    const gate = evaluateExportGate(state, fullSelection, { now: NOW });
+    expect(gate).toMatchObject({ status: "ready", freshness: "current", blockers: [] });
+    expect(blockerCodes(state)).toEqual([]);
+    const manifest = createExportManifest(state, fullSelection, { now: NOW, previousGate: gate });
+    const includedIds = manifest.includedCandidates.map((candidate) => candidate.candidateId);
+    const projectedDependencies = manifest.includedCandidates.flatMap((candidate) => candidate.dependencies);
+
+    expect(includedIds).not.toContain("CAND-TASK-0402");
+    expect(projectedDependencies.some((dependency) => dependency.kind === "candidate" && dependency.candidateId === "CAND-TASK-0402")).toBe(false);
+    expect(manifest.includedCandidates.find((candidate) => candidate.candidateId === "NEXUS-OFFENCE-TIMING")).toMatchObject({
+      assertionMode: "limitation",
+      effectiveReviewedText: LIMITATION_TEXT,
+      limitationTexts: [LIMITATION_TEXT],
+    });
+    expect(manifest.limitations).toContain(LIMITATION_TEXT);
+    expect(manifest.reviewDecisions).toEqual(expect.arrayContaining([
+      expect.objectContaining({ candidateId: "CAND-TASK-0402", action: "withdraw", resultingStatus: "invalidated" }),
+      expect.objectContaining({ candidateId: "NEXUS-COMPELLED-TASKS", action: "accept", resultingStatus: "human_accepted" }),
+      expect.objectContaining({ candidateId: "NEXUS-OFFENCE-TIMING", action: "accept_as_limitation", resultingStatus: "human_edited" }),
+    ]));
+    expect(manifest.auditEvents).toEqual(expect.arrayContaining([
+      expect.objectContaining({ eventType: "evidence_withdrawn", entityIds: ["CAND-TASK-0402"] }),
+      expect.objectContaining({ eventType: "candidate_reviewed", entityIds: ["NEXUS-COMPELLED-TASKS"] }),
+      expect.objectContaining({ eventType: "candidate_reviewed", entityIds: ["NEXUS-OFFENCE-TIMING"] }),
+    ]));
   });
 
   it("preserves reviewed gap responses and coverage limitation history", () => {
@@ -500,7 +564,7 @@ describe("TASK-009 export core", () => {
     const candidates = [...state.candidates]
       .reverse()
       .map((candidate) => {
-        if (candidate.id === "CAND-PASSPORT-DEBT") {
+        if (candidate.id === "CAND-CTRL-PASSPORT") {
           return {
             ...candidate,
             assertionMode: "limitation" as const,

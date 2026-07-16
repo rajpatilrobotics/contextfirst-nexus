@@ -156,6 +156,72 @@ describe("TASK-028 review dependency engine", () => {
     expect(withdrawal.decision.previousStatus).toBe("human_accepted");
   });
 
+  it("generically reconciles only invalid active non-source dependencies during renewed review", () => {
+    const assembled = assembleCandidates();
+    const candidateTemplate = assembled.find((candidate) => candidate.id === "CAND-TL-ARRIVAL")!;
+    const nexusTemplate = assembled.find((candidate) => candidate.id === "NEXUS-COMPELLED-TASKS")!;
+    const sourceDependency = nexusTemplate.dependencies.find((dependency) => dependency.kind === "source")!;
+    const withdrawnTarget: CaseCandidate = {
+      ...candidateTemplate,
+      id: "CAND-GENERIC-WITHDRAWN",
+      inclusionStatus: "withdrawn",
+      reviewStatus: "invalidated",
+    };
+    const validTarget: CaseCandidate = {
+      ...candidateTemplate,
+      id: "CAND-GENERIC-VALID",
+      reviewStatus: "human_accepted",
+    };
+    const invalidatedNexus: CaseCandidate = {
+      ...nexusTemplate,
+      id: "NEXUS-GENERIC-INVALIDATED",
+      reviewStatus: "invalidated",
+    };
+    const validNexus: CaseCandidate = {
+      ...nexusTemplate,
+      id: "NEXUS-GENERIC-VALID",
+      reviewStatus: "human_accepted",
+    };
+    const reviewed: CaseCandidate = {
+      ...nexusTemplate,
+      id: "NEXUS-GENERIC-REVIEWED",
+      reviewStatus: "invalidated",
+      dependencies: [
+        { ...sourceDependency, id: "DEP-GENERIC-SOURCE" },
+        { id: "DEP-GENERIC-WITHDRAWN", kind: "candidate", candidateId: withdrawnTarget.id, relationship: "supports", active: true },
+        { id: "DEP-GENERIC-INVALIDATED-NEXUS", kind: "nexus", nexusCandidateId: invalidatedNexus.id, relationship: "supports", active: true },
+        { id: "DEP-GENERIC-VALID", kind: "candidate", candidateId: validTarget.id, relationship: "supports", active: true },
+        { id: "DEP-GENERIC-VALID-NEXUS", kind: "nexus", nexusCandidateId: validNexus.id, relationship: "context_only", active: true },
+        { id: "DEP-GENERIC-MISSING", kind: "candidate", candidateId: "CAND-GENERIC-MISSING", relationship: "supports", active: true },
+        { id: "DEP-GENERIC-HISTORICAL", kind: "candidate", candidateId: withdrawnTarget.id, relationship: "limits", active: false },
+      ],
+    };
+    const candidates = [reviewed, withdrawnTarget, validTarget, invalidatedNexus, validNexus];
+
+    const result = reviewCandidate(candidates, { candidateId: reviewed.id, action: "accept", reason: null });
+    const reconciled = result.candidates.find((candidate) => candidate.id === reviewed.id)!;
+    const activity = Object.fromEntries(reconciled.dependencies.map((dependency) => [dependency.id, dependency.active]));
+
+    expect(reconciled.dependencies.map((dependency) => dependency.id)).toEqual(reviewed.dependencies.map((dependency) => dependency.id));
+    expect(activity).toEqual({
+      "DEP-GENERIC-SOURCE": true,
+      "DEP-GENERIC-WITHDRAWN": false,
+      "DEP-GENERIC-INVALIDATED-NEXUS": false,
+      "DEP-GENERIC-VALID": true,
+      "DEP-GENERIC-VALID-NEXUS": true,
+      "DEP-GENERIC-MISSING": true,
+      "DEP-GENERIC-HISTORICAL": false,
+    });
+    expect(result.decision.dependencySnapshot).toEqual([
+      "DEP-GENERIC-MISSING",
+      "DEP-GENERIC-SOURCE",
+      "DEP-GENERIC-VALID",
+      "DEP-GENERIC-VALID-NEXUS",
+    ]);
+    expect(reviewed.dependencies.find((dependency) => dependency.id === "DEP-GENERIC-WITHDRAWN")?.active).toBe(true);
+    expect(result.candidates.find((candidate) => candidate.id === validTarget.id)).toEqual(validTarget);
+  });
+
   it("reproduces the complete Step 0 through Step 3 hero transition", () => {
     let candidates = assembleCandidates();
     let decisions: ReviewDecision[] = [];
@@ -219,6 +285,14 @@ describe("TASK-028 review dependency engine", () => {
       assertionMode: "limitation",
       currentText: LIMITATION_TEXT,
     });
+    const compelled = candidates.find((candidate) => candidate.id === "NEXUS-COMPELLED-TASKS")!;
+    const offenceTiming = candidates.find((candidate) => candidate.id === "NEXUS-OFFENCE-TIMING")!;
+    expect(compelled.dependencies.find((dependency) => dependency.kind === "candidate" && dependency.candidateId === "CAND-TASK-0402")?.active).toBe(false);
+    expect(compelled.dependencies.filter((dependency) => dependency.kind === "source").every((dependency) => dependency.active)).toBe(true);
+    expect(offenceTiming.dependencies.find((dependency) => dependency.kind === "candidate" && dependency.candidateId === "CAND-TASK-0402")?.active).toBe(false);
+    expect(offenceTiming.dependencies.find((dependency) => dependency.kind === "nexus" && dependency.nexusCandidateId === "NEXUS-COMPELLED-TASKS")?.active).toBe(true);
+    expect(decisions.at(-2)?.dependencySnapshot).toEqual(compelled.dependencies.filter((dependency) => dependency.active).map((dependency) => dependency.id).sort());
+    expect(decisions.at(-1)?.dependencySnapshot).toEqual(offenceTiming.dependencies.filter((dependency) => dependency.active).map((dependency) => dependency.id).sort());
   });
 
   it("rejects validly shaped dependency cycles before graph use", () => {

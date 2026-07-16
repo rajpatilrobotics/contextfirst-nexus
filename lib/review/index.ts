@@ -204,6 +204,21 @@ function previousDecisionId(decisions: ReviewDecision[], candidateId: string) {
   return null;
 }
 
+function reconcileRenewedReviewDependencies(candidate: CaseCandidate, candidates: CaseCandidate[]): CaseCandidate {
+  if (candidate.reviewStatus !== "invalidated") return candidate;
+  const candidatesById = new Map(candidates.map((item) => [item.id, item]));
+  let changed = false;
+  const dependencies = candidate.dependencies.map((dependency) => {
+    if (!dependency.active || dependency.kind === "source") return dependency;
+    const targetId = dependency.kind === "candidate" ? dependency.candidateId : dependency.nexusCandidateId;
+    const target = candidatesById.get(targetId);
+    if (!target || (target.inclusionStatus === "active" && target.reviewStatus !== "invalidated")) return dependency;
+    changed = true;
+    return { ...dependency, active: false };
+  });
+  return changed ? { ...candidate, dependencies } : candidate;
+}
+
 function validateIntent(candidate: CaseCandidate, intent: ReviewIntent) {
   if (candidate.reviewRequirement === "derived_summary") throw new Error("Derived summaries cannot receive direct review actions.");
   if (intent.action === "confirm_unknown" && candidate.assertionMode !== "unknown_state" && candidate.kind !== "context_gap") throw new Error("Confirm unknown applies only to unknown state.");
@@ -217,14 +232,14 @@ export function reviewCandidate(candidates: CaseCandidate[], intent: ReviewInten
   if ((intent as { action: string }).action === "withdraw") throw new Error("Withdrawal requires withdrawCandidate.");
   const index = candidates.findIndex((candidate) => candidate.id === intent.candidateId);
   if (index < 0) throw new Error("Candidate not found.");
-  const candidate = candidates[index];
+  const candidate = reconcileRenewedReviewDependencies(candidates[index], candidates);
   validateIntent(candidate, intent);
   const action = intent.action;
   const resultingStatus: ReviewStatus = action === "accept" || action === "confirm_unknown" ? "human_accepted" : action === "edit" || action === "accept_as_limitation" ? "human_edited" : action === "reject" ? "rejected" : "uncertain";
   const currentText = action === "edit" ? intent.editedText : action === "accept_as_limitation" ? intent.limitationText : candidate.currentText;
   const updated: CaseCandidate = { ...candidate, revision: candidate.revision + 1, currentText, currentTextOrigin: action === "edit" || action === "accept_as_limitation" ? "human_created" : candidate.currentTextOrigin, assertionMode: action === "accept_as_limitation" && candidate.reviewStatus === "invalidated" ? "limitation" : candidate.assertionMode, reviewStatus: resultingStatus };
   const nextCandidates = [...candidates]; nextCandidates[index] = updated;
-  const decision: ReviewDecision = { id: decisionId(decisions), caseId: context.caseId ?? candidate.caseId, analysisRunId: context.analysisRunId ?? candidate.analysisRunId, candidateId: candidate.id, candidateRevision: updated.revision, action, previousStatus: candidate.reviewStatus, resultingStatus, editedText: action === "edit" ? intent.editedText : action === "accept_as_limitation" ? intent.limitationText : null, reason: "reason" in intent ? intent.reason : null, actor: context.actor ?? "current_practitioner", reviewerRole: "demo_evaluator", promptVersion: "1.0.0", rulesetVersion: "1.0.0", supersedesDecisionId: previousDecisionId(decisions, candidate.id), createdAt: context.now ?? "2026-07-16T00:00:00.000Z", dependencySnapshot: dependencySnapshot(candidate) };
+  const decision: ReviewDecision = { id: decisionId(decisions), caseId: context.caseId ?? candidate.caseId, analysisRunId: context.analysisRunId ?? candidate.analysisRunId, candidateId: candidate.id, candidateRevision: updated.revision, action, previousStatus: candidate.reviewStatus, resultingStatus, editedText: action === "edit" ? intent.editedText : action === "accept_as_limitation" ? intent.limitationText : null, reason: "reason" in intent ? intent.reason : null, actor: context.actor ?? "current_practitioner", reviewerRole: "demo_evaluator", promptVersion: "1.0.0", rulesetVersion: "1.0.0", supersedesDecisionId: previousDecisionId(decisions, candidate.id), createdAt: context.now ?? "2026-07-16T00:00:00.000Z", dependencySnapshot: dependencySnapshot(updated) };
   return { candidates: recalculateDerivedSummaries(nextCandidates), decision };
 }
 

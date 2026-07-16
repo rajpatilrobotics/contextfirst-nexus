@@ -501,7 +501,7 @@ function applyValidCommand(state: CaseState, command: CaseCommand): CaseCommandR
       }, "export_created", [record.id], undefined, false);
     }
     case "reveal_source":
-      return commit(state, command, {}, "source_revealed", [command.citationId], command.reasonCode, false);
+      return commit(state, command, {}, "source_revealed", [command.citationId], command.reasonCode);
     case "report_unsafe_output":
       return commit(state, command, {}, "unsafe_output_reported", command.entityIds, command.reasonCode, false);
     case "reset_case":

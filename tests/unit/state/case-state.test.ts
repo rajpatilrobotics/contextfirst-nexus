@@ -15,6 +15,7 @@ import {
 } from "../../../lib/analysis/replay";
 import { resolveCitation, resolveManualCitation } from "../../../lib/citations";
 import { cfnDemoFixture } from "../../../lib/fixtures";
+import { LIMITATION_TEXT } from "../../../lib/review";
 import type {
   AnalyzeRequest,
   CaseCommand,
@@ -49,6 +50,38 @@ function loadCheckpoint(state = createInitialCaseState(NOW)) {
     meta: meta(state, "cmd-load-checkpoint"),
     checkpointBundleId: "DEMO-CHECKPOINT-REVIEW",
   });
+}
+
+function completeCheckpointReview(state = loadCheckpoint()) {
+  const intents: Array<Extract<CaseCommand, { type: "review_candidate" }>["intent"]> = [
+    {
+      candidateId: "CAND-CTRL-PASSPORT",
+      action: "edit",
+      editedText: "The practitioner report describes passport removal; recruiter messages separately refer to passport custody.",
+      reason: "Preserve reported and documented sources separately.",
+    },
+    { candidateId: "CAND-CTRL-CONFINEMENT", action: "reject", reason: "No independent confirmation." },
+    { candidateId: "CAND-SENDER-0402", action: "reject", reason: "Assignment and allegation do not prove sender identity." },
+    { candidateId: "CAND-URG-INTERPRETER", action: "confirm_unknown", reason: null },
+  ];
+  for (const [index, intent] of intents.entries()) {
+    state = applyOk(state, {
+      type: "review_candidate",
+      meta: meta(state, `cmd-complete-checkpoint-${index + 1}`),
+      intent,
+    });
+  }
+  return state;
+}
+
+function createPopulatedExportState() {
+  let state = completeCheckpointReview();
+  state = applyOk(state, {
+    type: "evaluate_export_gate",
+    meta: meta(state, "cmd-current-export-gate"),
+    selection: fullSelection,
+  });
+  return state;
 }
 
 function liveRequest(state: CaseState): AnalyzeRequest {
@@ -141,7 +174,7 @@ function ambiguousCitationState() {
     meta: meta(state, "cmd-gate-before-resolution"),
     selection: fullSelection,
   });
-  const candidateId = "CAND-PASSPORT-DEBT";
+  const candidateId = "NEXUS-CONTROL";
   const candidate = state.candidates.find((item) => item.id === candidateId);
   if (!candidate) throw new Error("missing candidate");
   const dependency = candidate.dependencies.find(
@@ -367,6 +400,116 @@ describe("TASK-010 case state reducer", () => {
     expect(ordinaryReplay.dependencyChanges).toEqual([]);
   });
 
+  it("persists renewed-review dependency reconciliation through the reducer and session projection", () => {
+    let state = completeCheckpointReview();
+    state = applyOk(state, {
+      type: "evaluate_export_gate",
+      meta: meta(state, "cmd-gate-before-withdrawal"),
+      selection: fullSelection,
+    });
+    const unrelatedBefore = state.candidates.find((candidate) => candidate.id === "CAND-TL-ARRIVAL");
+    state = applyOk(state, {
+      type: "withdraw_candidate",
+      meta: meta(state, "cmd-withdraw-task"),
+      candidateId: "CAND-TASK-0402",
+      reason: "The assignment evidence was withdrawn from consideration.",
+    });
+    const beforeRenewedReview = state;
+    state = applyOk(state, {
+      type: "review_candidate",
+      meta: meta(state, "cmd-renew-compelled-tasks"),
+      intent: { candidateId: "NEXUS-COMPELLED-TASKS", action: "accept", reason: null },
+    });
+
+    const compelled = state.candidates.find((candidate) => candidate.id === "NEXUS-COMPELLED-TASKS")!;
+    const withdrawnEdge = compelled.dependencies.find(
+      (dependency) => dependency.kind === "candidate" && dependency.candidateId === "CAND-TASK-0402",
+    );
+    expect(withdrawnEdge?.active).toBe(false);
+    expect(state.reviews.at(-1)?.dependencySnapshot).toEqual(
+      compelled.dependencies.filter((dependency) => dependency.active).map((dependency) => dependency.id).sort(),
+    );
+    expect(state.caseRevision).toBe(beforeRenewedReview.caseRevision + 1);
+    expect(state.reviews).toHaveLength(beforeRenewedReview.reviews.length + 1);
+    expect(state.audit).toHaveLength(beforeRenewedReview.audit.length + 1);
+    expect(state.audit.at(-1)?.eventType).toBe("candidate_reviewed");
+    expect(state.exportGate).toBeNull();
+    expect(state.currentExportId).toBeNull();
+    expect(state.currentExportManifest).toBeNull();
+    expect(state.candidates.find((candidate) => candidate.id === "CAND-TL-ARRIVAL")).toEqual(unrelatedBefore);
+
+    state = applyOk(state, {
+      type: "review_candidate",
+      meta: meta(state, "cmd-renew-offence-timing"),
+      intent: {
+        candidateId: "NEXUS-OFFENCE-TIMING",
+        action: "accept_as_limitation",
+        limitationText: LIMITATION_TEXT,
+        reason: "The assigned-task dependency was withdrawn.",
+      },
+    });
+    const store = new Map<string, string>();
+    const session = {
+      getItem: (key: string) => store.get(key) ?? null,
+      setItem: (key: string, value: string) => store.set(key, value),
+      removeItem: (key: string) => store.delete(key),
+    };
+    expect(saveCaseState(session, state, NOW)).toBe(true);
+    const restored = loadCaseState(session);
+    expect(restored.ok).toBe(true);
+    if (!restored.ok) throw new Error(restored.reason);
+    for (const candidateId of ["NEXUS-COMPELLED-TASKS", "NEXUS-OFFENCE-TIMING"]) {
+      expect(
+        restored.state.candidates
+          .find((candidate) => candidate.id === candidateId)
+          ?.dependencies.find((dependency) => dependency.kind === "candidate" && dependency.candidateId === "CAND-TASK-0402")
+          ?.active,
+      ).toBe(false);
+    }
+  });
+
+  it("audits intentional source reveal once without material or export mutation", () => {
+    const state = createPopulatedExportState();
+    const citation = state.citations[0];
+    const command: CaseCommand = {
+      type: "reveal_source",
+      meta: meta(state, "cmd-reveal-source"),
+      citationId: citation.id,
+      reasonCode: "explicit_synthetic_source_review",
+    };
+    const result = applyCaseCommand(state, command);
+    expect(result.ok, result.ok ? undefined : result.reason).toBe(true);
+    if (!result.ok) throw new Error(result.reason);
+
+    expect(result.auditEvent).toMatchObject({
+      eventType: "source_revealed",
+      entityIds: [citation.id],
+      reasonCode: "explicit_synthetic_source_review",
+      summary: `source_revealed ${citation.id} explicit_synthetic_source_review`,
+    });
+    expect(result.state.audit).toHaveLength(state.audit.length + 1);
+    expect(result.state.audit.filter((event) => event.eventType === "source_revealed")).toHaveLength(1);
+    expect(result.auditEvent?.summary).not.toContain(citation.quotedText);
+    expect(result.state.caseRevision).toBe(state.caseRevision);
+    expect(result.state.exportGate).toEqual(state.exportGate);
+    expect(result.state.exports).toEqual(state.exports);
+    expect(result.state.currentExportId).toBe(state.currentExportId);
+    expect(result.state.currentExportManifest).toEqual(state.currentExportManifest);
+    expect(result.state.exportedRevision).toBe(state.exportedRevision);
+    expect(result.state.candidates).toEqual(state.candidates);
+    expect(result.state.citations).toEqual(state.citations);
+    expect(result.state.reviews).toEqual(state.reviews);
+    expect(result.state.citationResolutions).toEqual(state.citationResolutions);
+    expect(result.state.dependencyChanges).toEqual(state.dependencyChanges);
+
+    const duplicate = applyCaseCommand(result.state, command);
+    expect(duplicate.ok).toBe(false);
+    if (duplicate.ok) throw new Error("duplicate reveal unexpectedly succeeded");
+    expect(duplicate.reason).toBe("duplicate_idempotency_key");
+    expect(duplicate.state).toEqual(result.state);
+    expect(duplicate.state.audit.filter((event) => event.eventType === "source_revealed")).toHaveLength(1);
+  });
+
   it("persists only the safe projection and does not overwrite storage while pending", () => {
     let state = loadCheckpoint();
     const store = new Map<string, string>();
@@ -518,7 +661,7 @@ describe("TASK-010 case state reducer", () => {
       minimumNecessarySelection: {
         confirmed: true,
         intendedRecipientCategory: state.purposeBrief!.intendedRecipientCategory,
-        selectedCandidateIds: ["CAND-PASSPORT-DEBT"],
+        selectedCandidateIds: ["CAND-CTRL-PASSPORT"],
         excludedCandidateIds: ["CAND-TASK-0402"],
       },
     };
@@ -534,7 +677,7 @@ describe("TASK-010 case state reducer", () => {
       kind: "minimum_necessary_safe_share",
       minimumNecessarySelection: {
         ...firstSelection.minimumNecessarySelection!,
-        selectedCandidateIds: ["CAND-PASSPORT-DEBT", "CAND-REPORTED-CONTROL"],
+        selectedCandidateIds: ["CAND-CTRL-PASSPORT", "CAND-TL-ARRIVAL"],
       },
     };
     const changed = applyOk(first, {
@@ -580,7 +723,7 @@ describe("TASK-010 case state reducer", () => {
         minimumNecessarySelection: {
           confirmed: true,
           intendedRecipientCategory: state.purposeBrief!.intendedRecipientCategory,
-          selectedCandidateIds: ["CAND-PASSPORT-DEBT", "CAND-PASSPORT-DEBT"],
+          selectedCandidateIds: ["CAND-CTRL-PASSPORT", "CAND-CTRL-PASSPORT"],
           excludedCandidateIds: [],
         },
       },
@@ -589,8 +732,8 @@ describe("TASK-010 case state reducer", () => {
         minimumNecessarySelection: {
           confirmed: true,
           intendedRecipientCategory: state.purposeBrief!.intendedRecipientCategory,
-          selectedCandidateIds: ["CAND-PASSPORT-DEBT"],
-          excludedCandidateIds: ["CAND-PASSPORT-DEBT"],
+          selectedCandidateIds: ["CAND-CTRL-PASSPORT"],
+          excludedCandidateIds: ["CAND-CTRL-PASSPORT"],
         },
       },
       {
