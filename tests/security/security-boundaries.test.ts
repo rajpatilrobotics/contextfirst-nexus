@@ -15,6 +15,16 @@ const HEADER_MAP = new Map(SECURITY_HEADERS.map((header) => [header.key, header.
 const PROVIDER_ORIGIN_PATTERN = /openai\.com|googleapis\.com|mistral\.ai/i;
 const SECRET_PATTERN = /\bsk-(?:proj-|test_|live_)?[A-Za-z][A-Za-z0-9_-]{19,}|api[_-]?key|cookie|provider body|rawText|SYSTEM OVERRIDE/i;
 
+function parseContentSecurityPolicy(csp: string): Map<string, string[]> {
+  return new Map(
+    csp
+      .split(";")
+      .map((directive) => directive.trim().split(/\s+/))
+      .filter(([name]) => Boolean(name))
+      .map(([name, ...tokens]) => [name, tokens]),
+  );
+}
+
 describe("security headers", () => {
   it("defines a restrictive header set without browser provider origins", () => {
     expect(HEADER_MAP.get("X-Frame-Options")).toBe("DENY");
@@ -25,13 +35,22 @@ describe("security headers", () => {
     expect(HEADER_MAP.get("Permissions-Policy")).toContain("geolocation=()");
 
     const csp = HEADER_MAP.get("Content-Security-Policy") ?? "";
-    expect(csp).toContain("default-src 'self'");
-    expect(csp).toContain("frame-ancestors 'none'");
-    expect(csp).toContain("connect-src 'self'");
-    expect(csp).toContain("worker-src 'self' blob:");
-    expect(csp).toContain("object-src 'none'");
-    expect(csp).not.toMatch(PROVIDER_ORIGIN_PATTERN);
-    expect(csp).not.toContain("*");
+    const directives = parseContentSecurityPolicy(csp);
+    const scriptTokens = directives.get("script-src") ?? [];
+    const allTokens = [...directives.values()].flat();
+
+    expect(directives.get("default-src")).toEqual(["'self'"]);
+    expect(directives.get("frame-ancestors")).toEqual(["'none'"]);
+    expect(directives.get("connect-src")).toEqual(["'self'"]);
+    expect(directives.get("worker-src")).toEqual(["'self'", "blob:"]);
+    expect(directives.get("object-src")).toEqual(["'none'"]);
+    expect(directives.get("img-src")).toEqual(["'self'", "data:", "blob:"]);
+    expect(directives.get("frame-src")).toEqual(["'self'", "blob:"]);
+    expect(scriptTokens).toContain("'wasm-unsafe-eval'");
+    expect(scriptTokens).not.toContain("'unsafe-eval'");
+    expect(allTokens).not.toContain("'unsafe-eval'");
+    expect(allTokens.join(" ")).not.toMatch(PROVIDER_ORIGIN_PATTERN);
+    expect(allTokens).not.toContain("*");
   });
 });
 
