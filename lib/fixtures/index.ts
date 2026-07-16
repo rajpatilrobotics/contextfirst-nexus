@@ -11,3 +11,15 @@ export function getCfnDemoSelectedSegmentIds() {
 export function getCfnDemoSegment(segmentId: string) {
   return cfnDemoFixture.segments.find((segment) => segment.id === segmentId) ?? null;
 }
+
+export function getCfnDemoReviewDefinitions() {
+  return cfnDemoFixture.reviewDefinitions;
+}
+
+export function getCfnDemoCandidateDefinition(candidateId: string) {
+  return (
+    cfnDemoFixture.reviewDefinitions.candidateDefinitions.find(
+      (candidate) => candidate.id === candidateId,
+    ) ?? null
+  );
+}

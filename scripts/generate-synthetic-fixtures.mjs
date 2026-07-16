@@ -312,6 +312,320 @@ const selectedSegmentIds = [
   "D07-P2-S03",
 ];
 
+function sourceDependency(id, segmentId, evidenceNature = "documented_in_source") {
+  return {
+    dependencyId: `DEP-${id}-${segmentId}`,
+    kind: "source",
+    segmentId,
+    relationship: "supports",
+    evidenceNature,
+  };
+}
+
+function candidateDependency(id, candidateId) {
+  return {
+    dependencyId: `DEP-${id}-${candidateId}`,
+    kind: "candidate",
+    candidateId,
+    relationship: "supports",
+  };
+}
+
+function nexusDependency(id, nexusCandidateId) {
+  return {
+    dependencyId: `DEP-${id}-${nexusCandidateId}`,
+    kind: "nexus",
+    nexusCandidateId,
+    relationship: "supports",
+  };
+}
+
+function candidateBase({
+  id,
+  kind,
+  title,
+  text,
+  supportStatus,
+  reviewRequirement = "individual",
+  reviewLane,
+  dependencies,
+  assertionMode = "positive_finding",
+}) {
+  return {
+    id,
+    kind,
+    title,
+    text,
+    currentText: text,
+    currentTextOrigin: "ai_suggestion",
+    itemOrigin: "ai_suggestion",
+    assertionMode,
+    reviewRequirement,
+    inclusionStatus: "active",
+    supportStatus,
+    reviewStatus: "pending",
+    ...(reviewLane ? { reviewLane } : {}),
+    dependencies,
+    safeShareRecipientCategories: ["legal_practitioner", "trained_supervisor"],
+  };
+}
+
+function buildReviewDefinitions() {
+  const timeline = [
+    candidateBase({
+      id: "CAND-RECRUITMENT-OFFER",
+      kind: "timeline_event",
+      title: "Initial customer-support offer",
+      text: "Maya K. received an apparent customer-support offer before the later reported control period.",
+      supportStatus: "exact_source_supported",
+      reviewLane: "trafficking_indicators",
+      dependencies: [
+        sourceDependency("CAND-RECRUITMENT-OFFER", "D01-P1-S01"),
+        sourceDependency("CAND-RECRUITMENT-OFFER", "D01-P2-S02"),
+      ],
+      reviewRequirement: "fixture_specified",
+    }),
+    candidateBase({
+      id: "CAND-PASSPORT-DEBT",
+      kind: "timeline_event",
+      title: "Passport custody and travel debt",
+      text: "Messages describe passport custody and a travel debt tied to departure.",
+      supportStatus: "partially_supported",
+      reviewLane: "trafficking_indicators",
+      dependencies: [
+        sourceDependency("CAND-PASSPORT-DEBT", "D02-P2-S02"),
+        sourceDependency("CAND-PASSPORT-DEBT", "D02-P2-S05"),
+      ],
+    }),
+    candidateBase({
+      id: "CAND-REPORTED-CONTROL",
+      kind: "timeline_event",
+      title: "Reported locked exits and threats",
+      text: "Maya K. reports restricted movement, locked exits, and threats to a family member.",
+      supportStatus: "partially_supported",
+      reviewLane: "trafficking_indicators",
+      dependencies: [
+        sourceDependency("CAND-REPORTED-CONTROL", "D04-P2-S02", "reported_or_alleged_in_source"),
+        sourceDependency("CAND-REPORTED-CONTROL", "D04-P2-S05", "reported_or_alleged_in_source"),
+      ],
+    }),
+    candidateBase({
+      id: "CAND-TASK-0402",
+      kind: "timeline_event",
+      title: "2025-04-02 assigned deceptive-message task",
+      text: "The task log assigns a deceptive-message task on 2025-04-02.",
+      supportStatus: "exact_source_supported",
+      reviewLane: "non_punishment_relevance",
+      dependencies: [sourceDependency("CAND-TASK-0402", "D05-P1-S05")],
+    }),
+    candidateBase({
+      id: "CAND-ALLEGED-0402",
+      kind: "timeline_event",
+      title: "2025-04-02 alleged communication",
+      text: "The fictional proceeding notice references one alleged communication on 2025-04-02.",
+      supportStatus: "exact_source_supported",
+      reviewLane: "non_punishment_relevance",
+      dependencies: [sourceDependency("CAND-ALLEGED-0402", "D06-P1-S05", "reported_or_alleged_in_source")],
+      reviewRequirement: "fixture_specified",
+    }),
+    candidateBase({
+      id: "CAND-URG-HEARING",
+      kind: "timeline_event",
+      title: "Fictional hearing date",
+      text: "The fictional hearing date is 2025-04-18.",
+      supportStatus: "exact_source_supported",
+      reviewLane: "protection_remedy_urgency",
+      dependencies: [sourceDependency("CAND-URG-HEARING", "D06-P2-S02")],
+      reviewRequirement: "fixture_specified",
+    }),
+  ];
+
+  const contextGaps = [
+    candidateBase({
+      id: "CAND-SENDER-0402",
+      kind: "context_gap",
+      title: "Sender authority unresolved",
+      text: "The identity and authority of the sender or task-log author for the 2025-04-02 entry remains unresolved.",
+      supportStatus: "insufficient_evidence",
+      reviewLane: "non_punishment_relevance",
+      dependencies: [
+        sourceDependency("CAND-SENDER-0402", "D05-META-01", "unknown"),
+        sourceDependency("CAND-SENDER-0402", "D05-P1-S05"),
+      ],
+      assertionMode: "limitation",
+    }),
+    candidateBase({
+      id: "CAND-URG-INTERPRETER",
+      kind: "context_gap",
+      title: "Interpreter status unknown",
+      text: "Interpreter status is unknown or blank in the support and proceeding records.",
+      supportStatus: "exact_source_supported",
+      reviewLane: "protection_remedy_urgency",
+      dependencies: [
+        sourceDependency("CAND-URG-INTERPRETER", "D06-P2-S04"),
+        sourceDependency("CAND-URG-INTERPRETER", "D07-P1-S05"),
+      ],
+      assertionMode: "limitation",
+    }),
+  ];
+
+  const nexus = [
+    candidateBase({
+      id: "NEXUS-RECRUITMENT",
+      kind: "nexus_relationship",
+      title: "Represented work and travel terms changed",
+      text: "Initial represented work and travel terms changed after recruitment.",
+      supportStatus: "partially_supported",
+      dependencies: [
+        sourceDependency("NEXUS-RECRUITMENT", "D01-P1-S01"),
+        sourceDependency("NEXUS-RECRUITMENT", "D01-P2-S02"),
+        sourceDependency("NEXUS-RECRUITMENT", "D02-P1-S04"),
+      ],
+      reviewRequirement: "fixture_specified",
+    }),
+    candidateBase({
+      id: "NEXUS-MOVEMENT",
+      kind: "nexus_relationship",
+      title: "Movement and onward transfer documented",
+      text: "Travel records document movement and onward transfer.",
+      supportStatus: "exact_source_supported",
+      dependencies: [
+        sourceDependency("NEXUS-MOVEMENT", "D03-P1-S02"),
+        sourceDependency("NEXUS-MOVEMENT", "D03-P2-S01"),
+      ],
+      reviewRequirement: "fixture_specified",
+    }),
+    candidateBase({
+      id: "NEXUS-CONTROL",
+      kind: "nexus_relationship",
+      title: "Document, debt, threat, or movement control",
+      text: "Source records and reported account describe document, debt, threat, or movement-control indicators for review.",
+      supportStatus: "partially_supported",
+      dependencies: [
+        candidateDependency("NEXUS-CONTROL", "CAND-PASSPORT-DEBT"),
+        candidateDependency("NEXUS-CONTROL", "CAND-REPORTED-CONTROL"),
+      ],
+      reviewRequirement: "derived_summary",
+    }),
+    candidateBase({
+      id: "NEXUS-COMPELLED-TASKS",
+      kind: "nexus_relationship",
+      title: "Assigned deceptive-message work and penalties",
+      text: "Assigned deceptive-message work and penalties are documented or reported during the alleged period.",
+      supportStatus: "partially_supported",
+      dependencies: [
+        sourceDependency("NEXUS-COMPELLED-TASKS", "D04-P2-S07", "reported_or_alleged_in_source"),
+        sourceDependency("NEXUS-COMPELLED-TASKS", "D05-P1-S02"),
+        candidateDependency("NEXUS-COMPELLED-TASKS", "CAND-TASK-0402"),
+        sourceDependency("NEXUS-COMPELLED-TASKS", "D05-P2-S03"),
+      ],
+    }),
+    candidateBase({
+      id: "NEXUS-OFFENCE-TIMING",
+      kind: "nexus_relationship",
+      title: "Timing between alleged communication and possible control",
+      text: "The 2025-04-02 alleged communication overlaps the documented task entry and possible control period.",
+      supportStatus: "partially_supported",
+      dependencies: [
+        sourceDependency("NEXUS-OFFENCE-TIMING", "D06-P1-S05", "reported_or_alleged_in_source"),
+        candidateDependency("NEXUS-OFFENCE-TIMING", "CAND-TASK-0402"),
+        nexusDependency("NEXUS-OFFENCE-TIMING", "NEXUS-CONTROL"),
+        nexusDependency("NEXUS-OFFENCE-TIMING", "NEXUS-COMPELLED-TASKS"),
+      ],
+    }),
+    candidateBase({
+      id: "NEXUS-URGENCY",
+      kind: "nexus_relationship",
+      title: "Procedural and protection urgency",
+      text: "Hearing, counsel, and interpreter records create urgent procedural review questions.",
+      supportStatus: "exact_source_supported",
+      dependencies: [
+        candidateDependency("NEXUS-URGENCY", "CAND-URG-HEARING"),
+        candidateDependency("NEXUS-URGENCY", "CAND-URG-INTERPRETER"),
+        sourceDependency("NEXUS-URGENCY", "D07-P1-S04"),
+      ],
+      reviewRequirement: "derived_summary",
+    }),
+  ];
+
+  return {
+    schemaVersion: VERSION,
+    caseId: CASE_ID,
+    fixtureVersion: VERSION,
+    candidateDefinitions: [...timeline, ...contextGaps, ...nexus],
+    timelineDefinitions: timeline.map((candidate) => ({
+      candidateId: candidate.id,
+      date: candidate.id === "CAND-TASK-0402" || candidate.id === "CAND-ALLEGED-0402" ? "2025-04-02" : "2025-03-14",
+      datePrecision: "day",
+      qualification: candidate.text,
+    })),
+    nexusDependencyDefinitions: nexus.map((candidate) => ({
+      nexusCandidateId: candidate.id,
+      reviewRequirement: candidate.reviewRequirement,
+      dependencies: candidate.dependencies,
+    })),
+    reviewLaneDefinitions: [
+      {
+        lane: "trafficking_indicators",
+        label: "Trafficking indicators for review",
+        candidateIds: ["CAND-RECRUITMENT-OFFER", "CAND-PASSPORT-DEBT", "CAND-REPORTED-CONTROL", "NEXUS-RECRUITMENT", "NEXUS-MOVEMENT", "NEXUS-CONTROL"],
+      },
+      {
+        lane: "non_punishment_relevance",
+        label: "Non-punishment relevance for review",
+        candidateIds: ["CAND-TASK-0402", "CAND-ALLEGED-0402", "CAND-SENDER-0402", "NEXUS-COMPELLED-TASKS", "NEXUS-OFFENCE-TIMING"],
+      },
+      {
+        lane: "protection_remedy_urgency",
+        label: "Protection, remedy, and procedural urgency",
+        candidateIds: ["CAND-URG-HEARING", "CAND-URG-INTERPRETER", "NEXUS-URGENCY"],
+      },
+    ],
+    contextGapDefinitions: contextGaps,
+    earlyUnresolvedBlockerIds: ["CAND-SENDER-0402", "CAND-URG-INTERPRETER"],
+    heroTransition: {
+      triggerCandidateId: "CAND-TASK-0402",
+      limitationText: "Insufficient evidence to support a link between the 2025-04-02 alleged communication and an assigned task.",
+      steps: [
+        {
+          step: 0,
+          action: "initial_state",
+          states: {
+            "CAND-TASK-0402": { supportStatus: "exact_source_supported", reviewStatus: "pending" },
+            "NEXUS-COMPELLED-TASKS": { supportStatus: "partially_supported", reviewStatus: "pending" },
+            "NEXUS-OFFENCE-TIMING": { supportStatus: "partially_supported", reviewStatus: "pending" },
+          },
+        },
+        {
+          step: 1,
+          action: "accept_CAND-TASK-0402",
+          states: {
+            "CAND-TASK-0402": { supportStatus: "exact_source_supported", reviewStatus: "human_accepted" },
+          },
+        },
+        {
+          step: 2,
+          action: "withdraw_CAND-TASK-0402",
+          states: {
+            "CAND-TASK-0402": { supportStatus: "exact_source_supported", reviewStatus: "invalidated", inclusionStatus: "withdrawn" },
+            "NEXUS-COMPELLED-TASKS": { supportStatus: "partially_supported", reviewStatus: "invalidated" },
+            "NEXUS-OFFENCE-TIMING": { supportStatus: "insufficient_evidence", reviewStatus: "invalidated" },
+          },
+          preservedUnrelatedDecisionIds: ["NEXUS-RECRUITMENT", "NEXUS-MOVEMENT", "NEXUS-CONTROL", "NEXUS-URGENCY"],
+        },
+        {
+          step: 3,
+          action: "renew_nexus_review",
+          states: {
+            "NEXUS-COMPELLED-TASKS": { supportStatus: "partially_supported", reviewStatus: "human_accepted" },
+            "NEXUS-OFFENCE-TIMING": { supportStatus: "insufficient_evidence", reviewStatus: "human_edited", assertionMode: "limitation" },
+          },
+        },
+      ],
+    },
+  };
+}
+
 function buildGuidancePack() {
   const cards = [
     ["INT-002", "OHCHR", "Recommended Principles and Guidelines on Human Rights and Human Trafficking", "international_guidance"],
@@ -527,6 +841,7 @@ function buildFixture() {
     ...canonicalProjection,
     canonicalFixtureDigest,
     approvedRedactedInputDigest,
+    reviewDefinitions: buildReviewDefinitions(),
     coverage: {
       expectedDocuments: 7,
       processedDocuments: 7,
