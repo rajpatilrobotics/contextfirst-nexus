@@ -393,15 +393,17 @@ tasks:
     wave: 10
     status: ready
     risk: high
-    dependencies: [TASK-004, TASK-005, TASK-006, TASK-010, TASK-017, TASK-018]
+    dependencies: [TASK-004, TASK-005, TASK-006, TASK-010, TASK-017, TASK-018, TASK-027]
     packet: tasks/TASK-019.md
     outcome: Implement document cards, browser processing, stage progress, coverage manifest, masking review, safe default source view, intentional reveal, analysis prerequisites, and the explicit controller-backed Start analysis flow.
     owns:
       - app/case/demo/intake/page.tsx
       - features/documents/
       - tests/components/documents/
+      - components/shell/case-shell.tsx
+      - tests/components/shell/shell.test.tsx
     verifies:
-      - npx vitest run tests/components/documents
+      - npx vitest run tests/components/documents tests/components/shell
       - npm run build
 
   - id: TASK-020
