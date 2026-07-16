@@ -15,7 +15,35 @@ import type {
 } from "../contracts";
 
 type FixtureDependency = { dependencyId: string; kind: "source" | "candidate" | "nexus"; segmentId?: string; candidateId?: string; nexusCandidateId?: string; relationship: DependencyRelationship; evidenceNature?: EvidenceNature };
-type FixtureDefinition = { id: string; kind: "timeline_event" | "context_gap" | "nexus_relationship"; title: string; text: string; currentText: string; currentTextOrigin: ItemOrigin; itemOrigin: ItemOrigin; assertionMode: string; reviewRequirement: string; inclusionStatus: "active" | "withdrawn" | "superseded"; supportStatus: SupportStatus; reviewLane?: ReviewLane; dependencies: FixtureDependency[]; safeShareRecipientCategories: string[] };
+type FixtureDefinition = {
+  id: string;
+  kind: "timeline_event" | "nexus_relationship" | "review_lane_item" | "context_gap" | "contradiction" | "entity" | "coverage_limitation" | "provenance_limitation";
+  title: string;
+  text: string;
+  currentText: string;
+  currentTextOrigin: ItemOrigin;
+  itemOrigin: ItemOrigin;
+  assertionMode: string;
+  reviewRequirement: string;
+  inclusionStatus: "active" | "withdrawn" | "superseded";
+  supportStatus: SupportStatus;
+  reviewLane?: ReviewLane;
+  dependencies: FixtureDependency[];
+  reviewQuestion?: string;
+  unknowns?: string[];
+  safeShareRecipientCategories: string[];
+};
+type FixtureTimelineDefinition = {
+  candidateId: string;
+  dateStart?: string;
+  dateEnd?: string;
+  datePrecision: "day" | "date_range" | "approximate" | "conflicting" | "unknown";
+  dateAlternatives: Array<{ start?: string; end?: string; label: string }>;
+  qualification: string;
+  locationLabel: string | null;
+  actorLabels: string[];
+  conflictGroupId: string | null;
+};
 type ContextGapResponseIntent = { gapId: string; responseStatus: "answered"; response: string; responseExplanation: null } | { gapId: string; responseStatus: "preserved_unknown"; response: null; responseExplanation: null } | { gapId: string; responseStatus: "deferred" | "outside_scope"; response: null; responseExplanation: string };
 
 export type ReviewAssemblyInput = {
@@ -57,7 +85,7 @@ function reviewRequirement(value: string): "individual" | "derived_summary" | "o
 }
 
 function assertionMode(value: string): "positive_proposition" | "limitation" | "gap" | "unknown_state" | "neutral_procedural_fact" {
-  if (value === "limitation") return value;
+  if (value === "limitation" || value === "gap" || value === "unknown_state" || value === "neutral_procedural_fact") return value;
   return "positive_proposition";
 }
 
@@ -86,7 +114,7 @@ function sourceStatus(definition: FixtureDefinition, citations: ReviewAssemblyIn
   return definition.supportStatus as SupportStatus;
 }
 
-function candidateFromDefinition(definition: FixtureDefinition, input: ReviewAssemblyInput, index: number): CaseCandidate {
+function candidateFromDefinition(definition: FixtureDefinition, input: ReviewAssemblyInput): CaseCandidate {
   const runId = input.analysisRunId ?? RUN_ID;
   const caseId = input.caseId ?? CASE_ID;
   const citationId = (segmentId: string) => `CIT-${segmentId}`;
@@ -109,28 +137,43 @@ function candidateFromDefinition(definition: FixtureDefinition, input: ReviewAss
     reviewStatus: "pending" as ReviewStatus,
     dependencies,
     relatedCoverageIssueIds: input.openCoverageIssueIds ?? [],
-    unknowns: definition.kind === "context_gap" ? [definition.title] : [],
-    reviewQuestion: definition.title,
+    unknowns: definition.unknowns ?? (definition.kind === "context_gap" ? [definition.title] : []),
+    reviewQuestion: definition.reviewQuestion ?? definition.title,
     consequential: definition.reviewRequirement === "individual",
     prohibitedConclusionCheck: "passed" as const,
     safeShareRecipientCategories: definition.safeShareRecipientCategories.map((category) => category === "legal_practitioner" ? "legal_aid_team" : "trained_supervisor" === category ? "ngo_caseworker" : "policy_or_research_summary") as SafeShareRecipientCategory[],
     createdAt: input.now ?? "2026-07-16T00:00:00.000Z",
   };
   if (definition.kind === "timeline_event") {
-    const timeline = cfnDemoFixture.reviewDefinitions.timelineDefinitions.find((item) => item.candidateId === definition.id);
-    return { ...base, kind: "timeline_event", dateStart: timeline?.date, datePrecision: (timeline?.datePrecision ?? "unknown") as "day", dateAlternatives: [], actorLabels: [], locationLabel: timeline?.qualification };
+    const timeline = cfnDemoFixture.reviewDefinitions.timelineDefinitions.find(
+      (item) => item.candidateId === definition.id,
+    ) as FixtureTimelineDefinition | undefined;
+    return {
+      ...base,
+      kind: "timeline_event",
+      ...(timeline?.dateStart ? { dateStart: timeline.dateStart } : {}),
+      ...(timeline?.dateEnd ? { dateEnd: timeline.dateEnd } : {}),
+      datePrecision: timeline?.datePrecision ?? "unknown",
+      dateAlternatives: timeline?.dateAlternatives ?? [],
+      actorLabels: timeline?.actorLabels ?? [],
+      ...(timeline?.locationLabel ? { locationLabel: timeline.locationLabel } : {}),
+      ...(timeline?.conflictGroupId ? { conflictGroupId: timeline.conflictGroupId } : {}),
+    };
   }
   if (definition.kind === "context_gap") {
     return { ...base, kind: "context_gap", response: null, responseStatus: "unanswered", responseEvidenceNature: "unknown", responseExplanation: null };
   }
-  const nexus = cfnDemoFixture.reviewDefinitions.nexusDependencyDefinitions.find((item) => item.nexusCandidateId === definition.id);
-  const category = definition.id.replace("NEXUS-", "").toLowerCase().replaceAll("-", "_") as "recruitment" | "movement" | "control" | "compelled_tasks" | "offence_timing" | "urgency";
-  return { ...base, kind: "nexus_relationship", category, requiredDependencyIds: nexus?.dependencies.map((dependency) => dependency.dependencyId).sort() ?? [], childCandidateIds: dependencies.filter((dependency): dependency is Extract<EvidenceDependency, { kind: "candidate" }> => dependency.kind === "candidate").map((dependency) => dependency.candidateId).sort(), relationshipSummary: base.currentText };
+  if (definition.kind === "nexus_relationship") {
+    const nexus = cfnDemoFixture.reviewDefinitions.nexusDependencyDefinitions.find((item) => item.nexusCandidateId === definition.id);
+    const category = definition.id.replace("NEXUS-", "").toLowerCase().replaceAll("-", "_") as "recruitment" | "movement" | "control" | "compelled_tasks" | "offence_timing" | "urgency";
+    return { ...base, kind: "nexus_relationship", category, requiredDependencyIds: nexus?.dependencies.map((dependency) => dependency.dependencyId).sort() ?? [], childCandidateIds: dependencies.filter((dependency): dependency is Extract<EvidenceDependency, { kind: "candidate" }> => dependency.kind === "candidate").map((dependency) => dependency.candidateId).sort(), relationshipSummary: base.currentText };
+  }
+  return { ...base, kind: definition.kind } as CaseCandidate;
 }
 
 export function assembleCandidates(input: ReviewAssemblyInput = {}): CaseCandidate[] {
   const definitions = cfnDemoFixture.reviewDefinitions.candidateDefinitions as unknown as FixtureDefinition[];
-  const candidates = definitions.map((definition, index) => candidateFromDefinition(definition, input, index));
+  const candidates = definitions.map((definition) => candidateFromDefinition(definition, input));
   return candidates;
 }
 
@@ -154,6 +197,12 @@ function canAccept(candidate: CaseCandidate): boolean {
 }
 function dependencySnapshot(candidate: CaseCandidate) { return candidate.dependencies.filter((dependency) => dependency.active).map((dependency) => dependency.id).sort(); }
 function decisionId(decisions: ReviewDecision[]) { return `REVIEW-${String(decisions.length + 1).padStart(4, "0")}`; }
+function previousDecisionId(decisions: ReviewDecision[], candidateId: string) {
+  for (let index = decisions.length - 1; index >= 0; index -= 1) {
+    if (decisions[index].candidateId === candidateId) return decisions[index].id;
+  }
+  return null;
+}
 
 function validateIntent(candidate: CaseCandidate, intent: ReviewIntent) {
   if (candidate.reviewRequirement === "derived_summary") throw new Error("Derived summaries cannot receive direct review actions.");
@@ -175,7 +224,7 @@ export function reviewCandidate(candidates: CaseCandidate[], intent: ReviewInten
   const currentText = action === "edit" ? intent.editedText : action === "accept_as_limitation" ? intent.limitationText : candidate.currentText;
   const updated: CaseCandidate = { ...candidate, revision: candidate.revision + 1, currentText, currentTextOrigin: action === "edit" || action === "accept_as_limitation" ? "human_created" : candidate.currentTextOrigin, assertionMode: action === "accept_as_limitation" && candidate.reviewStatus === "invalidated" ? "limitation" : candidate.assertionMode, reviewStatus: resultingStatus };
   const nextCandidates = [...candidates]; nextCandidates[index] = updated;
-  const decision: ReviewDecision = { id: decisionId(decisions), caseId: context.caseId ?? candidate.caseId, analysisRunId: context.analysisRunId ?? candidate.analysisRunId, candidateId: candidate.id, candidateRevision: updated.revision, action, previousStatus: candidate.reviewStatus, resultingStatus, editedText: action === "edit" ? intent.editedText : action === "accept_as_limitation" ? intent.limitationText : null, reason: "reason" in intent ? intent.reason : null, actor: context.actor ?? "current_practitioner", reviewerRole: "demo_evaluator", promptVersion: "1.0.0", rulesetVersion: "1.0.0", supersedesDecisionId: decisions.at(-1)?.candidateId === candidate.id ? decisions.at(-1)?.id ?? null : null, createdAt: context.now ?? "2026-07-16T00:00:00.000Z", dependencySnapshot: dependencySnapshot(candidate) };
+  const decision: ReviewDecision = { id: decisionId(decisions), caseId: context.caseId ?? candidate.caseId, analysisRunId: context.analysisRunId ?? candidate.analysisRunId, candidateId: candidate.id, candidateRevision: updated.revision, action, previousStatus: candidate.reviewStatus, resultingStatus, editedText: action === "edit" ? intent.editedText : action === "accept_as_limitation" ? intent.limitationText : null, reason: "reason" in intent ? intent.reason : null, actor: context.actor ?? "current_practitioner", reviewerRole: "demo_evaluator", promptVersion: "1.0.0", rulesetVersion: "1.0.0", supersedesDecisionId: previousDecisionId(decisions, candidate.id), createdAt: context.now ?? "2026-07-16T00:00:00.000Z", dependencySnapshot: dependencySnapshot(candidate) };
   return { candidates: recalculateDerivedSummaries(nextCandidates), decision };
 }
 
@@ -198,7 +247,7 @@ export function withdrawCandidate(candidates: CaseCandidate[], candidateId: stri
   const next = candidates.map((candidate) => ({ ...candidate }));
   next[index] = { ...target, revision: target.revision + 1, inclusionStatus: "withdrawn", reviewStatus: "invalidated", invalidatedAt: context.now ?? "2026-07-16T00:00:00.000Z", invalidationReason: "candidate_withdrawn" };
   const impacted = recalculateDependencyClosure(next, candidateId);
-  const decision: ReviewDecision = { id: decisionId(decisions), caseId: target.caseId, analysisRunId: target.analysisRunId, candidateId, candidateRevision: next[index].revision, action: "withdraw", previousStatus: target.reviewStatus, resultingStatus: "invalidated", editedText: null, reason, actor: context.actor ?? "current_practitioner", reviewerRole: "demo_evaluator", promptVersion: "1.0.0", rulesetVersion: "1.0.0", supersedesDecisionId: decisions.at(-1)?.candidateId === candidateId ? decisions.at(-1)?.id ?? null : null, createdAt: context.now ?? "2026-07-16T00:00:00.000Z", dependencySnapshot: dependencySnapshot(target) };
+  const decision: ReviewDecision = { id: decisionId(decisions), caseId: target.caseId, analysisRunId: target.analysisRunId, candidateId, candidateRevision: next[index].revision, action: "withdraw", previousStatus: target.reviewStatus, resultingStatus: "invalidated", editedText: null, reason, actor: context.actor ?? "current_practitioner", reviewerRole: "demo_evaluator", promptVersion: "1.0.0", rulesetVersion: "1.0.0", supersedesDecisionId: previousDecisionId(decisions, candidateId), createdAt: context.now ?? "2026-07-16T00:00:00.000Z", dependencySnapshot: dependencySnapshot(target) };
   const change: DependencyChange = { id: `DEPENDENCY-CHANGE-${decisions.length + 1}`, commandId: `withdraw-${candidateId}`, auditEventId: `AUDIT-${decisions.length + 1}`, changedEntityId: candidateId, reason: "candidate_withdrawn", impacts: impacted.map((item) => ({ candidateId: item.id, previousSupportStatus: item.before.supportStatus, resultingSupportStatus: item.after.supportStatus, previousReviewStatus: item.before.reviewStatus, resultingReviewStatus: item.after.reviewStatus, previousInclusionStatus: item.before.inclusionStatus, resultingInclusionStatus: item.after.inclusionStatus, explanation: `Dependency ${candidateId} was withdrawn.` })), preservedCandidateIds: next.filter((candidate) => !impacted.some((item) => item.id === candidate.id) && candidate.id !== candidateId).map((candidate) => candidate.id), exportReadinessRevoked: true, createdAt: context.now ?? "2026-07-16T00:00:00.000Z" };
   return { candidates: recalculateDerivedSummaries(next), decision, dependencyChange: change };
 }

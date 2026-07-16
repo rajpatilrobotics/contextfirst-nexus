@@ -349,7 +349,11 @@ function candidateBase({
   reviewRequirement = "individual",
   reviewLane,
   dependencies,
-  assertionMode = "positive_finding",
+  assertionMode = "positive_proposition",
+  itemOrigin = "ai_suggestion",
+  requiredHumanAction,
+  reviewQuestion = title,
+  unknowns = [],
 }) {
   return {
     id,
@@ -357,8 +361,8 @@ function candidateBase({
     title,
     text,
     currentText: text,
-    currentTextOrigin: "ai_suggestion",
-    itemOrigin: "ai_suggestion",
+    currentTextOrigin: itemOrigin,
+    itemOrigin,
     assertionMode,
     reviewRequirement,
     inclusionStatus: "active",
@@ -366,6 +370,9 @@ function candidateBase({
     reviewStatus: "pending",
     ...(reviewLane ? { reviewLane } : {}),
     dependencies,
+    requiredHumanAction,
+    reviewQuestion,
+    unknowns,
     safeShareRecipientCategories: ["legal_practitioner", "trained_supervisor"],
   };
 }
@@ -373,41 +380,32 @@ function candidateBase({
 function buildReviewDefinitions() {
   const timeline = [
     candidateBase({
-      id: "CAND-RECRUITMENT-OFFER",
+      id: "CAND-TL-ARRIVAL",
       kind: "timeline_event",
-      title: "Initial customer-support offer",
-      text: "Maya K. received an apparent customer-support offer before the later reported control period.",
+      title: "Documented arrival in J-02",
+      text: "Ticket records arrival in J-02 on 2025-03-12.",
       supportStatus: "exact_source_supported",
       reviewLane: "trafficking_indicators",
-      dependencies: [
-        sourceDependency("CAND-RECRUITMENT-OFFER", "D01-P1-S01"),
-        sourceDependency("CAND-RECRUITMENT-OFFER", "D01-P2-S02"),
-      ],
-      reviewRequirement: "fixture_specified",
+      dependencies: [sourceDependency("CAND-TL-ARRIVAL", "D03-P1-S02")],
+      assertionMode: "neutral_procedural_fact",
+      requiredHumanAction: "accept",
+      reviewQuestion: "What arrival in J-02 is documented by the ticket?",
+      unknowns: ["The relationship between arrival in J-02 and the later reported worksite arrival requires clarification."],
     }),
     candidateBase({
-      id: "CAND-PASSPORT-DEBT",
+      id: "CAND-CTRL-PASSPORT",
       kind: "timeline_event",
-      title: "Passport custody and travel debt",
-      text: "Messages describe passport custody and a travel debt tied to departure.",
+      title: "Reported worksite arrival and passport removal",
+      text: "Maya's passport was confiscated.",
       supportStatus: "partially_supported",
       reviewLane: "trafficking_indicators",
       dependencies: [
-        sourceDependency("CAND-PASSPORT-DEBT", "D02-P2-S02"),
-        sourceDependency("CAND-PASSPORT-DEBT", "D02-P2-S05"),
+        sourceDependency("CAND-CTRL-PASSPORT", "D04-P1-S03", "reported_or_alleged_in_source"),
+        sourceDependency("CAND-CTRL-PASSPORT", "D02-P2-S02"),
       ],
-    }),
-    candidateBase({
-      id: "CAND-REPORTED-CONTROL",
-      kind: "timeline_event",
-      title: "Reported locked exits and threats",
-      text: "Maya K. reports restricted movement, locked exits, and threats to a family member.",
-      supportStatus: "partially_supported",
-      reviewLane: "trafficking_indicators",
-      dependencies: [
-        sourceDependency("CAND-REPORTED-CONTROL", "D04-P2-S02", "reported_or_alleged_in_source"),
-        sourceDependency("CAND-REPORTED-CONTROL", "D04-P2-S05", "reported_or_alleged_in_source"),
-      ],
+      requiredHumanAction: "edit_to_preserve_reported_and_documented_sources",
+      reviewQuestion: "How should the reported worksite arrival and passport removal be distinguished from the separately documented passport-custody wording?",
+      unknowns: ["Passport removal is reported and is not independently confirmed by the recruiter message."],
     }),
     candidateBase({
       id: "CAND-TASK-0402",
@@ -417,26 +415,50 @@ function buildReviewDefinitions() {
       supportStatus: "exact_source_supported",
       reviewLane: "non_punishment_relevance",
       dependencies: [sourceDependency("CAND-TASK-0402", "D05-P1-S05")],
+      requiredHumanAction: "accept_then_withdraw_during_hero_interaction",
+      reviewQuestion: "What activity does the task log assign on 2025-04-02?",
+      unknowns: ["Task-log provenance remains unknown."],
+    }),
+  ];
+
+  const otherCandidates = [
+    candidateBase({
+      id: "CAND-CTRL-CONFINEMENT",
+      kind: "review_lane_item",
+      title: "Physical confinement not independently confirmed",
+      text: "Physical confinement is independently confirmed.",
+      supportStatus: "insufficient_evidence",
+      reviewLane: "trafficking_indicators",
+      dependencies: [sourceDependency("CAND-CTRL-CONFINEMENT", "D04-P2-S02", "reported_or_alleged_in_source")],
+      requiredHumanAction: "reject",
+      reviewQuestion: "Does the packet independently confirm physical confinement?",
+      unknowns: ["The packet contains a reported account but no independent confirmation of physical confinement."],
     }),
     candidateBase({
-      id: "CAND-ALLEGED-0402",
-      kind: "timeline_event",
-      title: "2025-04-02 alleged communication",
-      text: "The fictional proceeding notice references one alleged communication on 2025-04-02.",
-      supportStatus: "exact_source_supported",
+      id: "CAND-PROV-TASKLOG",
+      kind: "provenance_limitation",
+      title: "Task-log provenance unresolved",
+      text: "The task log is authenticated.",
+      supportStatus: "insufficient_evidence",
       reviewLane: "non_punishment_relevance",
-      dependencies: [sourceDependency("CAND-ALLEGED-0402", "D06-P1-S05", "reported_or_alleged_in_source")],
-      reviewRequirement: "fixture_specified",
+      dependencies: [sourceDependency("CAND-PROV-TASKLOG", "D05-META-01", "unknown")],
+      requiredHumanAction: "mark_uncertain",
+      reviewQuestion: "Is the task log authenticated?",
+      unknowns: ["Authenticity and authorship remain unresolved."],
     }),
     candidateBase({
-      id: "CAND-URG-HEARING",
-      kind: "timeline_event",
-      title: "Fictional hearing date",
-      text: "The fictional hearing date is 2025-04-18.",
+      id: "CAND-META-COOPERATION",
+      kind: "review_lane_item",
+      title: "Cooperation status unknown",
+      text: "Cooperation status is unknown.",
       supportStatus: "exact_source_supported",
       reviewLane: "protection_remedy_urgency",
-      dependencies: [sourceDependency("CAND-URG-HEARING", "D06-P2-S02")],
-      reviewRequirement: "fixture_specified",
+      dependencies: [sourceDependency("CAND-META-COOPERATION", "D04-P4-S04")],
+      assertionMode: "unknown_state",
+      itemOrigin: "source_extraction",
+      requiredHumanAction: "confirm_unknown_without_changing_analysis",
+      reviewQuestion: "What cooperation status is recorded?",
+      unknowns: ["Cooperation status remains unknown and must not affect evidence or Nexus analysis."],
     }),
   ];
 
@@ -444,28 +466,33 @@ function buildReviewDefinitions() {
     candidateBase({
       id: "CAND-SENDER-0402",
       kind: "context_gap",
-      title: "Sender authority unresolved",
-      text: "The identity and authority of the sender or task-log author for the 2025-04-02 entry remains unresolved.",
+      title: "Sender identity not established",
+      text: "Maya sent the specific communication alleged on 2025-04-02.",
       supportStatus: "insufficient_evidence",
       reviewLane: "non_punishment_relevance",
       dependencies: [
-        sourceDependency("CAND-SENDER-0402", "D05-META-01", "unknown"),
         sourceDependency("CAND-SENDER-0402", "D05-P1-S05"),
+        sourceDependency("CAND-SENDER-0402", "D06-P1-S05", "reported_or_alleged_in_source"),
       ],
-      assertionMode: "limitation",
+      requiredHumanAction: "reject",
+      reviewQuestion: "Do assignment and allegation records establish who sent the specific communication?",
+      unknowns: ["The sources show assignment and allegation, not sender proof."],
     }),
     candidateBase({
       id: "CAND-URG-INTERPRETER",
       kind: "context_gap",
       title: "Interpreter status unknown",
-      text: "Interpreter status is unknown or blank in the support and proceeding records.",
+      text: "Interpreter status is unknown for the 2025-04-18 hearing.",
       supportStatus: "exact_source_supported",
       reviewLane: "protection_remedy_urgency",
       dependencies: [
         sourceDependency("CAND-URG-INTERPRETER", "D06-P2-S04"),
         sourceDependency("CAND-URG-INTERPRETER", "D07-P1-S05"),
       ],
-      assertionMode: "limitation",
+      assertionMode: "unknown_state",
+      requiredHumanAction: "confirm_unknown",
+      reviewQuestion: "Is an interpreter confirmed for the 2025-04-18 hearing?",
+      unknowns: ["Interpreter provision remains unknown."],
     }),
   ];
 
@@ -481,7 +508,8 @@ function buildReviewDefinitions() {
         sourceDependency("NEXUS-RECRUITMENT", "D01-P2-S02"),
         sourceDependency("NEXUS-RECRUITMENT", "D02-P1-S04"),
       ],
-      reviewRequirement: "fixture_specified",
+      reviewRequirement: "optional",
+      reviewQuestion: "Did represented work and travel conditions materially change?",
     }),
     candidateBase({
       id: "NEXUS-MOVEMENT",
@@ -493,7 +521,9 @@ function buildReviewDefinitions() {
         sourceDependency("NEXUS-MOVEMENT", "D03-P1-S02"),
         sourceDependency("NEXUS-MOVEMENT", "D03-P2-S01"),
       ],
-      reviewRequirement: "fixture_specified",
+      reviewRequirement: "optional",
+      assertionMode: "neutral_procedural_fact",
+      reviewQuestion: "What movement and onward transfer are documented?",
     }),
     candidateBase({
       id: "NEXUS-CONTROL",
@@ -502,10 +532,17 @@ function buildReviewDefinitions() {
       text: "Source records and reported account describe document, debt, threat, or movement-control indicators for review.",
       supportStatus: "partially_supported",
       dependencies: [
-        candidateDependency("NEXUS-CONTROL", "CAND-PASSPORT-DEBT"),
-        candidateDependency("NEXUS-CONTROL", "CAND-REPORTED-CONTROL"),
+        sourceDependency("NEXUS-CONTROL", "D02-P2-S02"),
+        sourceDependency("NEXUS-CONTROL", "D02-P2-S05"),
+        sourceDependency("NEXUS-CONTROL", "D02-P3-S03"),
+        sourceDependency("NEXUS-CONTROL", "D04-P1-S03", "reported_or_alleged_in_source"),
+        sourceDependency("NEXUS-CONTROL", "D04-P2-S02", "reported_or_alleged_in_source"),
+        sourceDependency("NEXUS-CONTROL", "D04-P2-S05", "reported_or_alleged_in_source"),
+        candidateDependency("NEXUS-CONTROL", "CAND-CTRL-PASSPORT"),
+        candidateDependency("NEXUS-CONTROL", "CAND-CTRL-CONFINEMENT"),
       ],
       reviewRequirement: "derived_summary",
+      reviewQuestion: "What document, debt, threat, or movement control is documented or reported?",
     }),
     candidateBase({
       id: "NEXUS-COMPELLED-TASKS",
@@ -516,9 +553,11 @@ function buildReviewDefinitions() {
       dependencies: [
         sourceDependency("NEXUS-COMPELLED-TASKS", "D04-P2-S07", "reported_or_alleged_in_source"),
         sourceDependency("NEXUS-COMPELLED-TASKS", "D05-P1-S02"),
+        sourceDependency("NEXUS-COMPELLED-TASKS", "D05-P1-S05"),
         candidateDependency("NEXUS-COMPELLED-TASKS", "CAND-TASK-0402"),
         sourceDependency("NEXUS-COMPELLED-TASKS", "D05-P2-S03"),
       ],
+      reviewQuestion: "What deceptive-message activity and penalties are assigned or reported?",
     }),
     candidateBase({
       id: "NEXUS-OFFENCE-TIMING",
@@ -532,6 +571,7 @@ function buildReviewDefinitions() {
         nexusDependency("NEXUS-OFFENCE-TIMING", "NEXUS-CONTROL"),
         nexusDependency("NEXUS-OFFENCE-TIMING", "NEXUS-COMPELLED-TASKS"),
       ],
+      reviewQuestion: "What source-supported relationship exists between the 2025-04-02 allegation and possible control or assigned work at that time?",
     }),
     candidateBase({
       id: "NEXUS-URGENCY",
@@ -540,25 +580,79 @@ function buildReviewDefinitions() {
       text: "Hearing, counsel, and interpreter records create urgent procedural review questions.",
       supportStatus: "exact_source_supported",
       dependencies: [
-        candidateDependency("NEXUS-URGENCY", "CAND-URG-HEARING"),
-        candidateDependency("NEXUS-URGENCY", "CAND-URG-INTERPRETER"),
+        sourceDependency("NEXUS-URGENCY", "D06-P2-S02"),
+        sourceDependency("NEXUS-URGENCY", "D06-P2-S04"),
+        sourceDependency("NEXUS-URGENCY", "D07-P1-S02"),
         sourceDependency("NEXUS-URGENCY", "D07-P1-S04"),
+        sourceDependency("NEXUS-URGENCY", "D07-P1-S05"),
+        candidateDependency("NEXUS-URGENCY", "CAND-URG-INTERPRETER"),
       ],
       reviewRequirement: "derived_summary",
+      assertionMode: "gap",
+      reviewQuestion: "What procedural or protection questions need urgent review?",
     }),
   ];
+
+  const allCandidates = [...timeline, ...otherCandidates, ...contextGaps, ...nexus];
+  const canonicalCandidateIds = [
+    "CAND-TL-ARRIVAL",
+    "CAND-CTRL-PASSPORT",
+    "CAND-CTRL-CONFINEMENT",
+    "CAND-PROV-TASKLOG",
+    "CAND-TASK-0402",
+    "CAND-SENDER-0402",
+    "CAND-URG-INTERPRETER",
+    "CAND-META-COOPERATION",
+    "NEXUS-RECRUITMENT",
+    "NEXUS-MOVEMENT",
+    "NEXUS-CONTROL",
+    "NEXUS-COMPELLED-TASKS",
+    "NEXUS-OFFENCE-TIMING",
+    "NEXUS-URGENCY",
+  ];
+  const candidateDefinitions = canonicalCandidateIds.map((candidateId) => {
+    const candidate = allCandidates.find((item) => item.id === candidateId);
+    if (!candidate) throw new Error(`Missing canonical candidate definition: ${candidateId}`);
+    return candidate;
+  });
 
   return {
     schemaVersion: VERSION,
     caseId: CASE_ID,
     fixtureVersion: VERSION,
-    candidateDefinitions: [...timeline, ...contextGaps, ...nexus],
-    timelineDefinitions: timeline.map((candidate) => ({
-      candidateId: candidate.id,
-      date: candidate.id === "CAND-TASK-0402" || candidate.id === "CAND-ALLEGED-0402" ? "2025-04-02" : "2025-03-14",
-      datePrecision: "day",
-      qualification: candidate.text,
-    })),
+    candidateDefinitions,
+    timelineDefinitions: [
+      {
+        candidateId: "CAND-TL-ARRIVAL",
+        dateStart: "2025-03-12",
+        datePrecision: "day",
+        dateAlternatives: [],
+        qualification: "Documented ticket arrival in J-02; this is distinct from the later reported worksite arrival.",
+        locationLabel: "Jurisdiction J-02",
+        actorLabels: ["Maya K."],
+        conflictGroupId: null,
+      },
+      {
+        candidateId: "CAND-CTRL-PASSPORT",
+        dateStart: "2025-03-15",
+        datePrecision: "approximate",
+        dateAlternatives: [],
+        qualification: "Reported worksite arrival around 2025-03-15; this is a clarification question, not an automatic contradiction with the D03 arrival.",
+        locationLabel: "Reported worksite",
+        actorLabels: ["Maya K."],
+        conflictGroupId: null,
+      },
+      {
+        candidateId: "CAND-TASK-0402",
+        dateStart: "2025-04-02",
+        datePrecision: "day",
+        dateAlternatives: [],
+        qualification: "Documented task-log assignment; provenance remains unresolved and assignment does not prove sender identity.",
+        locationLabel: null,
+        actorLabels: [],
+        conflictGroupId: null,
+      },
+    ],
     nexusDependencyDefinitions: nexus.map((candidate) => ({
       nexusCandidateId: candidate.id,
       reviewRequirement: candidate.reviewRequirement,
@@ -568,17 +662,17 @@ function buildReviewDefinitions() {
       {
         lane: "trafficking_indicators",
         label: "Trafficking indicators for review",
-        candidateIds: ["CAND-RECRUITMENT-OFFER", "CAND-PASSPORT-DEBT", "CAND-REPORTED-CONTROL", "NEXUS-RECRUITMENT", "NEXUS-MOVEMENT", "NEXUS-CONTROL"],
+        candidateIds: ["CAND-TL-ARRIVAL", "CAND-CTRL-PASSPORT", "CAND-CTRL-CONFINEMENT", "NEXUS-RECRUITMENT", "NEXUS-MOVEMENT", "NEXUS-CONTROL"],
       },
       {
         lane: "non_punishment_relevance",
         label: "Non-punishment relevance for review",
-        candidateIds: ["CAND-TASK-0402", "CAND-ALLEGED-0402", "CAND-SENDER-0402", "NEXUS-COMPELLED-TASKS", "NEXUS-OFFENCE-TIMING"],
+        candidateIds: ["CAND-PROV-TASKLOG", "CAND-TASK-0402", "CAND-SENDER-0402", "NEXUS-COMPELLED-TASKS", "NEXUS-OFFENCE-TIMING"],
       },
       {
         lane: "protection_remedy_urgency",
         label: "Protection, remedy, and procedural urgency",
-        candidateIds: ["CAND-URG-HEARING", "CAND-URG-INTERPRETER", "NEXUS-URGENCY"],
+        candidateIds: ["CAND-URG-INTERPRETER", "CAND-META-COOPERATION", "NEXUS-URGENCY"],
       },
     ],
     contextGapDefinitions: contextGaps,
@@ -601,6 +695,8 @@ function buildReviewDefinitions() {
           action: "accept_CAND-TASK-0402",
           states: {
             "CAND-TASK-0402": { supportStatus: "exact_source_supported", reviewStatus: "human_accepted" },
+            "NEXUS-COMPELLED-TASKS": { supportStatus: "partially_supported", reviewStatus: "human_accepted" },
+            "NEXUS-OFFENCE-TIMING": { supportStatus: "partially_supported", reviewStatus: "human_accepted" },
           },
         },
         {
@@ -617,6 +713,7 @@ function buildReviewDefinitions() {
           step: 3,
           action: "renew_nexus_review",
           states: {
+            "CAND-TASK-0402": { supportStatus: "exact_source_supported", reviewStatus: "invalidated", inclusionStatus: "withdrawn" },
             "NEXUS-COMPELLED-TASKS": { supportStatus: "partially_supported", reviewStatus: "human_accepted" },
             "NEXUS-OFFENCE-TIMING": { supportStatus: "insufficient_evidence", reviewStatus: "human_edited", assertionMode: "limitation" },
           },
@@ -876,7 +973,16 @@ function buildFixture() {
 
 async function main() {
   const check = process.argv.includes("--check");
+  const caseOnly = process.argv.includes("--case-only");
+  if (check && caseOnly) {
+    throw new Error("Use either --check or --case-only, not both.");
+  }
   const { fixture, approvedProjection } = buildFixture();
+  if (caseOnly) {
+    writeJson(join(ROOT, "fixtures/cases/cfn-demo-001.json"), fixture, false);
+    console.log(`CFN-DEMO-001 canonicalFixtureDigest=${fixture.canonicalFixtureDigest}`);
+    return;
+  }
   const guidancePack = buildGuidancePack();
   const evaluationDefinitions = buildEvaluationDefinitions(fixture.approvedRedactedInputDigest, fixture.canonicalFixtureDigest);
   const manifest = {

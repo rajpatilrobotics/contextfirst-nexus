@@ -10,6 +10,8 @@ import {
   type ProcessingStage,
   type ReplayBundle,
   type ReplayRequest,
+  type ReviewDecision,
+  type ReviewIntent,
   type RunInputStateProvenance,
   type SourceSegment,
 } from "../contracts";
@@ -25,6 +27,36 @@ const VERSION = "1.0.0" as const;
 const NOW = "2026-07-16T00:00:00.000Z" as const;
 const REPLAY_RUN_ID = "RUN-CFN-DEMO-001-REPLAY" as const;
 const CHECKPOINT_RUN_ID = "RUN-CFN-DEMO-001-CHECKPOINT" as const;
+
+export const CANONICAL_REVIEW_CANDIDATE_IDS = [
+  "CAND-TL-ARRIVAL",
+  "CAND-CTRL-PASSPORT",
+  "CAND-CTRL-CONFINEMENT",
+  "CAND-PROV-TASKLOG",
+  "CAND-TASK-0402",
+  "CAND-SENDER-0402",
+  "CAND-URG-INTERPRETER",
+  "CAND-META-COOPERATION",
+  "NEXUS-RECRUITMENT",
+  "NEXUS-MOVEMENT",
+  "NEXUS-CONTROL",
+  "NEXUS-COMPELLED-TASKS",
+  "NEXUS-OFFENCE-TIMING",
+  "NEXUS-URGENCY",
+] as const;
+
+const CHECKPOINT_SEED_INTENTS: ReviewIntent[] = [
+  { candidateId: "CAND-TL-ARRIVAL", action: "accept", reason: null },
+  {
+    candidateId: "CAND-PROV-TASKLOG",
+    action: "mark_uncertain",
+    reason: "Task-log provenance remains unknown.",
+  },
+  { candidateId: "CAND-META-COOPERATION", action: "confirm_unknown", reason: null },
+  { candidateId: "CAND-TASK-0402", action: "accept", reason: null },
+  { candidateId: "NEXUS-COMPELLED-TASKS", action: "accept", reason: null },
+  { candidateId: "NEXUS-OFFENCE-TIMING", action: "accept", reason: null },
+];
 
 export type ReplayValidationResult =
   | { ok: true; bundle: ReplayBundle }
@@ -149,6 +181,186 @@ function citationsFor(candidates: CaseCandidate[], runId: string): Citation[] {
   }
 
   return [...byId.values()].sort((left, right) => left.id.localeCompare(right.id));
+}
+
+function applyCheckpointDecisions(baseCandidates: CaseCandidate[]) {
+  let candidates = baseCandidates;
+  const decisions: ReviewDecision[] = [];
+
+  for (const intent of CHECKPOINT_SEED_INTENTS) {
+    const reviewed = reviewCandidate(candidates, intent, decisions, {
+      actor: "fixture_reviewer",
+      analysisRunId: CHECKPOINT_RUN_ID,
+      now: NOW,
+    });
+    candidates = reviewed.candidates;
+    decisions.push(reviewed.decision);
+  }
+
+  return { candidates, decisions };
+}
+
+function checkpointPostDecisionHashProjection(
+  candidates: CaseCandidate[],
+  citations: Citation[],
+  decisions: ReviewDecision[],
+) {
+  return {
+    schemaVersion: VERSION,
+    checkpointId: TRUSTED_DEMO_CHECKPOINT_ID,
+    candidateOutcomes: [...candidates]
+      .sort((left, right) => left.id.localeCompare(right.id))
+      .map((candidate) => ({
+        id: candidate.id,
+        revision: candidate.revision,
+        kind: candidate.kind,
+        lane: candidate.lane ?? null,
+        title: candidate.title,
+        proposedText: candidate.proposedText,
+        currentText: candidate.currentText,
+        currentTextOrigin: candidate.currentTextOrigin,
+        itemOrigin: candidate.itemOrigin,
+        assertionMode: candidate.assertionMode,
+        reviewRequirement: candidate.reviewRequirement,
+        supportStatus: candidate.supportStatus,
+        reviewStatus: candidate.reviewStatus,
+        inclusionStatus: candidate.inclusionStatus,
+        relatedCoverageIssueIds: [...candidate.relatedCoverageIssueIds].sort(),
+        unknowns: [...candidate.unknowns].sort(),
+        reviewQuestion: candidate.reviewQuestion,
+        consequential: candidate.consequential,
+        prohibitedConclusionCheck: candidate.prohibitedConclusionCheck,
+        invalidationReason: candidate.invalidationReason ?? null,
+        timelineOutcome:
+          candidate.kind === "timeline_event"
+            ? {
+                dateStart: candidate.dateStart ?? null,
+                dateEnd: candidate.dateEnd ?? null,
+                datePrecision: candidate.datePrecision,
+                dateAlternatives: candidate.dateAlternatives.map((alternative) => ({
+                  start: alternative.start ?? null,
+                  end: alternative.end ?? null,
+                  label: alternative.label,
+                })),
+                locationLabel: candidate.locationLabel ?? null,
+                actorLabels: [...candidate.actorLabels].sort(),
+                conflictGroupId: candidate.conflictGroupId ?? null,
+              }
+            : null,
+        nexusOutcome:
+          candidate.kind === "nexus_relationship"
+            ? {
+                category: candidate.category,
+                requiredDependencyIds: [...candidate.requiredDependencyIds].sort(),
+                childCandidateIds: [...candidate.childCandidateIds].sort(),
+                relationshipSummary: candidate.relationshipSummary,
+              }
+            : null,
+        contextGapOutcome:
+          candidate.kind === "context_gap"
+            ? {
+                response: candidate.response,
+                responseStatus: candidate.responseStatus,
+                responseEvidenceNature: candidate.responseEvidenceNature,
+                responseExplanation: candidate.responseExplanation,
+              }
+            : null,
+        dependencyOutcomes: [...candidate.dependencies].sort((left, right) => left.id.localeCompare(right.id)),
+      })),
+    citationOutcomes: [...citations]
+      .sort((left, right) => left.id.localeCompare(right.id))
+      .map((citation) => ({
+        id: citation.id,
+        documentId: citation.documentId,
+        pageNumber: citation.pageNumber ?? null,
+        segmentId: citation.segmentId,
+        quotedText: citation.quotedText,
+        normalizedQuotedText: citation.normalizedQuotedText,
+        quoteForm: citation.quoteForm,
+        redactionMapVersion: citation.redactionMapVersion,
+        sourceLanguage: citation.sourceLanguage,
+        translationStatus: citation.translationStatus,
+        extractionQuality: citation.extractionQuality,
+        validationStatus: citation.validationStatus,
+        redactedSegmentRange: citation.redactedSegmentRange,
+        sourceSegmentRange: citation.sourceSegmentRange,
+        boundingBoxes: citation.boundingBoxes,
+        resolutionMethod: citation.resolutionMethod,
+        resolvedBy: citation.resolvedBy,
+      })),
+    appliedSeededDecisionOutcomes: decisions.map((decision, ordinal) => ({
+      ordinal,
+      id: decision.id,
+      candidateId: decision.candidateId,
+      candidateRevision: decision.candidateRevision,
+      action: decision.action,
+      previousStatus: decision.previousStatus,
+      resultingStatus: decision.resultingStatus,
+      editedText: decision.editedText,
+      reason: decision.reason,
+      actor: decision.actor,
+      reviewerRole: decision.reviewerRole,
+      promptVersion: decision.promptVersion,
+      rulesetVersion: decision.rulesetVersion,
+      supersedesDecisionId: decision.supersedesDecisionId,
+      dependencySnapshot: [...decision.dependencySnapshot].sort(),
+    })),
+  };
+}
+
+function hasExactCandidateMembership(candidates: CaseCandidate[]) {
+  const actual = candidates.map((candidate) => candidate.id).sort();
+  const expected = [...CANONICAL_REVIEW_CANDIDATE_IDS].sort();
+  return actual.length === expected.length && actual.every((id, index) => id === expected[index]);
+}
+
+function validateRunOwnershipAndDependencies(
+  candidates: CaseCandidate[],
+  citations: Citation[],
+  runId: string,
+): string | null {
+  if (candidates.some((candidate) => candidate.caseId !== "CFN-DEMO-001" || candidate.analysisRunId !== runId)) {
+    return "candidate_run_owner_mismatch";
+  }
+  if (citations.some((citation) => citation.caseId !== "CFN-DEMO-001" || citation.analysisRunId !== runId)) {
+    return "citation_run_owner_mismatch";
+  }
+
+  const candidateById = new Map(candidates.map((candidate) => [candidate.id, candidate]));
+  const citationById = new Map(citations.map((citation) => [citation.id, citation]));
+  const referencedCitationIds = new Set<string>();
+
+  for (const candidate of candidates) {
+    for (const dependency of candidate.dependencies) {
+      if (dependency.kind === "source") {
+        const citation = citationById.get(dependency.citationId);
+        if (!citation || citation.segmentId !== dependency.sourceSegmentId) return "source_dependency_mismatch";
+        referencedCitationIds.add(dependency.citationId);
+      } else if (dependency.kind === "candidate") {
+        const target = candidateById.get(dependency.candidateId);
+        if (!target || target.kind === "nexus_relationship") return "candidate_dependency_mismatch";
+      } else {
+        const target = candidateById.get(dependency.nexusCandidateId);
+        if (!target || target.kind !== "nexus_relationship") return "nexus_dependency_mismatch";
+      }
+    }
+  }
+
+  if (referencedCitationIds.size !== citations.length) return "unowned_citation";
+  return null;
+}
+
+function hasExpectedCheckpointDecisionSequence(decisions: ReviewDecision[]) {
+  if (decisions.length !== CHECKPOINT_SEED_INTENTS.length) return false;
+  return decisions.every((decision, index) => {
+    const expected = CHECKPOINT_SEED_INTENTS[index];
+    return (
+      decision.id === `REVIEW-${String(index + 1).padStart(4, "0")}` &&
+      decision.candidateId === expected.candidateId &&
+      decision.action === expected.action &&
+      decision.actor === "fixture_reviewer"
+    );
+  });
 }
 
 function completedProcessing(): ProcessingStage[] {
@@ -297,13 +509,7 @@ export function createTrustedCheckpointBundle(): DemoCheckpointBundle {
   const masking = trustedApprovedMasking("fixture_reviewer");
   const inputState = createReplayInputState(0, purposeBrief, masking);
   const baseCandidates = assembleCandidates({ analysisRunId: CHECKPOINT_RUN_ID, now: NOW });
-  const reviewed = reviewCandidate(
-    baseCandidates,
-    { candidateId: "CAND-TASK-0402", action: "reject", reason: "Fixture checkpoint marks this as needing renewed review." },
-    [],
-    { actor: "fixture_reviewer", analysisRunId: CHECKPOINT_RUN_ID, now: NOW },
-  );
-  const candidates = reviewed.candidates;
+  const { candidates, decisions } = applyCheckpointDecisions(baseCandidates);
   const citations = citationsFor(candidates, CHECKPOINT_RUN_ID);
   const run = makeRun(
     CHECKPOINT_RUN_ID,
@@ -312,27 +518,7 @@ export function createTrustedCheckpointBundle(): DemoCheckpointBundle {
     true,
     null,
   );
-  const postDecisionHashProjection = {
-    schemaVersion: VERSION,
-    checkpointId: TRUSTED_DEMO_CHECKPOINT_ID,
-    candidateOutcomes: candidates.map((candidate) => ({
-      id: candidate.id,
-      reviewStatus: candidate.reviewStatus,
-      supportStatus: candidate.supportStatus,
-      inclusionStatus: candidate.inclusionStatus,
-    })),
-    citationOutcomes: citations.map((citation) => ({
-      id: citation.id,
-      validationStatus: citation.validationStatus,
-      segmentId: citation.segmentId,
-    })),
-    appliedSeededDecisionOutcomes: [reviewed.decision].map((decision) => ({
-      id: decision.id,
-      candidateId: decision.candidateId,
-      action: decision.action,
-      actor: decision.actor,
-    })),
-  };
+  const postDecisionHashProjection = checkpointPostDecisionHashProjection(candidates, citations, decisions);
 
   return DemoCheckpointBundleSchema.parse({
     schemaVersion: VERSION,
@@ -361,12 +547,12 @@ export function createTrustedCheckpointBundle(): DemoCheckpointBundle {
     replayReleaseConfigurationId: "prepared-replay-v1",
     candidates,
     citations,
-    seededDecisions: [reviewed.decision],
+    seededDecisions: decisions,
     counts: {
       analysisRunCount: 1,
       candidateCount: candidates.length,
       citationCount: citations.length,
-      seededDecisionCount: 1,
+      seededDecisionCount: decisions.length,
       documentCount: cfnDemoFixture.documents.length,
       segmentCount: cfnDemoFixture.segments.length,
       processingStageCount: completedProcessing().length,
@@ -377,7 +563,7 @@ export function createTrustedCheckpointBundle(): DemoCheckpointBundle {
     providerTransmission: false,
     notModelOutput: true,
     seededDecisionActor: "fixture_reviewer",
-    seededDecisionIds: [reviewed.decision.id],
+    seededDecisionIds: decisions.map((decision) => decision.id),
   });
 }
 
@@ -415,11 +601,14 @@ export function validateReplayBundle(bundle: ReplayBundle): ReplayValidationResu
   if (value.canonicalFixtureDigest !== cfnDemoFixture.canonicalFixtureDigest) return { ok: false, reason: "fixture_digest_mismatch" };
   if (value.approvedRedactedInputDigest !== cfnDemoFixture.approvedRedactedInputDigest) return { ok: false, reason: "redacted_input_digest_mismatch" };
   if (value.selectedSegmentIds.join("|") !== cfnDemoFixture.selectedSegmentIds.join("|")) return { ok: false, reason: "selected_segments_mismatch" };
+  if (!hasExactCandidateMembership(value.candidates)) return { ok: false, reason: "candidate_membership_mismatch" };
+  if (value.counts.analysisRunCount !== 1 || value.candidates.length !== 14) return { ok: false, reason: "candidate_count_mismatch" };
   if (value.counts.candidateCount !== value.candidates.length || value.replayRun.candidateCount !== value.candidates.length) return { ok: false, reason: "candidate_count_mismatch" };
+  if (value.citations.length !== 23) return { ok: false, reason: "citation_count_mismatch" };
   if (value.counts.citationCount !== value.citations.length || value.replayRun.citationCount !== value.citations.length) return { ok: false, reason: "citation_count_mismatch" };
-  if (value.replayRun.quarantinedCount !== 0 || value.counts.seededDecisionCount !== 0) return { ok: false, reason: "unexpected_replay_payload" };
-  if (value.candidates.some((candidate) => candidate.analysisRunId !== value.replayRun.id)) return { ok: false, reason: "candidate_run_owner_mismatch" };
-  if (value.citations.some((citation) => citation.analysisRunId !== value.replayRun.id)) return { ok: false, reason: "citation_run_owner_mismatch" };
+  if (value.replayRun.quarantinedCount !== 0 || value.counts.seededDecisionCount !== 0 || value.seededDecisions.length !== 0) return { ok: false, reason: "unexpected_replay_payload" };
+  const ownershipFailure = validateRunOwnershipAndDependencies(value.candidates, value.citations, value.replayRun.id);
+  if (ownershipFailure) return { ok: false, reason: ownershipFailure };
   return { ok: true, bundle: value };
 }
 
@@ -428,36 +617,34 @@ export function validateCheckpointBundle(bundle: DemoCheckpointBundle): Checkpoi
   if (!parsed.success) return { ok: false, reason: "schema_invalid" };
   const value = parsed.data;
   if (value.canonicalFixtureDigest !== cfnDemoFixture.canonicalFixtureDigest) return { ok: false, reason: "fixture_digest_mismatch" };
+  if (value.approvedRedactedInputDigest !== cfnDemoFixture.approvedRedactedInputDigest) return { ok: false, reason: "redacted_input_digest_mismatch" };
+  if (value.selectedSegmentIds.join("|") !== cfnDemoFixture.selectedSegmentIds.join("|")) return { ok: false, reason: "selected_segments_mismatch" };
   if (value.counts.documentCount !== value.documents.length) return { ok: false, reason: "document_count_mismatch" };
   if (value.counts.segmentCount !== value.segments.length) return { ok: false, reason: "segment_count_mismatch" };
+  if (value.counts.processingStageCount !== value.processing.length) return { ok: false, reason: "processing_count_mismatch" };
+  if (!hasExactCandidateMembership(value.candidates)) return { ok: false, reason: "candidate_membership_mismatch" };
+  if (value.counts.analysisRunCount !== 1 || value.candidates.length !== 14) return { ok: false, reason: "candidate_count_mismatch" };
   if (value.counts.candidateCount !== value.candidates.length || value.replayRun.candidateCount !== value.candidates.length) return { ok: false, reason: "candidate_count_mismatch" };
+  if (value.citations.length !== 23) return { ok: false, reason: "citation_count_mismatch" };
   if (value.counts.citationCount !== value.citations.length || value.replayRun.citationCount !== value.citations.length) return { ok: false, reason: "citation_count_mismatch" };
-  if (value.seededDecisions.some((decision) => decision.actor !== "fixture_reviewer")) return { ok: false, reason: "seed_actor_mismatch" };
+  if (value.counts.seededDecisionCount !== 6 || value.seededDecisions.length !== 6) return { ok: false, reason: "seed_count_mismatch" };
+  if (!hasExpectedCheckpointDecisionSequence(value.seededDecisions)) return { ok: false, reason: "seed_sequence_mismatch" };
+  if (value.seededDecisionIds.join("|") !== value.seededDecisions.map((decision) => decision.id).join("|")) return { ok: false, reason: "seed_id_mismatch" };
+  if (value.seededDecisionActor !== "fixture_reviewer") return { ok: false, reason: "seed_actor_mismatch" };
+  const ownershipFailure = validateRunOwnershipAndDependencies(value.candidates, value.citations, value.replayRun.id);
+  if (ownershipFailure) return { ok: false, reason: ownershipFailure };
+  for (const decision of value.seededDecisions) {
+    const candidate = value.candidates.find((item) => item.id === decision.candidateId);
+    if (!candidate || candidate.revision !== decision.candidateRevision || candidate.reviewStatus !== decision.resultingStatus) {
+      return { ok: false, reason: "seed_outcome_mismatch" };
+    }
+  }
   if (value.coverageReviews.length !== 0 || value.coverage.issues.some((issue) => issue.coverageReviewDecisionId !== null)) return { ok: false, reason: "coverage_review_mismatch" };
-  const projection = {
-    schemaVersion: VERSION,
-    checkpointId: TRUSTED_DEMO_CHECKPOINT_ID,
-    candidateOutcomes: value.candidates.map((candidate) => ({
-      id: candidate.id,
-      reviewStatus: candidate.reviewStatus,
-      supportStatus: candidate.supportStatus,
-      inclusionStatus: candidate.inclusionStatus,
-    })),
-    citationOutcomes: value.citations.map((citation) => ({
-      id: citation.id,
-      validationStatus: citation.validationStatus,
-      segmentId: citation.segmentId,
-    })),
-    appliedSeededDecisionOutcomes: value.seededDecisions.map((decision) => ({
-      id: decision.id,
-      candidateId: decision.candidateId,
-      action: decision.action,
-      actor: decision.actor,
-    })),
-  };
+  const projection = checkpointPostDecisionHashProjection(value.candidates, value.citations, value.seededDecisions);
   if (sha256Hex(projection) !== value.expectedPostDecisionStateHash) return { ok: false, reason: "post_decision_hash_mismatch" };
-  if (value.purposeBrief.providerSelection.providerId !== "local_replay") return { ok: false, reason: "checkpoint_not_replay_acknowledged" };
-  if (value.masking.reviewedBy !== "fixture_reviewer" || value.masking.leakScanStatus !== "passed") return { ok: false, reason: "checkpoint_masking_mismatch" };
+  if (value.purposeBrief.status !== "complete" || value.purposeBrief.providerSelection.providerId !== "local_replay") return { ok: false, reason: "checkpoint_not_replay_acknowledged" };
+  if (value.masking.reviewStatus !== "approved" || value.masking.reviewedBy !== "fixture_reviewer" || value.masking.leakScanStatus !== "passed") return { ok: false, reason: "checkpoint_masking_mismatch" };
+  if (value.visibleLabel !== "Prepared synthetic review checkpoint" || value.replayVisibleLabel !== "Bundled deterministic replay, not live AI") return { ok: false, reason: "checkpoint_label_mismatch" };
   if (bundledGuidancePack.identity.version !== VERSION) return { ok: false, reason: "guidance_version_mismatch" };
   return { ok: true, bundle: value };
 }

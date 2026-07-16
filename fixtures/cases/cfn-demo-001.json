@@ -1015,34 +1015,32 @@
     "fixtureVersion": "1.0.0",
     "candidateDefinitions": [
       {
-        "id": "CAND-RECRUITMENT-OFFER",
+        "id": "CAND-TL-ARRIVAL",
         "kind": "timeline_event",
-        "title": "Initial customer-support offer",
-        "text": "Maya K. received an apparent customer-support offer before the later reported control period.",
-        "currentText": "Maya K. received an apparent customer-support offer before the later reported control period.",
+        "title": "Documented arrival in J-02",
+        "text": "Ticket records arrival in J-02 on 2025-03-12.",
+        "currentText": "Ticket records arrival in J-02 on 2025-03-12.",
         "currentTextOrigin": "ai_suggestion",
         "itemOrigin": "ai_suggestion",
-        "assertionMode": "positive_finding",
-        "reviewRequirement": "fixture_specified",
+        "assertionMode": "neutral_procedural_fact",
+        "reviewRequirement": "individual",
         "inclusionStatus": "active",
         "supportStatus": "exact_source_supported",
         "reviewStatus": "pending",
         "reviewLane": "trafficking_indicators",
         "dependencies": [
           {
-            "dependencyId": "DEP-CAND-RECRUITMENT-OFFER-D01-P1-S01",
+            "dependencyId": "DEP-CAND-TL-ARRIVAL-D03-P1-S02",
             "kind": "source",
-            "segmentId": "D01-P1-S01",
-            "relationship": "supports",
-            "evidenceNature": "documented_in_source"
-          },
-          {
-            "dependencyId": "DEP-CAND-RECRUITMENT-OFFER-D01-P2-S02",
-            "kind": "source",
-            "segmentId": "D01-P2-S02",
+            "segmentId": "D03-P1-S02",
             "relationship": "supports",
             "evidenceNature": "documented_in_source"
           }
+        ],
+        "requiredHumanAction": "accept",
+        "reviewQuestion": "What arrival in J-02 is documented by the ticket?",
+        "unknowns": [
+          "The relationship between arrival in J-02 and the later reported worksite arrival requires clarification."
         ],
         "safeShareRecipientCategories": [
           "legal_practitioner",
@@ -1050,14 +1048,14 @@
         ]
       },
       {
-        "id": "CAND-PASSPORT-DEBT",
+        "id": "CAND-CTRL-PASSPORT",
         "kind": "timeline_event",
-        "title": "Passport custody and travel debt",
-        "text": "Messages describe passport custody and a travel debt tied to departure.",
-        "currentText": "Messages describe passport custody and a travel debt tied to departure.",
+        "title": "Reported worksite arrival and passport removal",
+        "text": "Maya's passport was confiscated.",
+        "currentText": "Maya's passport was confiscated.",
         "currentTextOrigin": "ai_suggestion",
         "itemOrigin": "ai_suggestion",
-        "assertionMode": "positive_finding",
+        "assertionMode": "positive_proposition",
         "reviewRequirement": "individual",
         "inclusionStatus": "active",
         "supportStatus": "partially_supported",
@@ -1065,19 +1063,24 @@
         "reviewLane": "trafficking_indicators",
         "dependencies": [
           {
-            "dependencyId": "DEP-CAND-PASSPORT-DEBT-D02-P2-S02",
+            "dependencyId": "DEP-CAND-CTRL-PASSPORT-D04-P1-S03",
+            "kind": "source",
+            "segmentId": "D04-P1-S03",
+            "relationship": "supports",
+            "evidenceNature": "reported_or_alleged_in_source"
+          },
+          {
+            "dependencyId": "DEP-CAND-CTRL-PASSPORT-D02-P2-S02",
             "kind": "source",
             "segmentId": "D02-P2-S02",
             "relationship": "supports",
             "evidenceNature": "documented_in_source"
-          },
-          {
-            "dependencyId": "DEP-CAND-PASSPORT-DEBT-D02-P2-S05",
-            "kind": "source",
-            "segmentId": "D02-P2-S05",
-            "relationship": "supports",
-            "evidenceNature": "documented_in_source"
           }
+        ],
+        "requiredHumanAction": "edit_to_preserve_reported_and_documented_sources",
+        "reviewQuestion": "How should the reported worksite arrival and passport removal be distinguished from the separately documented passport-custody wording?",
+        "unknowns": [
+          "Passport removal is reported and is not independently confirmed by the recruiter message."
         ],
         "safeShareRecipientCategories": [
           "legal_practitioner",
@@ -1085,34 +1088,65 @@
         ]
       },
       {
-        "id": "CAND-REPORTED-CONTROL",
-        "kind": "timeline_event",
-        "title": "Reported locked exits and threats",
-        "text": "Maya K. reports restricted movement, locked exits, and threats to a family member.",
-        "currentText": "Maya K. reports restricted movement, locked exits, and threats to a family member.",
+        "id": "CAND-CTRL-CONFINEMENT",
+        "kind": "review_lane_item",
+        "title": "Physical confinement not independently confirmed",
+        "text": "Physical confinement is independently confirmed.",
+        "currentText": "Physical confinement is independently confirmed.",
         "currentTextOrigin": "ai_suggestion",
         "itemOrigin": "ai_suggestion",
-        "assertionMode": "positive_finding",
+        "assertionMode": "positive_proposition",
         "reviewRequirement": "individual",
         "inclusionStatus": "active",
-        "supportStatus": "partially_supported",
+        "supportStatus": "insufficient_evidence",
         "reviewStatus": "pending",
         "reviewLane": "trafficking_indicators",
         "dependencies": [
           {
-            "dependencyId": "DEP-CAND-REPORTED-CONTROL-D04-P2-S02",
+            "dependencyId": "DEP-CAND-CTRL-CONFINEMENT-D04-P2-S02",
             "kind": "source",
             "segmentId": "D04-P2-S02",
             "relationship": "supports",
             "evidenceNature": "reported_or_alleged_in_source"
-          },
-          {
-            "dependencyId": "DEP-CAND-REPORTED-CONTROL-D04-P2-S05",
-            "kind": "source",
-            "segmentId": "D04-P2-S05",
-            "relationship": "supports",
-            "evidenceNature": "reported_or_alleged_in_source"
           }
+        ],
+        "requiredHumanAction": "reject",
+        "reviewQuestion": "Does the packet independently confirm physical confinement?",
+        "unknowns": [
+          "The packet contains a reported account but no independent confirmation of physical confinement."
+        ],
+        "safeShareRecipientCategories": [
+          "legal_practitioner",
+          "trained_supervisor"
+        ]
+      },
+      {
+        "id": "CAND-PROV-TASKLOG",
+        "kind": "provenance_limitation",
+        "title": "Task-log provenance unresolved",
+        "text": "The task log is authenticated.",
+        "currentText": "The task log is authenticated.",
+        "currentTextOrigin": "ai_suggestion",
+        "itemOrigin": "ai_suggestion",
+        "assertionMode": "positive_proposition",
+        "reviewRequirement": "individual",
+        "inclusionStatus": "active",
+        "supportStatus": "insufficient_evidence",
+        "reviewStatus": "pending",
+        "reviewLane": "non_punishment_relevance",
+        "dependencies": [
+          {
+            "dependencyId": "DEP-CAND-PROV-TASKLOG-D05-META-01",
+            "kind": "source",
+            "segmentId": "D05-META-01",
+            "relationship": "supports",
+            "evidenceNature": "unknown"
+          }
+        ],
+        "requiredHumanAction": "mark_uncertain",
+        "reviewQuestion": "Is the task log authenticated?",
+        "unknowns": [
+          "Authenticity and authorship remain unresolved."
         ],
         "safeShareRecipientCategories": [
           "legal_practitioner",
@@ -1127,7 +1161,7 @@
         "currentText": "The task log assigns a deceptive-message task on 2025-04-02.",
         "currentTextOrigin": "ai_suggestion",
         "itemOrigin": "ai_suggestion",
-        "assertionMode": "positive_finding",
+        "assertionMode": "positive_proposition",
         "reviewRequirement": "individual",
         "inclusionStatus": "active",
         "supportStatus": "exact_source_supported",
@@ -1142,61 +1176,10 @@
             "evidenceNature": "documented_in_source"
           }
         ],
-        "safeShareRecipientCategories": [
-          "legal_practitioner",
-          "trained_supervisor"
-        ]
-      },
-      {
-        "id": "CAND-ALLEGED-0402",
-        "kind": "timeline_event",
-        "title": "2025-04-02 alleged communication",
-        "text": "The fictional proceeding notice references one alleged communication on 2025-04-02.",
-        "currentText": "The fictional proceeding notice references one alleged communication on 2025-04-02.",
-        "currentTextOrigin": "ai_suggestion",
-        "itemOrigin": "ai_suggestion",
-        "assertionMode": "positive_finding",
-        "reviewRequirement": "fixture_specified",
-        "inclusionStatus": "active",
-        "supportStatus": "exact_source_supported",
-        "reviewStatus": "pending",
-        "reviewLane": "non_punishment_relevance",
-        "dependencies": [
-          {
-            "dependencyId": "DEP-CAND-ALLEGED-0402-D06-P1-S05",
-            "kind": "source",
-            "segmentId": "D06-P1-S05",
-            "relationship": "supports",
-            "evidenceNature": "reported_or_alleged_in_source"
-          }
-        ],
-        "safeShareRecipientCategories": [
-          "legal_practitioner",
-          "trained_supervisor"
-        ]
-      },
-      {
-        "id": "CAND-URG-HEARING",
-        "kind": "timeline_event",
-        "title": "Fictional hearing date",
-        "text": "The fictional hearing date is 2025-04-18.",
-        "currentText": "The fictional hearing date is 2025-04-18.",
-        "currentTextOrigin": "ai_suggestion",
-        "itemOrigin": "ai_suggestion",
-        "assertionMode": "positive_finding",
-        "reviewRequirement": "fixture_specified",
-        "inclusionStatus": "active",
-        "supportStatus": "exact_source_supported",
-        "reviewStatus": "pending",
-        "reviewLane": "protection_remedy_urgency",
-        "dependencies": [
-          {
-            "dependencyId": "DEP-CAND-URG-HEARING-D06-P2-S02",
-            "kind": "source",
-            "segmentId": "D06-P2-S02",
-            "relationship": "supports",
-            "evidenceNature": "documented_in_source"
-          }
+        "requiredHumanAction": "accept_then_withdraw_during_hero_interaction",
+        "reviewQuestion": "What activity does the task log assign on 2025-04-02?",
+        "unknowns": [
+          "Task-log provenance remains unknown."
         ],
         "safeShareRecipientCategories": [
           "legal_practitioner",
@@ -1206,12 +1189,12 @@
       {
         "id": "CAND-SENDER-0402",
         "kind": "context_gap",
-        "title": "Sender authority unresolved",
-        "text": "The identity and authority of the sender or task-log author for the 2025-04-02 entry remains unresolved.",
-        "currentText": "The identity and authority of the sender or task-log author for the 2025-04-02 entry remains unresolved.",
+        "title": "Sender identity not established",
+        "text": "Maya sent the specific communication alleged on 2025-04-02.",
+        "currentText": "Maya sent the specific communication alleged on 2025-04-02.",
         "currentTextOrigin": "ai_suggestion",
         "itemOrigin": "ai_suggestion",
-        "assertionMode": "limitation",
+        "assertionMode": "positive_proposition",
         "reviewRequirement": "individual",
         "inclusionStatus": "active",
         "supportStatus": "insufficient_evidence",
@@ -1219,19 +1202,24 @@
         "reviewLane": "non_punishment_relevance",
         "dependencies": [
           {
-            "dependencyId": "DEP-CAND-SENDER-0402-D05-META-01",
-            "kind": "source",
-            "segmentId": "D05-META-01",
-            "relationship": "supports",
-            "evidenceNature": "unknown"
-          },
-          {
             "dependencyId": "DEP-CAND-SENDER-0402-D05-P1-S05",
             "kind": "source",
             "segmentId": "D05-P1-S05",
             "relationship": "supports",
             "evidenceNature": "documented_in_source"
+          },
+          {
+            "dependencyId": "DEP-CAND-SENDER-0402-D06-P1-S05",
+            "kind": "source",
+            "segmentId": "D06-P1-S05",
+            "relationship": "supports",
+            "evidenceNature": "reported_or_alleged_in_source"
           }
+        ],
+        "requiredHumanAction": "reject",
+        "reviewQuestion": "Do assignment and allegation records establish who sent the specific communication?",
+        "unknowns": [
+          "The sources show assignment and allegation, not sender proof."
         ],
         "safeShareRecipientCategories": [
           "legal_practitioner",
@@ -1242,11 +1230,11 @@
         "id": "CAND-URG-INTERPRETER",
         "kind": "context_gap",
         "title": "Interpreter status unknown",
-        "text": "Interpreter status is unknown or blank in the support and proceeding records.",
-        "currentText": "Interpreter status is unknown or blank in the support and proceeding records.",
+        "text": "Interpreter status is unknown for the 2025-04-18 hearing.",
+        "currentText": "Interpreter status is unknown for the 2025-04-18 hearing.",
         "currentTextOrigin": "ai_suggestion",
         "itemOrigin": "ai_suggestion",
-        "assertionMode": "limitation",
+        "assertionMode": "unknown_state",
         "reviewRequirement": "individual",
         "inclusionStatus": "active",
         "supportStatus": "exact_source_supported",
@@ -1268,6 +1256,44 @@
             "evidenceNature": "documented_in_source"
           }
         ],
+        "requiredHumanAction": "confirm_unknown",
+        "reviewQuestion": "Is an interpreter confirmed for the 2025-04-18 hearing?",
+        "unknowns": [
+          "Interpreter provision remains unknown."
+        ],
+        "safeShareRecipientCategories": [
+          "legal_practitioner",
+          "trained_supervisor"
+        ]
+      },
+      {
+        "id": "CAND-META-COOPERATION",
+        "kind": "review_lane_item",
+        "title": "Cooperation status unknown",
+        "text": "Cooperation status is unknown.",
+        "currentText": "Cooperation status is unknown.",
+        "currentTextOrigin": "source_extraction",
+        "itemOrigin": "source_extraction",
+        "assertionMode": "unknown_state",
+        "reviewRequirement": "individual",
+        "inclusionStatus": "active",
+        "supportStatus": "exact_source_supported",
+        "reviewStatus": "pending",
+        "reviewLane": "protection_remedy_urgency",
+        "dependencies": [
+          {
+            "dependencyId": "DEP-CAND-META-COOPERATION-D04-P4-S04",
+            "kind": "source",
+            "segmentId": "D04-P4-S04",
+            "relationship": "supports",
+            "evidenceNature": "documented_in_source"
+          }
+        ],
+        "requiredHumanAction": "confirm_unknown_without_changing_analysis",
+        "reviewQuestion": "What cooperation status is recorded?",
+        "unknowns": [
+          "Cooperation status remains unknown and must not affect evidence or Nexus analysis."
+        ],
         "safeShareRecipientCategories": [
           "legal_practitioner",
           "trained_supervisor"
@@ -1281,8 +1307,8 @@
         "currentText": "Initial represented work and travel terms changed after recruitment.",
         "currentTextOrigin": "ai_suggestion",
         "itemOrigin": "ai_suggestion",
-        "assertionMode": "positive_finding",
-        "reviewRequirement": "fixture_specified",
+        "assertionMode": "positive_proposition",
+        "reviewRequirement": "optional",
         "inclusionStatus": "active",
         "supportStatus": "partially_supported",
         "reviewStatus": "pending",
@@ -1309,6 +1335,8 @@
             "evidenceNature": "documented_in_source"
           }
         ],
+        "reviewQuestion": "Did represented work and travel conditions materially change?",
+        "unknowns": [],
         "safeShareRecipientCategories": [
           "legal_practitioner",
           "trained_supervisor"
@@ -1322,8 +1350,8 @@
         "currentText": "Travel records document movement and onward transfer.",
         "currentTextOrigin": "ai_suggestion",
         "itemOrigin": "ai_suggestion",
-        "assertionMode": "positive_finding",
-        "reviewRequirement": "fixture_specified",
+        "assertionMode": "neutral_procedural_fact",
+        "reviewRequirement": "optional",
         "inclusionStatus": "active",
         "supportStatus": "exact_source_supported",
         "reviewStatus": "pending",
@@ -1343,6 +1371,8 @@
             "evidenceNature": "documented_in_source"
           }
         ],
+        "reviewQuestion": "What movement and onward transfer are documented?",
+        "unknowns": [],
         "safeShareRecipientCategories": [
           "legal_practitioner",
           "trained_supervisor"
@@ -1356,25 +1386,69 @@
         "currentText": "Source records and reported account describe document, debt, threat, or movement-control indicators for review.",
         "currentTextOrigin": "ai_suggestion",
         "itemOrigin": "ai_suggestion",
-        "assertionMode": "positive_finding",
+        "assertionMode": "positive_proposition",
         "reviewRequirement": "derived_summary",
         "inclusionStatus": "active",
         "supportStatus": "partially_supported",
         "reviewStatus": "pending",
         "dependencies": [
           {
-            "dependencyId": "DEP-NEXUS-CONTROL-CAND-PASSPORT-DEBT",
+            "dependencyId": "DEP-NEXUS-CONTROL-D02-P2-S02",
+            "kind": "source",
+            "segmentId": "D02-P2-S02",
+            "relationship": "supports",
+            "evidenceNature": "documented_in_source"
+          },
+          {
+            "dependencyId": "DEP-NEXUS-CONTROL-D02-P2-S05",
+            "kind": "source",
+            "segmentId": "D02-P2-S05",
+            "relationship": "supports",
+            "evidenceNature": "documented_in_source"
+          },
+          {
+            "dependencyId": "DEP-NEXUS-CONTROL-D02-P3-S03",
+            "kind": "source",
+            "segmentId": "D02-P3-S03",
+            "relationship": "supports",
+            "evidenceNature": "documented_in_source"
+          },
+          {
+            "dependencyId": "DEP-NEXUS-CONTROL-D04-P1-S03",
+            "kind": "source",
+            "segmentId": "D04-P1-S03",
+            "relationship": "supports",
+            "evidenceNature": "reported_or_alleged_in_source"
+          },
+          {
+            "dependencyId": "DEP-NEXUS-CONTROL-D04-P2-S02",
+            "kind": "source",
+            "segmentId": "D04-P2-S02",
+            "relationship": "supports",
+            "evidenceNature": "reported_or_alleged_in_source"
+          },
+          {
+            "dependencyId": "DEP-NEXUS-CONTROL-D04-P2-S05",
+            "kind": "source",
+            "segmentId": "D04-P2-S05",
+            "relationship": "supports",
+            "evidenceNature": "reported_or_alleged_in_source"
+          },
+          {
+            "dependencyId": "DEP-NEXUS-CONTROL-CAND-CTRL-PASSPORT",
             "kind": "candidate",
-            "candidateId": "CAND-PASSPORT-DEBT",
+            "candidateId": "CAND-CTRL-PASSPORT",
             "relationship": "supports"
           },
           {
-            "dependencyId": "DEP-NEXUS-CONTROL-CAND-REPORTED-CONTROL",
+            "dependencyId": "DEP-NEXUS-CONTROL-CAND-CTRL-CONFINEMENT",
             "kind": "candidate",
-            "candidateId": "CAND-REPORTED-CONTROL",
+            "candidateId": "CAND-CTRL-CONFINEMENT",
             "relationship": "supports"
           }
         ],
+        "reviewQuestion": "What document, debt, threat, or movement control is documented or reported?",
+        "unknowns": [],
         "safeShareRecipientCategories": [
           "legal_practitioner",
           "trained_supervisor"
@@ -1388,7 +1462,7 @@
         "currentText": "Assigned deceptive-message work and penalties are documented or reported during the alleged period.",
         "currentTextOrigin": "ai_suggestion",
         "itemOrigin": "ai_suggestion",
-        "assertionMode": "positive_finding",
+        "assertionMode": "positive_proposition",
         "reviewRequirement": "individual",
         "inclusionStatus": "active",
         "supportStatus": "partially_supported",
@@ -1409,6 +1483,13 @@
             "evidenceNature": "documented_in_source"
           },
           {
+            "dependencyId": "DEP-NEXUS-COMPELLED-TASKS-D05-P1-S05",
+            "kind": "source",
+            "segmentId": "D05-P1-S05",
+            "relationship": "supports",
+            "evidenceNature": "documented_in_source"
+          },
+          {
             "dependencyId": "DEP-NEXUS-COMPELLED-TASKS-CAND-TASK-0402",
             "kind": "candidate",
             "candidateId": "CAND-TASK-0402",
@@ -1422,6 +1503,8 @@
             "evidenceNature": "documented_in_source"
           }
         ],
+        "reviewQuestion": "What deceptive-message activity and penalties are assigned or reported?",
+        "unknowns": [],
         "safeShareRecipientCategories": [
           "legal_practitioner",
           "trained_supervisor"
@@ -1435,7 +1518,7 @@
         "currentText": "The 2025-04-02 alleged communication overlaps the documented task entry and possible control period.",
         "currentTextOrigin": "ai_suggestion",
         "itemOrigin": "ai_suggestion",
-        "assertionMode": "positive_finding",
+        "assertionMode": "positive_proposition",
         "reviewRequirement": "individual",
         "inclusionStatus": "active",
         "supportStatus": "partially_supported",
@@ -1467,6 +1550,8 @@
             "relationship": "supports"
           }
         ],
+        "reviewQuestion": "What source-supported relationship exists between the 2025-04-02 allegation and possible control or assigned work at that time?",
+        "unknowns": [],
         "safeShareRecipientCategories": [
           "legal_practitioner",
           "trained_supervisor"
@@ -1480,23 +1565,32 @@
         "currentText": "Hearing, counsel, and interpreter records create urgent procedural review questions.",
         "currentTextOrigin": "ai_suggestion",
         "itemOrigin": "ai_suggestion",
-        "assertionMode": "positive_finding",
+        "assertionMode": "gap",
         "reviewRequirement": "derived_summary",
         "inclusionStatus": "active",
         "supportStatus": "exact_source_supported",
         "reviewStatus": "pending",
         "dependencies": [
           {
-            "dependencyId": "DEP-NEXUS-URGENCY-CAND-URG-HEARING",
-            "kind": "candidate",
-            "candidateId": "CAND-URG-HEARING",
-            "relationship": "supports"
+            "dependencyId": "DEP-NEXUS-URGENCY-D06-P2-S02",
+            "kind": "source",
+            "segmentId": "D06-P2-S02",
+            "relationship": "supports",
+            "evidenceNature": "documented_in_source"
           },
           {
-            "dependencyId": "DEP-NEXUS-URGENCY-CAND-URG-INTERPRETER",
-            "kind": "candidate",
-            "candidateId": "CAND-URG-INTERPRETER",
-            "relationship": "supports"
+            "dependencyId": "DEP-NEXUS-URGENCY-D06-P2-S04",
+            "kind": "source",
+            "segmentId": "D06-P2-S04",
+            "relationship": "supports",
+            "evidenceNature": "documented_in_source"
+          },
+          {
+            "dependencyId": "DEP-NEXUS-URGENCY-D07-P1-S02",
+            "kind": "source",
+            "segmentId": "D07-P1-S02",
+            "relationship": "supports",
+            "evidenceNature": "documented_in_source"
           },
           {
             "dependencyId": "DEP-NEXUS-URGENCY-D07-P1-S04",
@@ -1504,8 +1598,23 @@
             "segmentId": "D07-P1-S04",
             "relationship": "supports",
             "evidenceNature": "documented_in_source"
+          },
+          {
+            "dependencyId": "DEP-NEXUS-URGENCY-D07-P1-S05",
+            "kind": "source",
+            "segmentId": "D07-P1-S05",
+            "relationship": "supports",
+            "evidenceNature": "documented_in_source"
+          },
+          {
+            "dependencyId": "DEP-NEXUS-URGENCY-CAND-URG-INTERPRETER",
+            "kind": "candidate",
+            "candidateId": "CAND-URG-INTERPRETER",
+            "relationship": "supports"
           }
         ],
+        "reviewQuestion": "What procedural or protection questions need urgent review?",
+        "unknowns": [],
         "safeShareRecipientCategories": [
           "legal_practitioner",
           "trained_supervisor"
@@ -1514,46 +1623,44 @@
     ],
     "timelineDefinitions": [
       {
-        "candidateId": "CAND-RECRUITMENT-OFFER",
-        "date": "2025-03-14",
+        "candidateId": "CAND-TL-ARRIVAL",
+        "dateStart": "2025-03-12",
         "datePrecision": "day",
-        "qualification": "Maya K. received an apparent customer-support offer before the later reported control period."
+        "dateAlternatives": [],
+        "qualification": "Documented ticket arrival in J-02; this is distinct from the later reported worksite arrival.",
+        "locationLabel": "Jurisdiction J-02",
+        "actorLabels": [
+          "Maya K."
+        ],
+        "conflictGroupId": null
       },
       {
-        "candidateId": "CAND-PASSPORT-DEBT",
-        "date": "2025-03-14",
-        "datePrecision": "day",
-        "qualification": "Messages describe passport custody and a travel debt tied to departure."
-      },
-      {
-        "candidateId": "CAND-REPORTED-CONTROL",
-        "date": "2025-03-14",
-        "datePrecision": "day",
-        "qualification": "Maya K. reports restricted movement, locked exits, and threats to a family member."
+        "candidateId": "CAND-CTRL-PASSPORT",
+        "dateStart": "2025-03-15",
+        "datePrecision": "approximate",
+        "dateAlternatives": [],
+        "qualification": "Reported worksite arrival around 2025-03-15; this is a clarification question, not an automatic contradiction with the D03 arrival.",
+        "locationLabel": "Reported worksite",
+        "actorLabels": [
+          "Maya K."
+        ],
+        "conflictGroupId": null
       },
       {
         "candidateId": "CAND-TASK-0402",
-        "date": "2025-04-02",
+        "dateStart": "2025-04-02",
         "datePrecision": "day",
-        "qualification": "The task log assigns a deceptive-message task on 2025-04-02."
-      },
-      {
-        "candidateId": "CAND-ALLEGED-0402",
-        "date": "2025-04-02",
-        "datePrecision": "day",
-        "qualification": "The fictional proceeding notice references one alleged communication on 2025-04-02."
-      },
-      {
-        "candidateId": "CAND-URG-HEARING",
-        "date": "2025-03-14",
-        "datePrecision": "day",
-        "qualification": "The fictional hearing date is 2025-04-18."
+        "dateAlternatives": [],
+        "qualification": "Documented task-log assignment; provenance remains unresolved and assignment does not prove sender identity.",
+        "locationLabel": null,
+        "actorLabels": [],
+        "conflictGroupId": null
       }
     ],
     "nexusDependencyDefinitions": [
       {
         "nexusCandidateId": "NEXUS-RECRUITMENT",
-        "reviewRequirement": "fixture_specified",
+        "reviewRequirement": "optional",
         "dependencies": [
           {
             "dependencyId": "DEP-NEXUS-RECRUITMENT-D01-P1-S01",
@@ -1580,7 +1687,7 @@
       },
       {
         "nexusCandidateId": "NEXUS-MOVEMENT",
-        "reviewRequirement": "fixture_specified",
+        "reviewRequirement": "optional",
         "dependencies": [
           {
             "dependencyId": "DEP-NEXUS-MOVEMENT-D03-P1-S02",
@@ -1603,15 +1710,57 @@
         "reviewRequirement": "derived_summary",
         "dependencies": [
           {
-            "dependencyId": "DEP-NEXUS-CONTROL-CAND-PASSPORT-DEBT",
+            "dependencyId": "DEP-NEXUS-CONTROL-D02-P2-S02",
+            "kind": "source",
+            "segmentId": "D02-P2-S02",
+            "relationship": "supports",
+            "evidenceNature": "documented_in_source"
+          },
+          {
+            "dependencyId": "DEP-NEXUS-CONTROL-D02-P2-S05",
+            "kind": "source",
+            "segmentId": "D02-P2-S05",
+            "relationship": "supports",
+            "evidenceNature": "documented_in_source"
+          },
+          {
+            "dependencyId": "DEP-NEXUS-CONTROL-D02-P3-S03",
+            "kind": "source",
+            "segmentId": "D02-P3-S03",
+            "relationship": "supports",
+            "evidenceNature": "documented_in_source"
+          },
+          {
+            "dependencyId": "DEP-NEXUS-CONTROL-D04-P1-S03",
+            "kind": "source",
+            "segmentId": "D04-P1-S03",
+            "relationship": "supports",
+            "evidenceNature": "reported_or_alleged_in_source"
+          },
+          {
+            "dependencyId": "DEP-NEXUS-CONTROL-D04-P2-S02",
+            "kind": "source",
+            "segmentId": "D04-P2-S02",
+            "relationship": "supports",
+            "evidenceNature": "reported_or_alleged_in_source"
+          },
+          {
+            "dependencyId": "DEP-NEXUS-CONTROL-D04-P2-S05",
+            "kind": "source",
+            "segmentId": "D04-P2-S05",
+            "relationship": "supports",
+            "evidenceNature": "reported_or_alleged_in_source"
+          },
+          {
+            "dependencyId": "DEP-NEXUS-CONTROL-CAND-CTRL-PASSPORT",
             "kind": "candidate",
-            "candidateId": "CAND-PASSPORT-DEBT",
+            "candidateId": "CAND-CTRL-PASSPORT",
             "relationship": "supports"
           },
           {
-            "dependencyId": "DEP-NEXUS-CONTROL-CAND-REPORTED-CONTROL",
+            "dependencyId": "DEP-NEXUS-CONTROL-CAND-CTRL-CONFINEMENT",
             "kind": "candidate",
-            "candidateId": "CAND-REPORTED-CONTROL",
+            "candidateId": "CAND-CTRL-CONFINEMENT",
             "relationship": "supports"
           }
         ]
@@ -1631,6 +1780,13 @@
             "dependencyId": "DEP-NEXUS-COMPELLED-TASKS-D05-P1-S02",
             "kind": "source",
             "segmentId": "D05-P1-S02",
+            "relationship": "supports",
+            "evidenceNature": "documented_in_source"
+          },
+          {
+            "dependencyId": "DEP-NEXUS-COMPELLED-TASKS-D05-P1-S05",
+            "kind": "source",
+            "segmentId": "D05-P1-S05",
             "relationship": "supports",
             "evidenceNature": "documented_in_source"
           },
@@ -1685,16 +1841,25 @@
         "reviewRequirement": "derived_summary",
         "dependencies": [
           {
-            "dependencyId": "DEP-NEXUS-URGENCY-CAND-URG-HEARING",
-            "kind": "candidate",
-            "candidateId": "CAND-URG-HEARING",
-            "relationship": "supports"
+            "dependencyId": "DEP-NEXUS-URGENCY-D06-P2-S02",
+            "kind": "source",
+            "segmentId": "D06-P2-S02",
+            "relationship": "supports",
+            "evidenceNature": "documented_in_source"
           },
           {
-            "dependencyId": "DEP-NEXUS-URGENCY-CAND-URG-INTERPRETER",
-            "kind": "candidate",
-            "candidateId": "CAND-URG-INTERPRETER",
-            "relationship": "supports"
+            "dependencyId": "DEP-NEXUS-URGENCY-D06-P2-S04",
+            "kind": "source",
+            "segmentId": "D06-P2-S04",
+            "relationship": "supports",
+            "evidenceNature": "documented_in_source"
+          },
+          {
+            "dependencyId": "DEP-NEXUS-URGENCY-D07-P1-S02",
+            "kind": "source",
+            "segmentId": "D07-P1-S02",
+            "relationship": "supports",
+            "evidenceNature": "documented_in_source"
           },
           {
             "dependencyId": "DEP-NEXUS-URGENCY-D07-P1-S04",
@@ -1702,6 +1867,19 @@
             "segmentId": "D07-P1-S04",
             "relationship": "supports",
             "evidenceNature": "documented_in_source"
+          },
+          {
+            "dependencyId": "DEP-NEXUS-URGENCY-D07-P1-S05",
+            "kind": "source",
+            "segmentId": "D07-P1-S05",
+            "relationship": "supports",
+            "evidenceNature": "documented_in_source"
+          },
+          {
+            "dependencyId": "DEP-NEXUS-URGENCY-CAND-URG-INTERPRETER",
+            "kind": "candidate",
+            "candidateId": "CAND-URG-INTERPRETER",
+            "relationship": "supports"
           }
         ]
       }
@@ -1711,9 +1889,9 @@
         "lane": "trafficking_indicators",
         "label": "Trafficking indicators for review",
         "candidateIds": [
-          "CAND-RECRUITMENT-OFFER",
-          "CAND-PASSPORT-DEBT",
-          "CAND-REPORTED-CONTROL",
+          "CAND-TL-ARRIVAL",
+          "CAND-CTRL-PASSPORT",
+          "CAND-CTRL-CONFINEMENT",
           "NEXUS-RECRUITMENT",
           "NEXUS-MOVEMENT",
           "NEXUS-CONTROL"
@@ -1723,8 +1901,8 @@
         "lane": "non_punishment_relevance",
         "label": "Non-punishment relevance for review",
         "candidateIds": [
+          "CAND-PROV-TASKLOG",
           "CAND-TASK-0402",
-          "CAND-ALLEGED-0402",
           "CAND-SENDER-0402",
           "NEXUS-COMPELLED-TASKS",
           "NEXUS-OFFENCE-TIMING"
@@ -1734,8 +1912,8 @@
         "lane": "protection_remedy_urgency",
         "label": "Protection, remedy, and procedural urgency",
         "candidateIds": [
-          "CAND-URG-HEARING",
           "CAND-URG-INTERPRETER",
+          "CAND-META-COOPERATION",
           "NEXUS-URGENCY"
         ]
       }
@@ -1744,12 +1922,12 @@
       {
         "id": "CAND-SENDER-0402",
         "kind": "context_gap",
-        "title": "Sender authority unresolved",
-        "text": "The identity and authority of the sender or task-log author for the 2025-04-02 entry remains unresolved.",
-        "currentText": "The identity and authority of the sender or task-log author for the 2025-04-02 entry remains unresolved.",
+        "title": "Sender identity not established",
+        "text": "Maya sent the specific communication alleged on 2025-04-02.",
+        "currentText": "Maya sent the specific communication alleged on 2025-04-02.",
         "currentTextOrigin": "ai_suggestion",
         "itemOrigin": "ai_suggestion",
-        "assertionMode": "limitation",
+        "assertionMode": "positive_proposition",
         "reviewRequirement": "individual",
         "inclusionStatus": "active",
         "supportStatus": "insufficient_evidence",
@@ -1757,19 +1935,24 @@
         "reviewLane": "non_punishment_relevance",
         "dependencies": [
           {
-            "dependencyId": "DEP-CAND-SENDER-0402-D05-META-01",
-            "kind": "source",
-            "segmentId": "D05-META-01",
-            "relationship": "supports",
-            "evidenceNature": "unknown"
-          },
-          {
             "dependencyId": "DEP-CAND-SENDER-0402-D05-P1-S05",
             "kind": "source",
             "segmentId": "D05-P1-S05",
             "relationship": "supports",
             "evidenceNature": "documented_in_source"
+          },
+          {
+            "dependencyId": "DEP-CAND-SENDER-0402-D06-P1-S05",
+            "kind": "source",
+            "segmentId": "D06-P1-S05",
+            "relationship": "supports",
+            "evidenceNature": "reported_or_alleged_in_source"
           }
+        ],
+        "requiredHumanAction": "reject",
+        "reviewQuestion": "Do assignment and allegation records establish who sent the specific communication?",
+        "unknowns": [
+          "The sources show assignment and allegation, not sender proof."
         ],
         "safeShareRecipientCategories": [
           "legal_practitioner",
@@ -1780,11 +1963,11 @@
         "id": "CAND-URG-INTERPRETER",
         "kind": "context_gap",
         "title": "Interpreter status unknown",
-        "text": "Interpreter status is unknown or blank in the support and proceeding records.",
-        "currentText": "Interpreter status is unknown or blank in the support and proceeding records.",
+        "text": "Interpreter status is unknown for the 2025-04-18 hearing.",
+        "currentText": "Interpreter status is unknown for the 2025-04-18 hearing.",
         "currentTextOrigin": "ai_suggestion",
         "itemOrigin": "ai_suggestion",
-        "assertionMode": "limitation",
+        "assertionMode": "unknown_state",
         "reviewRequirement": "individual",
         "inclusionStatus": "active",
         "supportStatus": "exact_source_supported",
@@ -1805,6 +1988,11 @@
             "relationship": "supports",
             "evidenceNature": "documented_in_source"
           }
+        ],
+        "requiredHumanAction": "confirm_unknown",
+        "reviewQuestion": "Is an interpreter confirmed for the 2025-04-18 hearing?",
+        "unknowns": [
+          "Interpreter provision remains unknown."
         ],
         "safeShareRecipientCategories": [
           "legal_practitioner",
@@ -1845,6 +2033,14 @@
             "CAND-TASK-0402": {
               "supportStatus": "exact_source_supported",
               "reviewStatus": "human_accepted"
+            },
+            "NEXUS-COMPELLED-TASKS": {
+              "supportStatus": "partially_supported",
+              "reviewStatus": "human_accepted"
+            },
+            "NEXUS-OFFENCE-TIMING": {
+              "supportStatus": "partially_supported",
+              "reviewStatus": "human_accepted"
             }
           }
         },
@@ -1877,6 +2073,11 @@
           "step": 3,
           "action": "renew_nexus_review",
           "states": {
+            "CAND-TASK-0402": {
+              "supportStatus": "exact_source_supported",
+              "reviewStatus": "invalidated",
+              "inclusionStatus": "withdrawn"
+            },
             "NEXUS-COMPELLED-TASKS": {
               "supportStatus": "partially_supported",
               "reviewStatus": "human_accepted"
