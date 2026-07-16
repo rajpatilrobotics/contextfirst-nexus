@@ -491,7 +491,7 @@ tasks:
     title: Security, accessibility, and end-to-end integration
     stage: quality
     wave: 12
-    status: ready
+    status: integrated
     risk: high
     dependencies: [TASK-015, TASK-016, TASK-018, TASK-019, TASK-021, TASK-022, TASK-023, TASK-026, TASK-034, TASK-035]
     packet: tasks/TASK-024.md
@@ -520,11 +520,19 @@ tasks:
     title: Performance, release readiness, and deployment rehearsal
     stage: release
     wave: 13
-    status: pending
+    status: ready
     risk: high
     dependencies: [TASK-024]
     packet: tasks/TASK-025.md
-    outcome: Measure the frozen budgets, update truthful setup guidance, prepare the release checklist, run five prepared-checkpoint rehearsals, verify the stable production URL, and keep public live analysis disabled until separately approved.
+    outcome: Perform local release preparation, measure the frozen budgets, update truthful setup guidance, prepare the release checklist, and preserve all unrun manual evidence; deployment and production verification remain separately approval-gated.
+    readiness_scope: local_release_preparation_only
+    manual_evidence_rule: Preserve every TASK-024 manual NOT RUN result as NOT RUN in the TASK-025 release checklist unless that exact check is later performed under its required approval.
+    separately_unapproved:
+      - deployment
+      - stable_url_access
+      - vercel_changes
+      - production_setting_changes
+      - public_live_analysis
     owns:
       - README.md
       - RELEASE_CHECKLIST.md

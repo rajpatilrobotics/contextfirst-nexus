@@ -4,7 +4,7 @@
 
 - Task ID: TASK-025
 - Stage: release
-- Status: Pending. Only the coordinator may mark this task Ready after TASK-024 is integrated and every required release approval is recorded.
+- Status: Ready for local release preparation only. Deployment, stable-URL access, Vercel changes, production-setting changes, and public live analysis remain separately unapproved.
 - Wave: 13
 - Risk: high
 - Suggested branch: `task/025-release-readiness`
@@ -21,6 +21,7 @@ A hackathon demo needs a repeatable setup, honest limitations, measured performa
 ## 4. Dependencies and base requirement
 
 - TASK-024 must be integrated and its complete deterministic, end-to-end, accessibility, security, privacy, header, and production-build verification must pass.
+- Preserve every TASK-024 manual `NOT RUN` result as `NOT RUN` in `RELEASE_CHECKLIST.md` unless that exact check is later performed with its required approval and evidence. Local automated results must not promote a manual result.
 - Every earlier task is a transitive dependency through TASK-024 and must be integrated on the base branch. A completed but unintegrated worktree does not satisfy this requirement.
 - Create the worktree from the latest coordinator branch containing TASK-024 and its passing handoff. Confirm the release scripts named in the graph already exist in `package.json`; this task cannot add or change scripts there.
 - Actual deployment, a push that triggers deployment, any change to Vercel project settings, environment values, production secrets, firewall, rate controls, billing, quota, provider accounts, or any repository configuration change that alters deployed behavior requires separate explicit user approval. Task assignment or commit permission alone does not grant it.
