@@ -1,7 +1,7 @@
 schema_version: "1.0.0"
 project: contextfirst-nexus
 graph_status: approved_for_implementation
-task_count: 33
+task_count: 34
 
 authority:
   repository_rules: AGENTS.md
@@ -491,9 +491,9 @@ tasks:
     title: Security, accessibility, and end-to-end integration
     stage: quality
     wave: 12
-    status: ready
+    status: blocked
     risk: high
-    dependencies: [TASK-015, TASK-016, TASK-018, TASK-019, TASK-021, TASK-022, TASK-023, TASK-026]
+    dependencies: [TASK-015, TASK-016, TASK-018, TASK-019, TASK-021, TASK-022, TASK-023, TASK-026, TASK-034]
     packet: tasks/TASK-024.md
     outcome: Add restrictive headers, safe global errors, boundary scans, complete browser flows, accessibility scans, direct gate-bypass tests, log and secret checks, keyboard behavior, and provider-recovery verification.
     owns:
@@ -700,5 +700,42 @@ tasks:
     verifies:
       - npx vitest run tests/components/review/candidate
       - npm run typecheck
+      - npm run build
+      - git diff --check
+
+  - id: TASK-034
+    title: Repository lint baseline repair
+    stage: quality
+    wave: 12
+    status: ready
+    risk: high
+    dependencies: [TASK-022, TASK-023]
+    packet: tasks/TASK-034.md
+    outcome: Resolve the 32 integrated lint errors through behavior-preserving type, unused-code, navigation, and prefer-const corrections without weakening lint or changing TASK-024-owned files.
+    owns:
+      - app/api/analyze/route.ts
+      - app/trust/page.tsx
+      - features/documents/documents-workspace.tsx
+      - features/review/dependency/dependency-change-panel.tsx
+      - lib/ai/server/adapters/openai.ts
+      - lib/ai/server/evaluation-entry.ts
+      - lib/ai/server/orchestrator.ts
+      - lib/ai/server/recovery.ts
+      - lib/analysis/replay.ts
+      - lib/evaluation/harness.ts
+      - lib/review/index.ts
+      - lib/state/index.ts
+      - scripts/generate-synthetic-fixtures.mjs
+      - tests/components/export/export-workspace.test.tsx
+      - tests/components/provider/run-controller.test.ts
+      - tests/components/purpose/purpose-form.test.tsx
+      - tests/unit/ai/orchestration/orchestrator.test.ts
+      - tests/unit/evaluation/runner.test.ts
+    verifies:
+      - npm run lint
+      - npm run typecheck
+      - node scripts/generate-synthetic-fixtures.mjs --check
+      - npx vitest run tests/contracts/api tests/unit/ai/orchestration tests/unit/evaluation tests/unit/review tests/unit/state
+      - npx vitest run tests/components/export tests/components/provider tests/components/purpose
       - npm run build
       - git diff --check
