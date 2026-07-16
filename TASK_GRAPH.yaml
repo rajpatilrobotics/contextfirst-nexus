@@ -491,7 +491,7 @@ tasks:
     title: Security, accessibility, and end-to-end integration
     stage: quality
     wave: 12
-    status: blocked
+    status: ready
     risk: high
     dependencies: [TASK-015, TASK-016, TASK-018, TASK-019, TASK-021, TASK-022, TASK-023, TASK-026, TASK-034, TASK-035]
     packet: tasks/TASK-024.md
@@ -744,7 +744,7 @@ tasks:
     title: Reconcile canonical Review component tests
     stage: quality
     wave: 12
-    status: ready
+    status: integrated
     risk: medium
     dependencies: [TASK-020, TASK-028]
     packet: tasks/TASK-035.md
