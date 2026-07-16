@@ -1,7 +1,7 @@
 schema_version: "1.0.0"
 project: contextfirst-nexus
 graph_status: approved_for_implementation
-task_count: 34
+task_count: 35
 
 authority:
   repository_rules: AGENTS.md
@@ -491,9 +491,9 @@ tasks:
     title: Security, accessibility, and end-to-end integration
     stage: quality
     wave: 12
-    status: ready
+    status: blocked
     risk: high
-    dependencies: [TASK-015, TASK-016, TASK-018, TASK-019, TASK-021, TASK-022, TASK-023, TASK-026, TASK-034]
+    dependencies: [TASK-015, TASK-016, TASK-018, TASK-019, TASK-021, TASK-022, TASK-023, TASK-026, TASK-034, TASK-035]
     packet: tasks/TASK-024.md
     outcome: Add restrictive headers, safe global errors, boundary scans, complete browser flows, accessibility scans, direct gate-bypass tests, log and secret checks, keyboard behavior, and provider-recovery verification.
     owns:
@@ -738,4 +738,22 @@ tasks:
       - npx vitest run tests/contracts/api tests/unit/ai/orchestration tests/unit/evaluation tests/unit/review tests/unit/state
       - npx vitest run tests/components/export tests/components/provider tests/components/purpose
       - npm run build
+      - git diff --check
+
+  - id: TASK-035
+    title: Reconcile canonical Review component tests
+    stage: quality
+    wave: 12
+    status: ready
+    risk: medium
+    dependencies: [TASK-020, TASK-028]
+    packet: tasks/TASK-035.md
+    outcome: Reconcile the source-drawer and timeline component tests with the canonical TASK-028 candidate and timeline definitions without changing production code, fixtures, contracts, or digests.
+    owns:
+      - tests/components/review/source/source-drawer.test.tsx
+      - tests/components/review/timeline/timeline.test.tsx
+    verifies:
+      - npx vitest run tests/components/review/source/source-drawer.test.tsx tests/components/review/timeline/timeline.test.tsx
+      - npm run test:components
+      - npm run verify
       - git diff --check

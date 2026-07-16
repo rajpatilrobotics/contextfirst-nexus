@@ -4,11 +4,11 @@
 
 - Task ID: TASK-024
 - Stage: quality
-- Status: Blocked until TASK-034 is integrated
+- Status: Blocked only until TASK-035 is integrated
 - Wave: 12
 - Risk: high
 - Suggested branch: `task/024-security-a11y-e2e`
-- Depends on: TASK-015, TASK-016, TASK-018, TASK-019, TASK-021, TASK-022, TASK-023, TASK-026, TASK-034
+- Depends on: TASK-015, TASK-016, TASK-018, TASK-019, TASK-021, TASK-022, TASK-023, TASK-026, TASK-034, TASK-035
 
 ## 2. Goal
 
@@ -24,8 +24,9 @@ Unit and feature tests cannot prove that the complete browser flow preserves the
 - TASK-016 and TASK-026 must be integrated and provide deterministic evaluation evidence, the reviewed static admission handoff, and measured result projections used by Trust and release tests.
 - TASK-018, TASK-019, TASK-021, TASK-022, and TASK-023 must be integrated and provide the complete Purpose, provider recovery, Documents, Review, Export, Trust, audit, and Safety Lab user flows.
 - TASK-034 must be integrated and provide a clean repository lint baseline without changing TASK-024-owned files or weakening ESLint.
+- TASK-035 must be integrated and reconcile the two legacy Review component tests with the canonical TASK-028 fixture definitions without changing production behavior or canonical data.
 - Every transitive foundation, domain, state, shell, provider, fixture, replay, and renderer dependency must already be present through those integrated tasks.
-- Create or update the worktree from the latest coordinator branch containing all nine direct dependencies and their passing verification. If an integrated feature fails and its implementation path is unowned here, report it instead of patching it.
+- Create or update the worktree from the latest coordinator branch containing all ten direct dependencies and their passing verification. If an integrated feature fails and its implementation path is unowned here, report it instead of patching it.
 
 ## 5. Required context
 
