@@ -15,6 +15,7 @@
     "test:e2e": "npm run build && playwright test tests/e2e --pass-with-no-tests",
     "test:a11y": "npm run build && playwright test tests/a11y --pass-with-no-tests",
     "eval": "node scripts/run-evaluation.mjs",
+    "measure:performance": "node scripts/measure-performance.mjs",
     "assets:pdfjs": "node scripts/copy-pdfjs-assets.mjs",
     "build": "next build",
     "start": "next start",
