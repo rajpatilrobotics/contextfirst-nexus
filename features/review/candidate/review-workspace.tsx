@@ -136,6 +136,7 @@ export function ReviewWorkspace() {
   const [sourceSelection, setSourceSelection] = useState<SourceSelection | null>(null);
   const [withdrawalCandidateId, setWithdrawalCandidateId] = useState<string | null>(null);
   const workspaceRef = useRef<HTMLDivElement>(null);
+  const reviewWorkspaceTargetRef = useRef<HTMLElement>(null);
   const activeRun = useMemo(
     () => state.analysisRuns.find((run) => run.id === state.activeAnalysisRunId) ?? null,
     [state.activeAnalysisRunId, state.analysisRuns],
@@ -169,6 +170,16 @@ export function ReviewWorkspace() {
       workspace.inert = false;
     };
   }, [sourceMode, sourceSelection]);
+
+  useEffect(() => {
+    if (window.location.hash !== "#review-workspace") return;
+
+    const focusTimeout = window.setTimeout(() => {
+      reviewWorkspaceTargetRef.current?.focus({ preventScroll: true });
+    }, 0);
+
+    return () => window.clearTimeout(focusTimeout);
+  }, []);
 
   if (state.pendingLiveAnalysis) {
     return (
@@ -218,7 +229,13 @@ export function ReviewWorkspace() {
         ref={workspaceRef}
       >
         <div className="grid gap-10 pb-6">
-          <section aria-labelledby="review-workspace-heading" className="grid gap-5">
+          <section
+            aria-labelledby="review-workspace-heading"
+            className="grid gap-5"
+            id="review-workspace"
+            ref={reviewWorkspaceTargetRef}
+            tabIndex={-1}
+          >
             <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-start">
               <div className="max-w-3xl">
                 <p className="cfn-type-label text-[var(--color-ink-muted)]">Qualified practitioner review</p>
