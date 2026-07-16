@@ -1,7 +1,7 @@
 schema_version: "1.0.0"
 project: contextfirst-nexus
 graph_status: approved_for_implementation
-task_count: 30
+task_count: 31
 
 authority:
   repository_rules: AGENTS.md
@@ -455,9 +455,9 @@ tasks:
     title: Export experience and local renderers
     stage: interface
     wave: 9
-    status: ready
+    status: blocked
     risk: high
-    dependencies: [TASK-004, TASK-009, TASK-010, TASK-017, TASK-027, TASK-028, TASK-030]
+    dependencies: [TASK-004, TASK-009, TASK-010, TASK-017, TASK-021, TASK-027, TASK-028, TASK-030, TASK-031]
     packet: tasks/TASK-022.md
     outcome: Implement blocked export behavior, remediation links, minimum-necessary selection, semantic preview, structured JSON, lazy PDF generation, manifest parity, local downloads, and required labels.
     owns:
@@ -474,9 +474,9 @@ tasks:
     title: Trust, audit, Safety Lab, and guidance UI
     stage: interface
     wave: 10
-    status: ready
+    status: blocked
     risk: medium
-    dependencies: [TASK-003, TASK-004, TASK-010, TASK-016, TASK-017, TASK-026]
+    dependencies: [TASK-003, TASK-004, TASK-010, TASK-016, TASK-017, TASK-026, TASK-031]
     packet: tasks/TASK-023.md
     outcome: Implement the Trust page, System Card, truthful static admission and linked report evidence, measured fixture results, attempted-run history, prepared-checkpoint provenance, guidance cards, Audit History, and safe unsafe-output reporting.
     owns:
@@ -641,3 +641,26 @@ tasks:
     verifies:
       - npx vitest run tests/unit/review tests/unit/state tests/unit/export/core
       - npm run typecheck
+
+  - id: TASK-031
+    title: Audit and guidance truth bridge
+    stage: integration
+    wave: 10
+    status: ready
+    risk: high
+    dependencies: [TASK-003, TASK-009, TASK-010, TASK-016, TASK-026, TASK-027, TASK-030]
+    packet: tasks/TASK-031.md
+    outcome: Restore exactly-once safe canonical audit events for export, unsafe-output reporting, and reset commands, and rebuild the six-card guidance pack from the registered official primary sources without inventing evidence or legal conclusions.
+    owns:
+      - lib/state/index.ts
+      - scripts/generate-synthetic-fixtures.mjs
+      - fixtures/guidance/guidance-pack.json
+      - lib/guidance/index.ts
+      - tests/unit/state/case-state.test.ts
+      - tests/unit/guidance/
+    verifies:
+      - node scripts/generate-synthetic-fixtures.mjs --check
+      - npx vitest run tests/unit/state tests/unit/guidance tests/unit/export/core
+      - npm run typecheck
+      - npm run build
+      - git diff --check
