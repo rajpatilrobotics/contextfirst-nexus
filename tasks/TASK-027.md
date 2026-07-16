@@ -8,19 +8,20 @@
 - Wave: bridge before TASK-016, TASK-018, and TASK-022 resume.
 - Risk: high.
 - Suggested branch: `task-027-case-state-export-bridge`.
-- Depends on: TASK-009, TASK-010, TASK-017.
-- Graph outcome: Replace the shell-private state boundary with the canonical shared case-state context and dispatcher, correct export-input freshness and selection revision behavior, and build the complete canonical export limitation union.
+- Depends on: TASK-007, TASK-009, TASK-010, TASK-017.
+- Graph outcome: Replace the shell-private state boundary with the canonical shared case-state context and dispatcher, enforce valid manual citation resolution through the TASK-007 resolver, correct export-input freshness and selection revision behavior, and build the complete canonical export limitation union.
 
 ## 2. Goal
 
-Bridge the integrated shell, case reducer, and export core so every case route consumes one canonical persisted `CaseState`, export freshness follows frozen analysis-input provenance rather than unrelated case revision changes, export-selection changes produce a current gate for the resulting revision, and every required limitation is preserved in the manifest.
+Bridge the integrated citation resolver, shell, case reducer, and export core so every case route consumes one canonical persisted `CaseState`, manual resolution can trust only resolver-produced exact ranges, export freshness follows frozen analysis-input provenance rather than unrelated case revision changes, export-selection changes produce a current gate for the resulting revision, and every required limitation is preserved in the manifest.
 
 ## 3. Why this task exists
 
-TASK-022 preflight confirmed four shared integration defects that cannot be repaired inside a feature worktree without violating exclusive ownership. The shell currently owns private state that route children cannot consume, the export gate compares a run's source case revision even when the frozen analysis input is unchanged, export selection can make a newly evaluated gate stale immediately, and the manifest limitation list omits required sources. These are shared contract-bridge fixes and must land before evaluation, Purpose/provider UI, or export UI proceeds.
+TASK-020 and TASK-022 preflight confirmed shared integration defects that cannot be repaired inside feature worktrees without violating exclusive ownership. The state reducer can currently manufacture a manual citation result instead of delegating to the canonical resolver, the shell owns private state that route children cannot consume, the export gate compares a run's source case revision even when the frozen analysis input is unchanged, export selection can make a newly evaluated gate stale immediately, and the manifest limitation list omits required sources. These are shared contract-bridge fixes and must land before evaluation, Purpose/provider UI, or export UI proceeds.
 
 ## 4. Dependencies and base requirement
 
+- TASK-007 must be integrated and provide canonical citation resolution, ambiguity options, exact-range matching, and `resolveManualCitation`.
 - TASK-009 must be integrated and provide the canonical export gate and manifest implementation.
 - TASK-010 must be integrated and provide `CaseState`, canonical `CaseCommand` handling, revision checks, session persistence, and reset behavior.
 - TASK-017 must be integrated and provide the case shell and shell component tests.
@@ -36,7 +37,7 @@ Read these sources before editing, in this order:
 1. `AGENTS.md` in full.
 2. `tasks/TASK-027.md` in full.
 3. `PLANS.md` in full.
-4. The TASK-027 entry and TASK-009, TASK-010, TASK-016, TASK-017, TASK-018, TASK-020, and TASK-022 entries in `TASK_GRAPH.yaml`.
+4. The TASK-027 entry and TASK-007, TASK-009, TASK-010, TASK-016, TASK-017, TASK-018, TASK-020, and TASK-022 entries in `TASK_GRAPH.yaml`.
 5. `docs/CONTEXT_INDEX.md` in full.
 6. `docs/ORCHESTRATION_AND_INTEGRATION.md`: Sections 4, 5, 6, 7, 8, 9, 12, 13, and 16.
 7. `docs/ARCHITECTURE.md`: Sections 3, 4, 6, 7, 8.6, 8.7, 11, 13, 14, and 16.
@@ -44,7 +45,7 @@ Read these sources before editing, in this order:
 9. `docs/PRODUCT_SPEC.md`: Sections 6, 7.1, 7.5, 7.12 through 7.15, 9, 10, and 12.
 10. `docs/SAFETY_AND_DATA.md` in full.
 11. `docs/TESTING_AND_EVALUATION.md`: Sections covering case-state transitions, persistence, export gates, manifest parity, regressions, and integration verification.
-12. `tasks/TASK-009.md`, `tasks/TASK-010.md`, and `tasks/TASK-017.md`, with special attention to their frozen invariants and original ownership.
+12. `tasks/TASK-007.md`, `tasks/TASK-009.md`, `tasks/TASK-010.md`, and `tasks/TASK-017.md`, with special attention to their frozen invariants and original ownership.
 13. The current contents and Git status of every path in Section 6.
 
 ## 6. Exclusive write scope
@@ -134,10 +135,14 @@ Read-only inspection does not grant permission to repair, reformat, or regenerat
 ### 9.5 Manual citation-resolution enforcement
 
 - Enforce manual citation resolution in the canonical `resolve_citation` command path, not only in TASK-020 presentation controls.
-- Accept manual resolution only for a citation in the active successful run whose current validation state is `ambiguous_match` and whose owning active candidate has the matching source dependency.
-- Reject attempts to rewrite an exact, already manually resolved, unknown, unavailable, cross-run, or candidate-unowned citation.
-- Validate that the chosen segment and range are an allowed bounded exact occurrence for the unresolved citation; an arbitrary segment or range must not become trusted through the command.
-- Preserve the immutable resolution record, audit event, provenance, export invalidation, and case-revision behavior for a valid resolution.
+- Require the current citation in the active successful run to have `validationStatus: ambiguous_match` and require its owning active candidate to have the matching source dependency.
+- Require the selected segment to be an existing canonical segment. Never accept a caller-created segment, text, range, or ambiguity option.
+- Reconstruct the TASK-007 citation proposal from canonical state, rerun `resolveCitation` to recompute the valid ambiguity ranges, and pass the selected segment/range to `resolveManualCitation`.
+- Accept only a range that exactly equals one resolver-provided ambiguity option. Reject exact, normalized-only, already resolved, unavailable, unknown, cross-run, candidate-unowned, arbitrary-segment, partial, shifted, or out-of-bounds selections without mutation.
+- Use the citation returned by `resolveManualCitation`; the reducer must not manufacture or patch a `manually_resolved` citation itself.
+- Append the resolver-produced `CitationResolutionDecision` and the canonical audit event, then recalculate the owning candidate's support from its current source dependencies and citation states.
+- Stale the export gate and current export projection, increment the case revision through the canonical command path, and preserve citation/run provenance.
+- Never automatically accept, restore, or otherwise change a candidate review decision when citation support changes. A candidate that still requires individual review remains or returns to the applicable non-accepted review state.
 
 ## 10. Out of scope
 
@@ -169,7 +174,9 @@ Read-only inspection does not grant permission to repair, reformat, or regenerat
 - A materially changed export selection increments `caseRevision` before evaluation, clears prior export output, and stores a gate current for the resulting revision.
 - The same normalized selection does not cause an extra revision bump.
 - Manifest limitations are sorted and duplicate-free and contain all included candidate limitations, coverage limitations, reviewed gap explanations, and included guidance-card limitations, with excluded content absent.
-- Manual resolution succeeds only for a valid active ambiguous citation, matching candidate dependency, and allowed exact occurrence; invalid status, ownership, run, segment, and range attempts are rejected without mutation.
+- Manual resolution succeeds only when the current citation is `ambiguous_match`, the canonical segment exists, `resolveCitation` recomputes the ambiguity, and the selection exactly matches a resolver-provided range.
+- The stored citation and appended decision come from `resolveManualCitation`; the owning candidate support is recalculated, the export gate is stale, the audit and case revision advance, and no candidate review is automatically accepted.
+- Invalid status, ownership, run, segment, ambiguity, and range attempts are rejected without state, audit, review, revision, or export mutation.
 - All pre-existing focused shell, export-core, and state behavior remains passing.
 - Only the six paths in Section 6 change.
 
@@ -191,7 +198,7 @@ All three commands must pass. Do not weaken or skip a regression assertion to ob
 4. Confirm provenance tests independently cover each required field and explicitly prove `sourceCaseRevision` is ignored.
 5. Confirm selection tests compare first/materially changed and unchanged normalized selections and assert gate/state revision equality.
 6. Confirm limitation tests contain duplicates and shuffled input, then assert the exact sorted union and absence of excluded limitations.
-7. Confirm manual-resolution tests cover valid ambiguity resolution plus rejection of exact, already resolved, cross-run, candidate-unowned, arbitrary-segment, and invalid-range attempts.
+7. Confirm manual-resolution tests prove TASK-007 recomputation and exact resolver-range matching; resolver-produced citation and decision storage; candidate support recalculation; audit, revision, and export staleness; no automatic review acceptance; and rejection of exact, already resolved, normalized-only, cross-run, candidate-unowned, missing-segment, arbitrary-segment, shifted, partial, and out-of-bounds attempts.
 8. Inspect the diff for credentials, private data, raw source text, provider payloads, or real-person data. None may be present.
 
 ## 15. Commit permission and message

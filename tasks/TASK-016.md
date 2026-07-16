@@ -2,12 +2,12 @@
 
 ## 1. Task metadata
 
-- Status: Pending until coordinator marks ready.
+- Status: Blocked until TASK-027 and TASK-028 are integrated and the coordinator marks ready.
 - Stage: quality.
 - Wave: 8.
 - Risk: high.
 - Suggested branch: `task/016-evaluation-harness`.
-- Depends on: TASK-003, TASK-007, TASK-008, TASK-009, TASK-010, TASK-015.
+- Depends on: TASK-003, TASK-007, TASK-008, TASK-009, TASK-010, TASK-015, TASK-027, TASK-028.
 - Graph outcome: Implement deterministic evaluation across all frozen variants, raw versus validated result separation, provider provenance, versioned admission reports with canonical digests, blocking admission gates, optional live runs, and no aggregate accuracy score without changing runtime admission.
 
 ## 2. Goal
@@ -23,7 +23,9 @@ Provider marketing and a successful demo do not establish fitness for source-gro
 - TASK-003 must be integrated with the frozen 12-family, 14-variant evaluation definitions, exact expected answers, development and held-out split, fixture version, and synthetic source truth.
 - TASK-007 through TASK-010 must be integrated so citation, review, dependency, export, state, replay, and checkpoint checks use production domain logic.
 - TASK-015 must be integrated so each live release adapter and common post-validation path can be exercised through the same orchestration boundary.
-- Start from the coordinator branch after all six dependencies are integrated. The opening coordinator prompt must identify the base revision. Stop if the dependency state or base revision is missing or inconsistent.
+- TASK-027 must be integrated so shared case state, valid manual citation resolution, export freshness, selection revision, and manifest limitations use the corrected canonical paths.
+- TASK-028 must be integrated so deterministic review, replay, and checkpoint evaluation use the exact frozen 14-candidate definitions and reconciled D03/D04 chronology.
+- Start from the coordinator branch after all eight dependencies are integrated. The opening coordinator prompt must identify the base revision. Stop if the dependency state or base revision is missing or inconsistent.
 - Deterministic verification must work with no provider credential, no network request, and no live-evaluation spend.
 
 ## 5. Required context

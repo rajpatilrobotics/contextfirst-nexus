@@ -1,7 +1,7 @@
 schema_version: "1.0.0"
 project: contextfirst-nexus
 graph_status: approved_for_implementation
-task_count: 27
+task_count: 28
 
 authority:
   repository_rules: AGENTS.md
@@ -334,7 +334,7 @@ tasks:
     wave: 8
     status: blocked
     risk: high
-    dependencies: [TASK-003, TASK-007, TASK-008, TASK-009, TASK-010, TASK-015, TASK-027]
+    dependencies: [TASK-003, TASK-007, TASK-008, TASK-009, TASK-010, TASK-015, TASK-027, TASK-028]
     packet: tasks/TASK-016.md
     outcome: Implement deterministic evaluation across all frozen variants, raw versus validated result separation, provider provenance, versioned admission reports with canonical digests, blocking admission gates, optional live runs, and no aggregate accuracy score without changing runtime admission.
     owns:
@@ -428,7 +428,7 @@ tasks:
     wave: 11
     status: blocked
     risk: high
-    dependencies: [TASK-004, TASK-008, TASK-010, TASK-017, TASK-019, TASK-020]
+    dependencies: [TASK-004, TASK-008, TASK-010, TASK-017, TASK-019, TASK-020, TASK-028]
     packet: tasks/TASK-021.md
     outcome: Compose the review route with timeline, Nexus, three lanes, candidate cards, context gaps, queue, dependency feedback, audit access, individual actions, and the complete evidence-withdrawal demonstration.
     owns:
@@ -455,7 +455,7 @@ tasks:
     wave: 9
     status: blocked
     risk: high
-    dependencies: [TASK-004, TASK-009, TASK-010, TASK-017, TASK-027]
+    dependencies: [TASK-004, TASK-009, TASK-010, TASK-017, TASK-027, TASK-028]
     packet: tasks/TASK-022.md
     outcome: Implement blocked export behavior, remediation links, minimum-necessary selection, semantic preview, structured JSON, lazy PDF generation, manifest parity, local downloads, and required labels.
     owns:
@@ -558,7 +558,7 @@ tasks:
     wave: 9
     status: ready
     risk: high
-    dependencies: [TASK-009, TASK-010, TASK-017]
+    dependencies: [TASK-007, TASK-009, TASK-010, TASK-017]
     packet: tasks/TASK-027.md
     outcome: Replace the shell-private state boundary with the canonical shared case-state context and dispatcher, enforce valid manual citation resolution, correct export-input freshness and selection revision behavior, and build the complete canonical export limitation union.
     owns:
@@ -572,3 +572,26 @@ tasks:
       - npx vitest run tests/components/shell tests/unit/export/core tests/unit/state
       - npm run typecheck
       - npm run build
+
+  - id: TASK-028
+    title: Canonical review fixture reconciliation
+    stage: integration
+    wave: 9
+    status: ready
+    risk: high
+    dependencies: [TASK-003, TASK-008, TASK-010, TASK-020]
+    packet: tasks/TASK-028.md
+    outcome: Reconcile the synthetic review definitions, review engine, checkpoint, and replay with the frozen 14-candidate set and distinct D03/D04 arrival chronology without changing canonical fixture, redacted-input, evaluation, or provider bindings.
+    owns:
+      - scripts/generate-synthetic-fixtures.mjs
+      - fixtures/cases/cfn-demo-001.json
+      - lib/fixtures/
+      - lib/review/
+      - lib/analysis/replay.ts
+      - tests/unit/fixtures/
+      - tests/unit/review/
+      - tests/unit/replay/
+    verifies:
+      - node scripts/generate-synthetic-fixtures.mjs --check
+      - npx vitest run tests/unit/fixtures tests/unit/review tests/unit/replay
+      - npm run typecheck

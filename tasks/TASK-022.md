@@ -4,11 +4,11 @@
 
 - Task ID: TASK-022
 - Stage: interface
-- Status: Pending. Only the coordinator may mark this task Ready after every dependency is integrated.
+- Status: Blocked until TASK-027 and TASK-028 are integrated. Only the coordinator may then mark this task Ready.
 - Wave: 9
 - Risk: high
 - Suggested branch: `task/022-export-renderers`
-- Depends on: TASK-004, TASK-009, TASK-010, TASK-017
+- Depends on: TASK-004, TASK-009, TASK-010, TASK-017, TASK-027, TASK-028
 
 ## 2. Goal
 
@@ -24,8 +24,10 @@ The final handoff is the point where unsupported, unreviewed, stale, over-broad,
 - TASK-009 must be integrated and provide the complete canonical export gate, freshness rules, full and safe-share projections, minimum-necessity rules, single-run provenance, and deterministic manifest serialization.
 - TASK-010 must be integrated and provide central gate evaluation, export creation, case revision, current-export state, audit events, purpose-change invalidation, and replay or run provenance.
 - TASK-017 must be integrated and provide the case shell, Export navigation state, case status, persistent synthetic banner, and stable blocker-navigation context.
+- TASK-027 must be integrated and provide shared route-visible case state, corrected export-input freshness, revision-before-gate behavior, and the complete manifest limitation union.
+- TASK-028 must be integrated and provide the exact canonical review candidate, dependency, replay, and checkpoint fixture projections consumed by export.
 - TASK-010 provides audit and current-run provenance state, while TASK-004 provides reusable accessible limitation and disclosure surfaces. The full Trust and Safety Lab page remains independent in TASK-023.
-- Create the worktree from the latest coordinator branch containing all four integrated dependencies and their passing verification. Do not recreate gate or manifest logic in a component or renderer.
+- Create the worktree from the latest coordinator branch containing all six integrated dependencies and their passing verification. Do not recreate gate or manifest logic in a component or renderer.
 
 ## 5. Required context
 

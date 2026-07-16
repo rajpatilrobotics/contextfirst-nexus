@@ -8,7 +8,7 @@
 - Wave: 11
 - Risk: high
 - Suggested branch: `task/021-review-hero`
-- Depends on: TASK-004, TASK-008, TASK-010, TASK-017, TASK-019, TASK-020
+- Depends on: TASK-004, TASK-008, TASK-010, TASK-017, TASK-019, TASK-020, TASK-028
 
 ## 2. Goal
 
@@ -26,9 +26,9 @@ The Review workspace is the core product demonstration. It must let a practition
 - TASK-017 must be integrated and provide the case shell, Review navigation state, header status, synthetic boundary, and responsive layout.
 - TASK-019 must be integrated and provide the complete explicit Start analysis flow, terminal run activation, document coverage, and masking-prerequisite UI state consumed by Review.
 - TASK-020 must be integrated and provide the qualified timeline, citation controls, source drawer, exact highlighting, and focus restoration.
-- Upstream fixture reconciliation must add the missing canonical D03 and D04 timeline records before TASK-021 can start. TASK-021 must consume those integrated records and must not fabricate or patch them inside the review feature.
+- TASK-028 must be integrated and provide the reconciled exact 14-candidate review definitions, separate canonical D03 and D04 timeline records, and consistent replay/checkpoint projections. TASK-021 must consume those integrated records and must not fabricate or patch them inside the review feature.
 - TASK-010 provides canonical review state and commands. TASK-004 provides the generic accessible disclosure surfaces used by this workspace. Audit History and unsafe-output reporting remain independent in TASK-023.
-- Create the worktree from the latest coordinator branch containing all six integrated dependencies and their passing verification. Do not duplicate any dependency behavior inside the route or feature components.
+- Create the worktree from the latest coordinator branch containing all seven integrated dependencies and their passing verification. Do not duplicate any dependency behavior inside the route or feature components.
 
 ## 5. Required context
 

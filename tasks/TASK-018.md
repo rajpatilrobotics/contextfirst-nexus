@@ -4,11 +4,11 @@
 
 - Task ID: TASK-018
 - Stage: interface
-- Status: Pending. Only the coordinator may mark this task Ready after every dependency is integrated.
+- Status: Blocked until TASK-027 is integrated. Only the coordinator may then mark this task Ready.
 - Wave: 9
 - Risk: high
 - Suggested branch: `task/018-purpose-provider-ui`
-- Depends on: TASK-004, TASK-010, TASK-015, TASK-017
+- Depends on: TASK-004, TASK-010, TASK-015, TASK-017, TASK-027
 
 ## 2. Goal
 
@@ -24,7 +24,8 @@ Provider choice changes who receives approved redacted synthetic content, which 
 - TASK-010 must be integrated and provide canonical Case Purpose Brief commands, pending live-analysis state, locally validated recovery linkage, case revision, audit events, run history, active-run selection, local replay, checkpoint loading, and export-readiness invalidation.
 - TASK-015 must be integrated and provide the safe `GET /api/analyze` availability projection, stateless `POST /api/analyze` unions, exact recovery options, terminal live execution results without recovery metadata, and no-secret error contract.
 - TASK-017 must be integrated and provide the case layout, persistent synthetic banner, navigation, status header, and global Trust and Safety destination.
-- Create the worktree from the latest coordinator branch containing all four integrated dependencies and their passing verification. Do not use unmerged worktree output or recreate their interfaces.
+- TASK-027 must be integrated and provide the shared route-visible case-state context and canonical command dispatcher while preserving session persistence and Reset Case.
+- Create the worktree from the latest coordinator branch containing all five integrated dependencies and their passing verification. Do not use unmerged worktree output or recreate their interfaces.
 
 ## 5. Required context
 
