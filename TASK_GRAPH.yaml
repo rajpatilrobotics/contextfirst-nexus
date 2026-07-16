@@ -1,7 +1,7 @@
 schema_version: "1.0.0"
 project: contextfirst-nexus
 graph_status: approved_for_implementation
-task_count: 31
+task_count: 32
 
 authority:
   repository_rules: AGENTS.md
@@ -455,9 +455,9 @@ tasks:
     title: Export experience and local renderers
     stage: interface
     wave: 9
-    status: ready
+    status: blocked
     risk: high
-    dependencies: [TASK-004, TASK-009, TASK-010, TASK-017, TASK-021, TASK-027, TASK-028, TASK-030, TASK-031]
+    dependencies: [TASK-004, TASK-009, TASK-010, TASK-017, TASK-021, TASK-027, TASK-028, TASK-030, TASK-031, TASK-032]
     packet: tasks/TASK-022.md
     outcome: Implement blocked export behavior, remediation links, minimum-necessary selection, semantic preview, structured JSON, lazy PDF generation, manifest parity, local downloads, and required labels.
     owns:
@@ -661,6 +661,24 @@ tasks:
     verifies:
       - node scripts/generate-synthetic-fixtures.mjs --check
       - npx vitest run tests/unit/state tests/unit/guidance tests/unit/export/core
+      - npm run typecheck
+      - npm run build
+      - git diff --check
+
+  - id: TASK-032
+    title: Review remediation focus bridge
+    stage: integration
+    wave: 11
+    status: ready
+    risk: medium
+    dependencies: [TASK-017, TASK-021]
+    packet: tasks/TASK-032.md
+    outcome: Provide a stable accessible Review workspace remediation target that receives focus only when navigation enters with the exact review-workspace hash, including the real export-blocker URL.
+    owns:
+      - features/review/candidate/review-workspace.tsx
+      - tests/components/review/candidate/review-workspace-focus.test.tsx
+    verifies:
+      - npx vitest run tests/components/review/candidate
       - npm run typecheck
       - npm run build
       - git diff --check

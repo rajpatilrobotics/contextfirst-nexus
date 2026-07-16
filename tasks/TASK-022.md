@@ -4,11 +4,11 @@
 
 - Task ID: TASK-022
 - Stage: interface
-- Status: Blocked until TASK-027 and TASK-028 are integrated. Only the coordinator may then mark this task Ready.
+- Status: Blocked until TASK-032 is integrated. Only the coordinator may then mark this task Ready.
 - Wave: 9
 - Risk: high
 - Suggested branch: `task/022-export-renderers`
-- Depends on: TASK-004, TASK-009, TASK-010, TASK-017, TASK-027, TASK-028
+- Depends on: TASK-004, TASK-009, TASK-010, TASK-017, TASK-021, TASK-027, TASK-028, TASK-030, TASK-031, TASK-032
 
 ## 2. Goal
 
@@ -24,10 +24,14 @@ The final handoff is the point where unsupported, unreviewed, stale, over-broad,
 - TASK-009 must be integrated and provide the complete canonical export gate, freshness rules, full and safe-share projections, minimum-necessity rules, single-run provenance, and deterministic manifest serialization.
 - TASK-010 must be integrated and provide central gate evaluation, export creation, case revision, current-export state, audit events, purpose-change invalidation, and replay or run provenance.
 - TASK-017 must be integrated and provide the case shell, Export navigation state, case status, persistent synthetic banner, and stable blocker-navigation context.
+- TASK-021 must be integrated and provide the canonical Review route, review workspace, candidate interactions, queue, dependency feedback, and withdrawal demonstration.
 - TASK-027 must be integrated and provide shared route-visible case state, corrected export-input freshness, revision-before-gate behavior, and the complete manifest limitation union.
 - TASK-028 must be integrated and provide the exact canonical review candidate, dependency, replay, and checkpoint fixture projections consumed by export.
+- TASK-030 must be integrated and provide reconciled withdrawal dependencies, the exact post-withdrawal export result, and canonical source-reveal auditing.
+- TASK-031 must be integrated and provide exactly-once export audit events plus the verified official-source guidance pack.
+- TASK-032 must be integrated and provide the stable accessible `review-workspace` remediation target for Review-incomplete blocker links.
 - TASK-010 provides audit and current-run provenance state, while TASK-004 provides reusable accessible limitation and disclosure surfaces. The full Trust and Safety Lab page remains independent in TASK-023.
-- Create the worktree from the latest coordinator branch containing all six integrated dependencies and their passing verification. Do not recreate gate or manifest logic in a component or renderer.
+- Update the existing worktree to the latest coordinator branch containing all ten integrated dependencies and their passing verification before TASK-022 resumes. Do not recreate gate or manifest logic in a component or renderer.
 
 ## 5. Required context
 
@@ -36,7 +40,7 @@ Read in this order before editing:
 1. `AGENTS.md` in full.
 2. `tasks/TASK-022.md` in full.
 3. `PLANS.md` in full.
-4. The TASK-022 entry in `TASK_GRAPH.yaml` in full.
+4. The TASK-022 and TASK-032 entries in `TASK_GRAPH.yaml` in full, followed by `tasks/TASK-032.md` in full.
 5. `docs/CONTEXT_INDEX.md` in full.
 6. `decision-log.md` in full.
 7. `PROJECT_BRIEF.md`: The problem, The proposed solution, End-to-end prototype flow, Prototype scope, Product principles, Strongest demo moment, and Success criteria.
