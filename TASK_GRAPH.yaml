@@ -370,7 +370,7 @@ tasks:
     title: Purpose, provider selection, and recovery UI
     stage: interface
     wave: 9
-    status: blocked
+    status: ready
     risk: high
     dependencies: [TASK-004, TASK-010, TASK-015, TASK-017, TASK-027]
     packet: tasks/TASK-018.md
@@ -556,7 +556,7 @@ tasks:
     title: Case state and export contract bridge
     stage: integration
     wave: 9
-    status: ready
+    status: integrated
     risk: high
     dependencies: [TASK-007, TASK-009, TASK-010, TASK-017]
     packet: tasks/TASK-027.md
