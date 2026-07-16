@@ -473,7 +473,7 @@ function applyValidCommand(state: CaseState, command: CaseCommand): CaseCommandR
       });
       return commit(base, command, {
         exportGate: gate,
-      }, gate.status === "ready" ? "export_gate_evaluated" : "export_blocked", [gate.id], gate.status === "blocked" ? gate.blockers[0]?.code : undefined, false);
+      }, gate.status === "ready" ? "export_gate_evaluated" : "export_blocked", [gate.id], gate.status === "blocked" ? gate.blockers[0]?.code : undefined);
     }
     case "create_export": {
       const normalized = normalizeExportSelection(command.selection);
@@ -498,14 +498,14 @@ function applyValidCommand(state: CaseState, command: CaseCommand): CaseCommandR
         currentExportId: record.id,
         currentExportManifest: manifest,
         exportedRevision: state.exportGate.caseRevision,
-      }, "export_created", [record.id], undefined, false);
+      }, "export_created", [record.id]);
     }
     case "reveal_source":
       return commit(state, command, {}, "source_revealed", [command.citationId], command.reasonCode);
     case "report_unsafe_output":
-      return commit(state, command, {}, "unsafe_output_reported", command.entityIds, command.reasonCode, false);
+      return commit(state, command, {}, "unsafe_output_reported", command.entityIds, command.reasonCode);
     case "reset_case":
-      return commit(createInitialCaseState(command.meta.createdAt), command, {}, "case_reset", [], undefined, false);
+      return commit(createInitialCaseState(command.meta.createdAt), command, {}, "case_reset", []);
   }
 }
 

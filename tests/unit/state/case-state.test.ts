@@ -74,8 +74,25 @@ function completeCheckpointReview(state = loadCheckpoint()) {
   return state;
 }
 
+function completeReadyExportReview(state = completeCheckpointReview()) {
+  const extraIntents: Array<Extract<CaseCommand, { type: "review_candidate" }>["intent"]> = [
+    { candidateId: "CAND-PROV-TASKLOG", action: "reject", reason: "Task-log provenance remains unresolved for export." },
+    { candidateId: "CAND-META-COOPERATION", action: "confirm_unknown", reason: null },
+  ];
+  for (const [index, intent] of extraIntents.entries()) {
+    const reviewStatus = state.candidates.find((candidate) => candidate.id === intent.candidateId)?.reviewStatus;
+    if (!reviewStatus || ["human_accepted", "human_edited", "rejected"].includes(reviewStatus)) continue;
+    state = applyOk(state, {
+      type: "review_candidate",
+      meta: meta(state, `cmd-complete-ready-extra-${index + 1}`),
+      intent,
+    });
+  }
+  return state;
+}
+
 function createPopulatedExportState() {
-  let state = completeCheckpointReview();
+  let state = completeReadyExportReview();
   state = applyOk(state, {
     type: "evaluate_export_gate",
     meta: meta(state, "cmd-current-export-gate"),
@@ -166,6 +183,37 @@ const fullSelection: ExportSelection = {
   kind: "full_practitioner_handoff",
   minimumNecessarySelection: null,
 };
+
+const unsafeAuditFragments = [
+  "SYSTEM OVERRIDE",
+  "Maya K.",
+  "passport",
+  "prompt",
+  "provider response",
+  "raw diagnostic",
+  "secret",
+];
+
+function expectSafeAuditEvent(
+  event: CaseState["audit"][number] | undefined,
+  expected: {
+    eventType: CaseState["audit"][number]["eventType"];
+    entityIds: string[];
+    reasonCode?: string;
+    commandId: string;
+  },
+) {
+  expect(event).toMatchObject({
+    eventType: expected.eventType,
+    entityIds: expected.entityIds,
+    commandId: expected.commandId,
+    idempotencyKey: `idem-${expected.commandId}`,
+  });
+  expect(event?.reasonCode).toBe(expected.reasonCode);
+  for (const fragment of unsafeAuditFragments) {
+    expect(event?.summary).not.toContain(fragment);
+  }
+}
 
 function ambiguousCitationState() {
   let state = loadCheckpoint();
@@ -508,6 +556,182 @@ describe("TASK-010 case state reducer", () => {
     expect(duplicate.reason).toBe("duplicate_idempotency_key");
     expect(duplicate.state).toEqual(result.state);
     expect(duplicate.state.audit.filter((event) => event.eventType === "source_revealed")).toHaveLength(1);
+  });
+
+  it("audits ready export-gate evaluation once without changing gate truth or duplicating events", () => {
+    const state = completeReadyExportReview();
+    const result = applyCaseCommand(state, {
+      type: "evaluate_export_gate",
+      meta: meta(state, "cmd-audit-ready-gate"),
+      selection: fullSelection,
+    });
+    expect(result.ok, result.ok ? undefined : result.reason).toBe(true);
+    if (!result.ok) throw new Error(result.reason);
+
+    expect(result.state.exportGate?.status).toBe("ready");
+    expect(result.state.exportGate?.caseRevision).toBe(state.caseRevision);
+    expect(result.state.caseRevision).toBe(state.caseRevision);
+    expect(result.state.audit).toHaveLength(state.audit.length + 1);
+    expectSafeAuditEvent(result.state.audit.at(-1), {
+      eventType: "export_gate_evaluated",
+      entityIds: [result.state.exportGate!.id],
+      commandId: "cmd-audit-ready-gate",
+    });
+
+    const duplicate = applyCaseCommand(result.state, {
+      type: "evaluate_export_gate",
+      meta: { ...meta(result.state, "cmd-audit-ready-gate-duplicate"), idempotencyKey: "idem-cmd-audit-ready-gate" },
+      selection: fullSelection,
+    });
+    expect(duplicate.ok).toBe(false);
+    if (duplicate.ok) throw new Error("duplicate ready gate unexpectedly succeeded");
+    expect(duplicate.reason).toBe("duplicate_idempotency_key");
+    expect(duplicate.state.audit.filter((event) => event.eventType === "export_gate_evaluated")).toHaveLength(1);
+    expect(duplicate.state.exportGate).toEqual(result.state.exportGate);
+  });
+
+  it("audits blocked export-gate evaluation once and preserves blockers", () => {
+    const state = loadCheckpoint();
+    const result = applyCaseCommand(state, {
+      type: "evaluate_export_gate",
+      meta: meta(state, "cmd-audit-blocked-gate"),
+      selection: fullSelection,
+    });
+    expect(result.ok, result.ok ? undefined : result.reason).toBe(true);
+    if (!result.ok) throw new Error(result.reason);
+
+    expect(result.state.exportGate?.status).toBe("blocked");
+    expect(result.state.exportGate?.blockers[0]).toMatchObject({
+      code: "REVIEW_INCOMPLETE",
+    });
+    expect(result.state.exportGate?.blockers[0]?.entityIds).toEqual([
+      "CAND-CTRL-CONFINEMENT",
+      "CAND-CTRL-PASSPORT",
+      "CAND-PROV-TASKLOG",
+      "CAND-SENDER-0402",
+      "CAND-URG-INTERPRETER",
+    ]);
+    expect(result.state.caseRevision).toBe(state.caseRevision);
+    expect(result.state.audit).toHaveLength(state.audit.length + 1);
+    expectSafeAuditEvent(result.state.audit.at(-1), {
+      eventType: "export_blocked",
+      entityIds: [result.state.exportGate!.id],
+      reasonCode: "REVIEW_INCOMPLETE",
+      commandId: "cmd-audit-blocked-gate",
+    });
+
+    const duplicate = applyCaseCommand(result.state, {
+      type: "evaluate_export_gate",
+      meta: { ...meta(result.state, "cmd-audit-blocked-gate-duplicate"), idempotencyKey: "idem-cmd-audit-blocked-gate" },
+      selection: fullSelection,
+    });
+    expect(duplicate.ok).toBe(false);
+    expect(duplicate.state.audit.filter((event) => event.eventType === "export_blocked")).toHaveLength(1);
+    expect(duplicate.state.exportGate).toEqual(result.state.exportGate);
+  });
+
+  it("audits export creation once and duplicate idempotency cannot create another export", () => {
+    const state = createPopulatedExportState();
+    const result = applyCaseCommand(state, {
+      type: "create_export",
+      meta: meta(state, "cmd-audit-create-export"),
+      selection: fullSelection,
+    });
+    expect(result.ok, result.ok ? undefined : result.reason).toBe(true);
+    if (!result.ok) throw new Error(result.reason);
+
+    expect(result.state.exports).toHaveLength(state.exports.length + 1);
+    expect(result.state.currentExportId).toBe("EXPORT-1");
+    expect(result.state.currentExportManifest?.gate).toEqual(state.exportGate);
+    expect(result.state.currentExportManifest?.exportSelectionDigest).toBe(state.exportGate?.exportSelectionDigest);
+    expect(result.state.exportedRevision).toBe(state.exportGate?.caseRevision);
+    expect(result.state.caseRevision).toBe(state.caseRevision);
+    expect(result.state.audit).toHaveLength(state.audit.length + 1);
+    expectSafeAuditEvent(result.state.audit.at(-1), {
+      eventType: "export_created",
+      entityIds: ["EXPORT-1"],
+      commandId: "cmd-audit-create-export",
+    });
+
+    const duplicate = applyCaseCommand(result.state, {
+      type: "create_export",
+      meta: { ...meta(result.state, "cmd-audit-create-export-duplicate"), idempotencyKey: "idem-cmd-audit-create-export" },
+      selection: fullSelection,
+    });
+    expect(duplicate.ok).toBe(false);
+    expect(duplicate.state.exports).toHaveLength(result.state.exports.length);
+    expect(duplicate.state.audit.filter((event) => event.eventType === "export_created")).toHaveLength(1);
+  });
+
+  it("audits unsafe-output reporting once without storing unsafe content or duplicating reports", () => {
+    const state = loadCheckpoint();
+    const result = applyCaseCommand(state, {
+      type: "report_unsafe_output",
+      meta: meta(state, "cmd-audit-unsafe-output"),
+      entityIds: ["CAND-SENDER-0402", "NEXUS-OFFENCE-TIMING"],
+      reasonCode: "citation_problem",
+    });
+    expect(result.ok, result.ok ? undefined : result.reason).toBe(true);
+    if (!result.ok) throw new Error(result.reason);
+
+    expect(result.state.caseRevision).toBe(state.caseRevision);
+    expect(result.state.candidates).toEqual(state.candidates);
+    expect(result.state.citations).toEqual(state.citations);
+    expect(result.state.audit).toHaveLength(state.audit.length + 1);
+    expectSafeAuditEvent(result.state.audit.at(-1), {
+      eventType: "unsafe_output_reported",
+      entityIds: ["CAND-SENDER-0402", "NEXUS-OFFENCE-TIMING"],
+      reasonCode: "citation_problem",
+      commandId: "cmd-audit-unsafe-output",
+    });
+
+    const duplicate = applyCaseCommand(result.state, {
+      type: "report_unsafe_output",
+      meta: { ...meta(result.state, "cmd-audit-unsafe-output-duplicate"), idempotencyKey: "idem-cmd-audit-unsafe-output" },
+      entityIds: ["CAND-SENDER-0402", "NEXUS-OFFENCE-TIMING"],
+      reasonCode: "citation_problem",
+    });
+    expect(duplicate.ok).toBe(false);
+    expect(duplicate.state.audit.filter((event) => event.eventType === "unsafe_output_reported")).toHaveLength(1);
+    expect(duplicate.state.candidates).toEqual(result.state.candidates);
+  });
+
+  it("reset_case returns a clean initial state with exactly one safe reset audit event", () => {
+    const state = createPopulatedExportState();
+    const result = applyCaseCommand(state, {
+      type: "reset_case",
+      meta: meta(state, "cmd-audit-reset"),
+    });
+    expect(result.ok, result.ok ? undefined : result.reason).toBe(true);
+    if (!result.ok) throw new Error(result.reason);
+
+    expect(result.state.caseRevision).toBe(0);
+    expect(result.state.purposeBrief).toBeNull();
+    expect(result.state.documents).toEqual([]);
+    expect(result.state.segments).toEqual([]);
+    expect(result.state.candidates).toEqual([]);
+    expect(result.state.citations).toEqual([]);
+    expect(result.state.exports).toEqual([]);
+    expect(result.state.currentExportManifest).toBeNull();
+    expect(result.state.audit).toHaveLength(1);
+    expectSafeAuditEvent(result.state.audit[0], {
+      eventType: "case_reset",
+      entityIds: [],
+      commandId: "cmd-audit-reset",
+    });
+
+    const duplicate = applyCaseCommand(result.state, {
+      type: "reset_case",
+      meta: {
+        ...meta(result.state, "cmd-audit-reset-duplicate"),
+        idempotencyKey: "idem-cmd-audit-reset",
+      },
+    });
+    expect(duplicate.ok).toBe(false);
+    if (duplicate.ok) throw new Error("duplicate reset unexpectedly succeeded");
+    expect(duplicate.reason).toBe("duplicate_idempotency_key");
+    expect(duplicate.state.audit).toHaveLength(1);
+    expect(duplicate.state).toEqual(result.state);
   });
 
   it("persists only the safe projection and does not overwrite storage while pending", () => {
