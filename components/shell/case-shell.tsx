@@ -17,7 +17,7 @@ export const SYNTHETIC_BANNER_TEXT =
 
 export const STEP_NAVIGATION = [
   { id: "purpose", label: "Purpose", href: "/case/demo/purpose" },
-  { id: "documents", label: "Documents", href: "/case/demo/documents" },
+  { id: "documents", label: "Documents", href: "/case/demo/intake" },
   { id: "review", label: "Review", href: "/case/demo/review" },
   { id: "export", label: "Export", href: "/case/demo/export" },
 ] as const;

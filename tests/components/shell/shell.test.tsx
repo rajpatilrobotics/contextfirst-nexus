@@ -7,6 +7,7 @@ import {
   CaseShell,
   STEP_NAVIGATION,
   SYNTHETIC_BANNER_TEXT,
+  deriveCurrentStep,
   deriveStepProgress,
   describeRunProvenance,
   useCaseState,
@@ -237,6 +238,7 @@ describe("TASK-017 case shell", () => {
   });
 
   it("uses frozen navigation progress labels for active status variants", () => {
+    expect(deriveCurrentStep("/case/demo/intake")).toBe("documents");
     expect(deriveStepProgress("purpose", "purpose", "draft")).toBe("active");
     expect(deriveStepProgress("purpose", "purpose", "review_required")).toBe("warning");
     expect(deriveStepProgress("purpose", "purpose", "blocked")).toBe("failed");
@@ -366,12 +368,20 @@ describe("TASK-017 case shell", () => {
     Object.defineProperty(window, "innerWidth", { configurable: true, value: 320 });
 
     render(
-      <CaseShell currentPath="/case/demo/documents" initialState={createInitialCaseState(NOW)}>
+      <CaseShell currentPath="/case/demo/intake" initialState={createInitialCaseState(NOW)}>
         <h2>Documents child route</h2>
       </CaseShell>,
     );
 
     expect(screen.getByRole("button", { name: /Reset Case/i })).toBeEnabled();
+    expect(screen.getByRole("link", { name: /Documents/ })).toHaveAttribute(
+      "href",
+      "/case/demo/intake",
+    );
+    expect(screen.getByRole("link", { name: /Documents/ })).toHaveAttribute(
+      "aria-current",
+      "step",
+    );
     for (const step of STEP_NAVIGATION) {
       expect(screen.getByRole("link", { name: new RegExp(step.label) })).toBeInTheDocument();
     }
