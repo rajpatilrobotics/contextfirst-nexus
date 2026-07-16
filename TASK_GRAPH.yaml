@@ -408,7 +408,7 @@ tasks:
     title: Timeline and source drawer
     stage: interface
     wave: 9
-    status: ready
+    status: integrated
     risk: medium
     dependencies: [TASK-004, TASK-005, TASK-007, TASK-010, TASK-017]
     packet: tasks/TASK-020.md
@@ -426,7 +426,7 @@ tasks:
     title: Review workspace and hero interaction
     stage: interface
     wave: 11
-    status: pending
+    status: blocked
     risk: high
     dependencies: [TASK-004, TASK-008, TASK-010, TASK-017, TASK-019, TASK-020]
     packet: tasks/TASK-021.md
@@ -560,7 +560,7 @@ tasks:
     risk: high
     dependencies: [TASK-009, TASK-010, TASK-017]
     packet: tasks/TASK-027.md
-    outcome: Replace the shell-private state boundary with the canonical shared case-state context and dispatcher, correct export-input freshness and selection revision behavior, and build the complete canonical export limitation union.
+    outcome: Replace the shell-private state boundary with the canonical shared case-state context and dispatcher, enforce valid manual citation resolution, correct export-input freshness and selection revision behavior, and build the complete canonical export limitation union.
     owns:
       - components/shell/
       - lib/export/core/

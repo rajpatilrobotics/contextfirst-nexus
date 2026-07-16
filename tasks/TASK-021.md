@@ -4,7 +4,7 @@
 
 - Task ID: TASK-021
 - Stage: interface
-- Status: Pending. Only the coordinator may mark this task Ready after every dependency is integrated.
+- Status: Blocked. The coordinator may mark this task Ready only after every dependency is integrated and the missing canonical D03 and D04 timeline records are reconciled in the fixture outputs.
 - Wave: 11
 - Risk: high
 - Suggested branch: `task/021-review-hero`
@@ -26,6 +26,7 @@ The Review workspace is the core product demonstration. It must let a practition
 - TASK-017 must be integrated and provide the case shell, Review navigation state, header status, synthetic boundary, and responsive layout.
 - TASK-019 must be integrated and provide the complete explicit Start analysis flow, terminal run activation, document coverage, and masking-prerequisite UI state consumed by Review.
 - TASK-020 must be integrated and provide the qualified timeline, citation controls, source drawer, exact highlighting, and focus restoration.
+- Upstream fixture reconciliation must add the missing canonical D03 and D04 timeline records before TASK-021 can start. TASK-021 must consume those integrated records and must not fabricate or patch them inside the review feature.
 - TASK-010 provides canonical review state and commands. TASK-004 provides the generic accessible disclosure surfaces used by this workspace. Audit History and unsafe-output reporting remain independent in TASK-023.
 - Create the worktree from the latest coordinator branch containing all six integrated dependencies and their passing verification. Do not duplicate any dependency behavior inside the route or feature components.
 
@@ -131,7 +132,7 @@ All domain engines, state, fixtures, timeline and source components, trust compo
 
 ## 10. Implementation steps
 
-1. Inspect Git status, owned files, TASK-008 review interfaces, TASK-010 commands and selectors, TASK-020 timeline and source APIs, TASK-017 navigation destination, and all golden fixture records. Stop if any stable ID or transition differs.
+1. Inspect Git status, owned files, TASK-008 review interfaces, TASK-010 commands and selectors, TASK-020 timeline and source APIs, TASK-017 navigation destination, and all golden fixture records. Confirm the reconciled canonical D03 and D04 timeline records are present; stop if either is missing or if any stable ID or transition differs.
 2. Compose `/case/demo/review` from dependency components and focused feature regions using only canonical read-only candidate selectors. Keep domain policy in `lib/review` and central mutations in TASK-010, not in the page, component callbacks, or local mirrored arrays.
 3. Implement `CandidateReviewCard`, `ContextGapPanel`, the six-row Nexus, three separate lane regions, and Review Queue with exact labels, valid actions, reasons, source access, statuses, limitations, unknowns, coverage warnings, and stable remediation targets. Candidate controls emit only narrow `ReviewIntent`; withdrawal dispatches only `withdraw_candidate`.
 4. Implement the withdrawal confirmation and persistent `DependencyChangePanel` from canonical preview and result records, including affected IDs, focus movement, announcements, and before-and-after explanation.
@@ -203,6 +204,7 @@ Return a self-contained handoff containing:
 Stop and notify the coordinator if:
 
 - Any dependency is not integrated, a required canonical component or command is absent, or the base fails existing verification.
+- The canonical D03 or D04 timeline record is missing from the integrated fixture outputs; fixture reconciliation belongs upstream and must not be implemented in TASK-021.
 - The task graph and this packet disagree about title, dependencies, owned paths, or verification commands.
 - Completing the route requires editing the review engine, reducer, fixture, replay, citation or source service, trust feature, export route, contract, shell, UI primitive, package file, test configuration, or another unowned path.
 - Any stable candidate ID, Nexus ID, fixture dependency, checkpoint attribution, early blocker, action rule, or hero transition differs from the authoritative documents or integrated domain engine.

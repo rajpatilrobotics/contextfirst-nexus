@@ -131,6 +131,14 @@ Read-only inspection does not grant permission to repair, reformat, or regenerat
 - Excluded candidates and excluded guidance cards must not contribute limitations.
 - The union must be deterministic regardless of input insertion order and must not alter the existing structured candidate, coverage, reviewed-gap, or guidance-card projections.
 
+### 9.5 Manual citation-resolution enforcement
+
+- Enforce manual citation resolution in the canonical `resolve_citation` command path, not only in TASK-020 presentation controls.
+- Accept manual resolution only for a citation in the active successful run whose current validation state is `ambiguous_match` and whose owning active candidate has the matching source dependency.
+- Reject attempts to rewrite an exact, already manually resolved, unknown, unavailable, cross-run, or candidate-unowned citation.
+- Validate that the chosen segment and range are an allowed bounded exact occurrence for the unresolved citation; an arbitrary segment or range must not become trusted through the command.
+- Preserve the immutable resolution record, audit event, provenance, export invalidation, and case-revision behavior for a valid resolution.
+
 ## 10. Out of scope
 
 - Any shared contract or Zod schema change.
@@ -148,8 +156,9 @@ Read-only inspection does not grant permission to repair, reformat, or regenerat
 4. Correct active-run frozen-input matching in `lib/export/core/` without changing contract schemas or blocker codes.
 5. Correct `evaluate_export_gate` ordering in `lib/state/` so material selection changes update revision before gate evaluation.
 6. Build the deterministic limitation union from only included manifest data.
-7. Add focused regression tests for all four fixes inside the transferred test paths.
-8. Run only the exact verification in Section 13, inspect the owned-path diff, and prepare the handoff.
+7. Enforce the manual citation-resolution preconditions in the central state command path.
+8. Add focused regression tests for all five fixes inside the transferred test paths.
+9. Run only the exact verification in Section 13, inspect the owned-path diff, and prepare the handoff.
 
 ## 12. Acceptance criteria
 
@@ -160,6 +169,7 @@ Read-only inspection does not grant permission to repair, reformat, or regenerat
 - A materially changed export selection increments `caseRevision` before evaluation, clears prior export output, and stores a gate current for the resulting revision.
 - The same normalized selection does not cause an extra revision bump.
 - Manifest limitations are sorted and duplicate-free and contain all included candidate limitations, coverage limitations, reviewed gap explanations, and included guidance-card limitations, with excluded content absent.
+- Manual resolution succeeds only for a valid active ambiguous citation, matching candidate dependency, and allowed exact occurrence; invalid status, ownership, run, segment, and range attempts are rejected without mutation.
 - All pre-existing focused shell, export-core, and state behavior remains passing.
 - Only the six paths in Section 6 change.
 
@@ -181,7 +191,8 @@ All three commands must pass. Do not weaken or skip a regression assertion to ob
 4. Confirm provenance tests independently cover each required field and explicitly prove `sourceCaseRevision` is ignored.
 5. Confirm selection tests compare first/materially changed and unchanged normalized selections and assert gate/state revision equality.
 6. Confirm limitation tests contain duplicates and shuffled input, then assert the exact sorted union and absence of excluded limitations.
-7. Inspect the diff for credentials, private data, raw source text, provider payloads, or real-person data. None may be present.
+7. Confirm manual-resolution tests cover valid ambiguity resolution plus rejection of exact, already resolved, cross-run, candidate-unowned, arbitrary-segment, and invalid-range attempts.
+8. Inspect the diff for credentials, private data, raw source text, provider payloads, or real-person data. None may be present.
 
 ## 15. Commit permission and message
 
@@ -192,7 +203,7 @@ All three commands must pass. Do not weaken or skip a regression assertion to ob
 
 - Report `Task: TASK-027` and outcome as Complete, Partial, or Blocked.
 - List every changed file and confirm each is within Section 6.
-- Summarize the shared context/dispatcher, persistence and reset preservation, provenance comparison, revision-before-gate behavior, and limitation union.
+- Summarize the shared context/dispatcher, persistence and reset preservation, manual citation-resolution enforcement, provenance comparison, revision-before-gate behavior, and limitation union.
 - Report every Section 13 command and every Section 14 manual check.
 - Identify any unrun check, blocker, assumption, or required coordinator follow-up.
 - Include a commit SHA only if the coordinator authorized the exact Section 15 commit; otherwise report `Not committed`.
@@ -203,7 +214,7 @@ Stop and report to the coordinator if:
 
 - Any dependency is not integrated or the worktree is not based on the pushed documentation baseline.
 - A fix requires any write outside Section 6, including `app/case/demo/layout.tsx`, shared contracts, fixtures, guidance data, package files, configuration, documentation, or the task graph.
-- The existing contracts cannot express the shared dispatcher, frozen provenance check, gate revision, or limitation union.
+- The existing contracts cannot express the shared dispatcher, manual citation-resolution enforcement, frozen provenance check, gate revision, or limitation union.
 - A new command, blocker code, manifest field, dependency, storage mechanism, or public API appears necessary.
 - Existing user changes overlap an owned path and cannot be preserved safely.
 - Verification exposes an unrelated failure that cannot be resolved within the exclusive scope without broad cleanup or hardening.
