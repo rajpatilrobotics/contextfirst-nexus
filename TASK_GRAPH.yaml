@@ -474,7 +474,7 @@ tasks:
     title: Trust, audit, Safety Lab, and guidance UI
     stage: interface
     wave: 10
-    status: pending
+    status: ready
     risk: medium
     dependencies: [TASK-003, TASK-004, TASK-010, TASK-016, TASK-017, TASK-026]
     packet: tasks/TASK-023.md
@@ -541,7 +541,7 @@ tasks:
     title: Static provider admission handoff
     stage: providers
     wave: 9
-    status: ready
+    status: integrated
     risk: high
     dependencies: [TASK-016]
     packet: tasks/TASK-026.md
