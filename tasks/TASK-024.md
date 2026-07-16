@@ -4,7 +4,7 @@
 
 - Task ID: TASK-024
 - Stage: quality
-- Status: Pending. Only the coordinator may mark this task Ready after every dependency is integrated.
+- Status: Ready
 - Wave: 12
 - Risk: high
 - Suggested branch: `task/024-security-a11y-e2e`
@@ -52,6 +52,7 @@ Read in this order before editing:
 ## 6. Exclusive write scope
 
 - `next.config.ts`
+- `vitest.config.ts`
 - `app/error.tsx`
 - `app/global-error.tsx`
 - `app/loading.tsx`
@@ -61,6 +62,12 @@ Read in this order before editing:
 - `tests/e2e/`
 - `tests/a11y/`
 - `tests/security/`
+
+Within `vitest.config.ts`, TASK-024 may only add the exact glob
+`tests/security/**/*.test.{ts,tsx}` to the existing Vitest include list. Preserve
+every existing include, setup file, environment, and exclusion. Do not change
+reporters, environments, timeouts, aliases, coverage, or otherwise weaken test
+discovery.
 
 No other path may be created, edited, renamed, moved, or deleted.
 
@@ -79,7 +86,7 @@ No other path may be created, edited, renamed, moved, or deleted.
 - `package.json`
 - `package-lock.json`
 - `tsconfig.json`
-- shared lint, Vitest, Playwright, and test setup files
+- shared lint, Playwright, and test setup files
 
 All read-only application, domain, fixture, configuration, dependency, and setup paths must remain unchanged even when a test exposes a defect there.
 
@@ -117,7 +124,7 @@ All read-only application, domain, fixture, configuration, dependency, and setup
 
 ## 10. Implementation steps
 
-1. Inspect Git status, all owned files, integrated routes and contracts, existing scripts and test configuration, and current response behavior. Confirm every dependency is present before adding tests.
+1. Inspect Git status, all owned files, integrated routes and contracts, existing scripts and test configuration, and current response behavior. Confirm every dependency is present before adding tests. Make the only permitted `vitest.config.ts` change by adding `tests/security/**/*.test.{ts,tsx}` to the existing include list without changing any other Vitest behavior.
 2. Implement a central immutable header definition in `lib/security/http-headers.ts` and apply it through `next.config.ts`, using the narrowest policy compatible with the documented same-origin worker and local blob needs.
 3. Implement accessible safe root loading, not-found, route error, and global error surfaces with no sensitive diagnostics, one clear heading, safe next action, focus behavior, and no unsupported completion claim.
 4. Implement `scripts/verify-boundaries.mjs` as a deterministic read-only scan for server-only imports in client surfaces, provider or secret exposure, unsafe case rendering, and frozen forbidden patterns that can be established statically.
@@ -132,6 +139,7 @@ All read-only application, domain, fixture, configuration, dependency, and setup
 - Global loading, not-found, route-error, and global-error states are accessible, actionable, and free of raw exception, source, provider, credential, account, project, billing, endpoint, and stack details.
 - The boundary scan fails on a controlled fixture for client-side provider imports, secret-like tracked content, or unsafe case HTML rendering and passes the integrated repository without modifying it.
 - Security tests prove minimum-necessary provider payloads, server-only keys, exact-fixture enforcement, common provider controls, inert document rendering, D07 containment, safe logs and errors, declared-identifier absence, and central export-gate enforcement.
+- `npx vitest run tests/security` discovers the security tests through the exact added include glob, while every pre-existing include, setup file, environment, exclusion, reporter, timeout, alias, and coverage setting remains unchanged.
 - Direct export bypass attempts cannot create a manifest, PDF, or JSON while any blocker is active.
 - End-to-end tests complete the full golden flow, exact early blocker flow, hero withdrawal and renewed review, full handoff, separate safe-share handoff, audit and Trust checks, ID-only replay and checkpoint provenance, atomic corrupted-bundle rejection, Reset Case, and negative or failure paths.
 - Provider recovery tests prove no automatic attempt, frozen option order, new acknowledgement, separate linked run, failed-run preservation, no output merging, and no switching bypass for safety failures. Transport tests prove that network loss and invalid response envelopes clear pending state, preserve the prior active run, show unknown remote outcome, and create no run or recovery link.

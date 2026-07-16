@@ -498,6 +498,7 @@ tasks:
     outcome: Add restrictive headers, safe global errors, boundary scans, complete browser flows, accessibility scans, direct gate-bypass tests, log and secret checks, keyboard behavior, and provider-recovery verification.
     owns:
       - next.config.ts
+      - vitest.config.ts
       - app/error.tsx
       - app/global-error.tsx
       - app/loading.tsx
