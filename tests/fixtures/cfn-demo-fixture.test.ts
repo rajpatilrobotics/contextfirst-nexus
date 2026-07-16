@@ -1,27 +1,11 @@
 import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
-import { createHash } from "node:crypto";
 import {
   DocumentRecordSchema,
   EvaluationDefinitionSchema,
   SourceSegmentSchema,
 } from "../../lib/contracts";
 import { cfnDemoEvaluationDefinitions, cfnDemoFixture, getCfnDemoSegment } from "../../lib/fixtures";
-
-function canonicalize(value: unknown): string {
-  if (Array.isArray(value)) return `[${value.map(canonicalize).join(",")}]`;
-  if (value && typeof value === "object") {
-    return `{${Object.keys(value)
-      .sort()
-      .map((key) => `${JSON.stringify(key)}:${canonicalize((value as Record<string, unknown>)[key])}`)
-      .join(",")}}`;
-  }
-  return JSON.stringify(value);
-}
-
-function digest(value: unknown) {
-  return createHash("sha256").update(canonicalize(value)).digest("hex");
-}
 
 describe("CFN-DEMO-001 synthetic fixture", () => {
   it("contains exactly the seven frozen documents and generated public PDFs", () => {
