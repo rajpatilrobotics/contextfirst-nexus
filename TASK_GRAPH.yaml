@@ -168,7 +168,7 @@ tasks:
     title: Citation validation and source resolution
     stage: domain
     wave: 5
-    status: ready
+    status: integrated
     risk: high
     dependencies: [TASK-001, TASK-002, TASK-003, TASK-006]
     packet: tasks/TASK-007.md
