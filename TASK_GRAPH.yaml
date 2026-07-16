@@ -370,7 +370,7 @@ tasks:
     title: Purpose, provider selection, and recovery UI
     stage: interface
     wave: 9
-    status: ready
+    status: integrated
     risk: high
     dependencies: [TASK-004, TASK-010, TASK-015, TASK-017, TASK-027]
     packet: tasks/TASK-018.md
@@ -391,7 +391,7 @@ tasks:
     title: Intake, masking, processing, and coverage UI
     stage: interface
     wave: 10
-    status: pending
+    status: ready
     risk: high
     dependencies: [TASK-004, TASK-005, TASK-006, TASK-010, TASK-017, TASK-018]
     packet: tasks/TASK-019.md
