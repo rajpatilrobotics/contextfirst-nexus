@@ -1,7 +1,7 @@
 schema_version: "1.0.0"
 project: contextfirst-nexus
 graph_status: approved_for_implementation
-task_count: 26
+task_count: 27
 
 authority:
   repository_rules: AGENTS.md
@@ -332,9 +332,9 @@ tasks:
     title: Evaluation harness and admission reporting
     stage: quality
     wave: 8
-    status: ready
+    status: blocked
     risk: high
-    dependencies: [TASK-003, TASK-007, TASK-008, TASK-009, TASK-010, TASK-015]
+    dependencies: [TASK-003, TASK-007, TASK-008, TASK-009, TASK-010, TASK-015, TASK-027]
     packet: tasks/TASK-016.md
     outcome: Implement deterministic evaluation across all frozen variants, raw versus validated result separation, provider provenance, versioned admission reports with canonical digests, blocking admission gates, optional live runs, and no aggregate accuracy score without changing runtime admission.
     owns:
@@ -370,9 +370,9 @@ tasks:
     title: Purpose, provider selection, and recovery UI
     stage: interface
     wave: 9
-    status: ready
+    status: blocked
     risk: high
-    dependencies: [TASK-004, TASK-010, TASK-015, TASK-017]
+    dependencies: [TASK-004, TASK-010, TASK-015, TASK-017, TASK-027]
     packet: tasks/TASK-018.md
     outcome: Implement the complete Case Purpose Brief, explicit provider and replay selection, provider disclosures, acknowledgements, unavailable states, a single browser run controller, and operational recovery without automatic fallback.
     owns:
@@ -453,9 +453,9 @@ tasks:
     title: Export experience and local renderers
     stage: interface
     wave: 9
-    status: ready
+    status: blocked
     risk: high
-    dependencies: [TASK-004, TASK-009, TASK-010, TASK-017]
+    dependencies: [TASK-004, TASK-009, TASK-010, TASK-017, TASK-027]
     packet: tasks/TASK-022.md
     outcome: Implement blocked export behavior, remediation links, minimum-necessary selection, semantic preview, structured JSON, lazy PDF generation, manifest parity, local downloads, and required labels.
     owns:
@@ -549,5 +549,26 @@ tasks:
       - tests/unit/ai/admission/
     verifies:
       - npx vitest run tests/unit/ai/admission tests/unit/ai/shared tests/contracts/api
+      - npm run typecheck
+      - npm run build
+
+  - id: TASK-027
+    title: Case state and export contract bridge
+    stage: integration
+    wave: 9
+    status: ready
+    risk: high
+    dependencies: [TASK-009, TASK-010, TASK-017]
+    packet: tasks/TASK-027.md
+    outcome: Replace the shell-private state boundary with the canonical shared case-state context and dispatcher, correct export-input freshness and selection revision behavior, and build the complete canonical export limitation union.
+    owns:
+      - components/shell/
+      - lib/export/core/
+      - lib/state/
+      - tests/components/shell/
+      - tests/unit/export/core/
+      - tests/unit/state/
+    verifies:
+      - npx vitest run tests/components/shell tests/unit/export/core tests/unit/state
       - npm run typecheck
       - npm run build
