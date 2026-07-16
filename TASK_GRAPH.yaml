@@ -455,7 +455,7 @@ tasks:
     title: Export experience and local renderers
     stage: interface
     wave: 9
-    status: blocked
+    status: ready
     risk: high
     dependencies: [TASK-004, TASK-009, TASK-010, TASK-017, TASK-021, TASK-027, TASK-028, TASK-030, TASK-031, TASK-032]
     packet: tasks/TASK-022.md
@@ -669,7 +669,7 @@ tasks:
     title: Review remediation focus bridge
     stage: integration
     wave: 11
-    status: ready
+    status: integrated
     risk: medium
     dependencies: [TASK-017, TASK-021]
     packet: tasks/TASK-032.md
