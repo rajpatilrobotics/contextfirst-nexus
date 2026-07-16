@@ -391,7 +391,7 @@ tasks:
     title: Intake, masking, processing, and coverage UI
     stage: interface
     wave: 10
-    status: ready
+    status: integrated
     risk: high
     dependencies: [TASK-004, TASK-005, TASK-006, TASK-010, TASK-017, TASK-018, TASK-027, TASK-030]
     packet: tasks/TASK-019.md
@@ -428,7 +428,7 @@ tasks:
     title: Review workspace and hero interaction
     stage: interface
     wave: 11
-    status: blocked
+    status: ready
     risk: high
     dependencies: [TASK-004, TASK-008, TASK-010, TASK-017, TASK-019, TASK-020, TASK-028, TASK-030]
     packet: tasks/TASK-021.md
