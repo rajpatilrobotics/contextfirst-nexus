@@ -4,11 +4,11 @@
 
 - Task ID: TASK-025
 - Stage: release
-- Status: Ready for local release preparation only. TASK-036 is integrated; deployment, stable-URL access, Vercel changes, production-setting changes, and public live analysis remain separately unapproved.
+- Status: Blocked only until TASK-037 is integrated. Approval remains recorded for replay-only deployment and later stable-URL verification after the approved build is confirmed deployed; public live AI, provider calls, credential changes, billing changes, and all other Vercel or production-setting changes remain rejected.
 - Wave: 13
 - Risk: high
 - Suggested branch: `task/025-release-readiness`
-- Depends on: TASK-024, TASK-036
+- Depends on: TASK-024, TASK-036, TASK-037
 
 ## 2. Goal
 
@@ -22,12 +22,15 @@ A hackathon demo needs a repeatable setup, honest limitations, measured performa
 
 - TASK-024 must be integrated and its complete deterministic, end-to-end, accessibility, security, privacy, header, and production-build verification must pass.
 - TASK-036 must be integrated and restore CSP-compatible local PDF generation without broadening the policy beyond the narrowly verified WebAssembly capability.
+- TASK-037 must be integrated and make the approved stable origin an explicit fail-closed Playwright target without starting the local web server or accessing the stable URL during its implementation.
 - Preserve every TASK-024 manual `NOT RUN` result as `NOT RUN` in `RELEASE_CHECKLIST.md` unless that exact check is later performed with its required approval and evidence. Local automated results must not promote a manual result.
 - Every earlier task is a transitive dependency through TASK-024, and TASK-036 must also be integrated on the base branch. A completed but unintegrated worktree does not satisfy this requirement.
 - Create the worktree from the latest coordinator branch containing TASK-024 and its passing handoff. TASK-025 may add only the exact missing `measure:performance` script binding defined in Section 6; every other package field and script remains frozen.
 - Actual deployment, a push that triggers deployment, any change to Vercel project settings, environment values, production secrets, firewall, rate controls, billing, quota, provider accounts, or any repository configuration change that alters deployed behavior requires separate explicit user approval. Task assignment or commit permission alone does not grant it.
 - The stable URL rehearsal at `https://contextfirst-nexus.vercel.app` may run only after the user separately approves deployment or production verification and the coordinator confirms the approved build is present there. Without that approval, do not access the stable URL, do not claim TASK-025 Complete, and report the release task as Partial or Blocked as applicable.
 - Public live analysis remains disabled unless the user separately approves its budget, abuse controls, provider settings, and production enablement. Approval to deploy replay-only does not approve public live analysis.
+- Approval is recorded for replay-only deployment after TASK-037 and for later stable-URL verification only after the approved replay-only build is confirmed deployed. TASK-037 does not exercise either approval.
+- Public live AI, live-provider calls, credential changes, billing changes, and every other Vercel or production-setting change remain rejected.
 
 ## 5. Required context
 
