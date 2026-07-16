@@ -17,7 +17,7 @@ export const AI_BOUNDARY_VERSION = "1.0.0" as const;
 export const SHARED_PROMPT_VERSION = "1.0.0" as const;
 export const ADAPTER_VERSION = "task-011-shared-boundary-v1" as const;
 export const EVALUATION_DEFINITION_SET_DIGEST =
-  "7e59a1e8c9f21f9794b2967d6815320d4c0963cb9a44963db4f45ef34d01b423" as const;
+  "649b10f68d8a445e79c626efa63ede464cc19b7a82ffab5785c8dcd84b4f2683" as const;
 
 export const CFN_DEMO_FIXTURE_BINDING = {
   dataOrigin: "bundled_synthetic",

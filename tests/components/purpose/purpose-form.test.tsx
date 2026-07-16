@@ -2,7 +2,7 @@ import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import { CasePurposeBriefForm } from "../../../features/purpose";
-import { RequiredExcludedDecisions } from "../../../lib/contracts";
+import { RequiredExcludedDecisions, type CasePurposeBrief } from "../../../lib/contracts";
 import { trustedPurposeBrief } from "../../../lib/analysis/replay";
 import { selectableProviderOptions } from "../provider/fixtures";
 
@@ -43,7 +43,7 @@ describe("TASK-018 CasePurposeBriefForm", () => {
 
   it("saves the complete canonical brief with every exclusion and replay acknowledgement", async () => {
     const user = userEvent.setup();
-    const onSave = vi.fn(() => null);
+    const onSave = vi.fn((_brief: CasePurposeBrief) => null);
     render(<CasePurposeBriefForm onSave={onSave} options={selectableProviderOptions()} />);
     await completeForm(user);
     await user.click(screen.getByRole("button", { name: "Save Case Purpose Brief" }));
@@ -65,7 +65,7 @@ describe("TASK-018 CasePurposeBriefForm", () => {
   it("preserves identity and creation time while incrementing an edited purpose revision", async () => {
     const user = userEvent.setup();
     const initialBrief = trustedPurposeBrief();
-    const onSave = vi.fn(() => null);
+    const onSave = vi.fn((_brief: CasePurposeBrief) => null);
     render(
       <CasePurposeBriefForm
         initialBrief={initialBrief}

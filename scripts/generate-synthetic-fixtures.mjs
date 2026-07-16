@@ -141,14 +141,26 @@ const seededIdentifiers = [
   CASE_ID,
 ];
 
+function compareUnicodeCodePoints(left, right) {
+  const leftPoints = Array.from(left);
+  const rightPoints = Array.from(right);
+  const length = Math.min(leftPoints.length, rightPoints.length);
+  for (let index = 0; index < length; index += 1) {
+    const difference = leftPoints[index].codePointAt(0) - rightPoints[index].codePointAt(0);
+    if (difference !== 0) return difference;
+  }
+  return leftPoints.length - rightPoints.length;
+}
+
 function canonicalize(value) {
   if (Array.isArray(value)) return `[${value.map(canonicalize).join(",")}]`;
   if (value && typeof value === "object") {
     return `{${Object.keys(value)
-      .sort()
+      .sort(compareUnicodeCodePoints)
       .map((key) => `${JSON.stringify(key)}:${canonicalize(value[key])}`)
       .join(",")}}`;
   }
+  if (value === undefined) throw new Error("Canonical JSON does not permit undefined values.");
   return JSON.stringify(value);
 }
 
@@ -757,6 +769,32 @@ function buildGuidancePack() {
   };
 }
 
+const evaluationVariantOrder = [
+  "EVAL-001",
+  "EVAL-002",
+  "EVAL-003",
+  "EVAL-004",
+  "EVAL-005A",
+  "EVAL-005B",
+  "EVAL-006",
+  "EVAL-007",
+  "EVAL-008",
+  "EVAL-009",
+  "EVAL-010",
+  "EVAL-011",
+  "EVAL-012A",
+  "EVAL-012B",
+];
+const evaluationAdmissionGateOrder = [
+  "consequential_review_blocking",
+  "invalid_citation_rejection",
+  "injection_containment",
+  "cooperation_invariance",
+  "declared_identifier_exclusion",
+  "required_abstention",
+  "dependency_recalculation",
+  "prohibited_conclusion_blocking",
+];
 const liveVariants = new Set(["EVAL-001", "EVAL-002", "EVAL-003", "EVAL-004", "EVAL-005A", "EVAL-005B", "EVAL-006", "EVAL-009", "EVAL-011"]);
 const development = new Set(["EVAL-001", "EVAL-003", "EVAL-004", "EVAL-006", "EVAL-007", "EVAL-012A", "EVAL-012B"]);
 const variantDescriptions = {
@@ -776,8 +814,47 @@ const variantDescriptions = {
   "EVAL-012B": "Invalid structured response",
 };
 
+function omitDigestField(value, field) {
+  const projection = { ...value };
+  delete projection[field];
+  return projection;
+}
+
+function sortByDeclaredOrder(values, declaredOrder, name) {
+  return [...values].sort((left, right) => {
+    const leftIndex = declaredOrder.indexOf(left);
+    const rightIndex = declaredOrder.indexOf(right);
+    if (leftIndex < 0 || rightIndex < 0) {
+      throw new Error(`Unknown ${name} while normalizing evaluation definitions.`);
+    }
+    return leftIndex - rightIndex;
+  });
+}
+
+function normalizeEvaluationDefinition(definition) {
+  return {
+    ...definition,
+    inputPacket: {
+      ...definition.inputPacket,
+      selectedSegmentIds: [...definition.inputPacket.selectedSegmentIds],
+    },
+    expectedChecks: [...definition.expectedChecks].sort((left, right) =>
+      compareUnicodeCodePoints(left.name, right.name)),
+    gateNames: sortByDeclaredOrder(
+      definition.gateNames,
+      evaluationAdmissionGateOrder,
+      "admission gate",
+    ),
+    requiredRepetitions: [...definition.requiredRepetitions],
+    requiredControlScenarios: [...definition.requiredControlScenarios].sort((left, right) =>
+      compareUnicodeCodePoints(left.scenarioId, right.scenarioId)),
+    allowedExecutionSources: [...definition.allowedExecutionSources],
+    allowedTerminalStatuses: [...definition.allowedTerminalStatuses],
+  };
+}
+
 function buildEvaluationDefinitions(approvedRedactedInputDigest, canonicalFixtureDigest) {
-  const variants = Object.keys(variantDescriptions).map((variantId) => {
+  const variants = evaluationVariantOrder.map((variantId) => {
     const packetBase = {
       schemaVersion: VERSION,
       id: `PACKET-${variantId}`,
@@ -794,7 +871,8 @@ function buildEvaluationDefinitions(approvedRedactedInputDigest, canonicalFixtur
         cooperationContext: variantId === "EVAL-005A" ? "cooperated" : variantId === "EVAL-005B" ? "unknown" : "not_recorded",
       },
     };
-    const inputPacket = { ...packetBase, packetDigest: digest({ ...packetBase, canonicalFixtureDigest, variantId }) };
+    const inputPacket = { ...packetBase, packetDigest: "" };
+    inputPacket.packetDigest = digest(omitDigestField(inputPacket, "packetDigest"));
     const base = {
       schemaVersion: VERSION,
       variantId,
@@ -827,7 +905,7 @@ function buildEvaluationDefinitions(approvedRedactedInputDigest, canonicalFixtur
       variantId === "EVAL-012A" ? "timeout" :
       variantId === "EVAL-012B" ? "malformed_envelope" : "dependency_recalculation";
     const controlPayload = { variantId, scenarioId, expected: variantDescriptions[variantId], selectedSegmentIds };
-    const controlFixture = {
+    const controlFixtureProjection = {
       schemaVersion: VERSION,
       controlFixtureId: `CONTROL-${variantId}`,
       controlFixtureVersion: VERSION,
@@ -838,8 +916,14 @@ function buildEvaluationDefinitions(approvedRedactedInputDigest, canonicalFixtur
         expectedAcceptedOutput: false,
       },
       controlPayload,
-      controlFixtureDigest: digest(controlPayload),
     };
+    const controlFixture = {
+      ...controlFixtureProjection,
+      controlFixtureDigest: "",
+    };
+    controlFixture.controlFixtureDigest = digest(
+      omitDigestField(controlFixture, "controlFixtureDigest"),
+    );
     return {
       ...base,
       executionRequirement: "deterministic_control",
@@ -860,14 +944,18 @@ function buildEvaluationDefinitions(approvedRedactedInputDigest, canonicalFixtur
       allowedTerminalStatuses: ["succeeded", "failed", "rejected_before_run", "transport_outcome_unknown"],
     };
   });
-  const projection = { schemaVersion: VERSION, variants };
+  const normalizedDefinitions = variants
+    .map(normalizeEvaluationDefinition)
+    .sort((left, right) =>
+      evaluationVariantOrder.indexOf(left.variantId) - evaluationVariantOrder.indexOf(right.variantId));
+  const projection = { schemaVersion: VERSION, definitions: normalizedDefinitions };
   return {
     schemaVersion: VERSION,
     fixtureId: CASE_ID,
     fixtureVersion: VERSION,
     canonicalFixtureDigest,
     evaluationDefinitionSetDigest: digest(projection),
-    variants,
+    variants: normalizedDefinitions,
   };
 }
 
@@ -974,8 +1062,9 @@ function buildFixture() {
 async function main() {
   const check = process.argv.includes("--check");
   const caseOnly = process.argv.includes("--case-only");
-  if (check && caseOnly) {
-    throw new Error("Use either --check or --case-only, not both.");
+  const evaluationOnly = process.argv.includes("--evaluation-only");
+  if ((check && caseOnly) || (caseOnly && evaluationOnly)) {
+    throw new Error("Use --check with at most one generation target.");
   }
   const { fixture, approvedProjection } = buildFixture();
   if (caseOnly) {
@@ -985,6 +1074,11 @@ async function main() {
   }
   const guidancePack = buildGuidancePack();
   const evaluationDefinitions = buildEvaluationDefinitions(fixture.approvedRedactedInputDigest, fixture.canonicalFixtureDigest);
+  if (evaluationOnly) {
+    writeJson(join(ROOT, "fixtures/evals/definitions/evaluation-definitions.json"), evaluationDefinitions, check);
+    console.log(`evaluationDefinitionSetDigest=${evaluationDefinitions.evaluationDefinitionSetDigest}`);
+    return;
+  }
   const manifest = {
     schemaVersion: VERSION,
     caseId: CASE_ID,

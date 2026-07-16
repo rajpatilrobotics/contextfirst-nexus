@@ -2,15 +2,27 @@ import { describe, expect, it, vi } from "vitest";
 import {
   AnalyzeResponseSchema,
   CasePurposeBriefSchema,
+  type AnalysisTransportFailureReason,
   type CaseCommand,
   type CaseState,
 } from "../../../lib/contracts";
 import { applyCaseCommand, createInitialCaseState, type CaseCommandResult } from "../../../lib/state";
 import { trustedApprovedMasking, trustedPurposeBrief, trustedSegments } from "../../../lib/analysis/replay";
 import { cfnDemoFixture } from "../../../lib/fixtures";
-import { buildAnalyzeRequest, runSelectedAnalysis } from "../../../features/analysis/run-controller";
+import {
+  buildAnalyzeRequest,
+  runSelectedAnalysis,
+  type RunControllerOptions,
+} from "../../../features/analysis/run-controller";
 
 const NOW = "2026-07-16T10:00:00.000Z";
+type FetchImplementation = NonNullable<RunControllerOptions["fetchImpl"]>;
+
+const transportFailures = [
+  ["network_unavailable", async (): Promise<Response | null | undefined> => { throw new Error("offline"); }],
+  ["response_unavailable", async (): Promise<Response | null | undefined> => undefined],
+  ["invalid_response_envelope", async (): Promise<Response | null | undefined> => jsonResponse({ unexpected: true })],
+] as const satisfies ReadonlyArray<readonly [AnalysisTransportFailureReason, FetchImplementation]>;
 
 function livePurpose() {
   const replay = trustedPurposeBrief();
@@ -109,7 +121,10 @@ describe("TASK-018 analysis run controller", () => {
     const succeeded = AnalyzeResponseSchema.parse({
       schemaVersion: "1.0.0", outcome: "succeeded", run: liveRun("succeeded"), candidates: [], citations: [], quarantined: [],
     });
-    const fetchImpl = vi.fn(async () => {
+    const fetchImpl = vi.fn(async (
+      _input: RequestInfo | URL,
+      _init?: RequestInit,
+    ): Promise<Response> => {
       expect(harness.commands[0].type).toBe("start_live_analysis");
       expect(harness.getState().pendingLiveAnalysis).not.toBeNull();
       return jsonResponse(succeeded);
@@ -163,11 +178,7 @@ describe("TASK-018 analysis run controller", () => {
     expect(fetchImpl).not.toHaveBeenCalled();
   });
 
-  it.each([
-    ["network_unavailable", async () => { throw new Error("offline"); }],
-    ["response_unavailable", async () => undefined],
-    ["invalid_response_envelope", async () => jsonResponse({ unexpected: true })],
-  ] as const)("records %s without inventing a run", async (reasonCode, fetchImpl) => {
+  it.each(transportFailures)("records %s without inventing a run", async (reasonCode, fetchImpl) => {
     const harness = dispatcher(readyState());
     const result = await runSelectedAnalysis({ state: harness.getState(), dispatchCaseCommand: harness.dispatch, fetchImpl, now: () => NOW });
     expect(result).toMatchObject({ status: "transport_failed", reasonCode });

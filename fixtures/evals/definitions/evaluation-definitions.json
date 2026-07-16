@@ -3,7 +3,7 @@
   "fixtureId": "CFN-DEMO-001",
   "fixtureVersion": "1.0.0",
   "canonicalFixtureDigest": "ede4457873700cc4bce1bb5fad29c89a4e25d2e6ca7ccd33c323a2ce8ac5809c",
-  "evaluationDefinitionSetDigest": "14861367a7050ffecc72ba3467208bdc3cf313efcd7396862aca2952539a1dc1",
+  "evaluationDefinitionSetDigest": "649b10f68d8a445e79c626efa63ede464cc19b7a82ffab5785c8dcd84b4f2683",
   "variants": [
     {
       "schemaVersion": "1.0.0",
@@ -53,13 +53,13 @@
           "requestedExport": "full_practitioner_handoff",
           "cooperationContext": "not_recorded"
         },
-        "packetDigest": "34aedfd235241adcac0d93bf9e53187176f4f4db993ef044ffebace223ef9086"
+        "packetDigest": "19cc4b70a5903902909166ef087c81da4aea49d5921b0cce945a15876bd94556"
       },
       "split": "development",
       "applicableReleaseScope": "all_frozen_live_releases",
       "gateNames": [
-        "prohibited_conclusion_blocking",
-        "invalid_citation_rejection"
+        "invalid_citation_rejection",
+        "prohibited_conclusion_blocking"
       ],
       "expectedChecks": [
         {
@@ -131,13 +131,13 @@
           "requestedExport": "full_practitioner_handoff",
           "cooperationContext": "not_recorded"
         },
-        "packetDigest": "af3ed79c96fccd5878721d0d42b859688e2e65197f5749efcafb13beaef0f759"
+        "packetDigest": "097a3292065a762a73683d17a705077437d2697fee705d91cf569f1094d5763b"
       },
       "split": "held_out",
       "applicableReleaseScope": "all_frozen_live_releases",
       "gateNames": [
-        "prohibited_conclusion_blocking",
-        "invalid_citation_rejection"
+        "invalid_citation_rejection",
+        "prohibited_conclusion_blocking"
       ],
       "expectedChecks": [
         {
@@ -209,13 +209,13 @@
           "requestedExport": "full_practitioner_handoff",
           "cooperationContext": "not_recorded"
         },
-        "packetDigest": "38d5c08d4d91fa19c4d3a9ca7530601069ee04c278acfd6fdc0fb7808d75cec9"
+        "packetDigest": "6c926fe8b71723e472e5d2f055dc703574862c25a6671b995844e55447903094"
       },
       "split": "development",
       "applicableReleaseScope": "all_frozen_live_releases",
       "gateNames": [
-        "prohibited_conclusion_blocking",
-        "invalid_citation_rejection"
+        "invalid_citation_rejection",
+        "prohibited_conclusion_blocking"
       ],
       "expectedChecks": [
         {
@@ -287,13 +287,13 @@
           "requestedExport": "full_practitioner_handoff",
           "cooperationContext": "not_recorded"
         },
-        "packetDigest": "e4bf2db86cb3eadb01b8c3a268c49ff3cdd35070b0ef64cb4bd37e2553b398ad"
+        "packetDigest": "1cad34db204369358a41523adf274d03b3e110da5549949f646e787fb8169541"
       },
       "split": "development",
       "applicableReleaseScope": "all_frozen_live_releases",
       "gateNames": [
-        "prohibited_conclusion_blocking",
-        "invalid_citation_rejection"
+        "invalid_citation_rejection",
+        "prohibited_conclusion_blocking"
       ],
       "expectedChecks": [
         {
@@ -365,13 +365,13 @@
           "requestedExport": "full_practitioner_handoff",
           "cooperationContext": "cooperated"
         },
-        "packetDigest": "774a9e96b0c3fca5b8d9a2ccd9bba00d65e78ddd1abdf410a654cebb5849b082"
+        "packetDigest": "aa1e8ac66f6dbaa5c2a08b1209a69e8057fee092cf77a52882bd3f3412f8936e"
       },
       "split": "held_out",
       "applicableReleaseScope": "all_frozen_live_releases",
       "gateNames": [
-        "prohibited_conclusion_blocking",
-        "invalid_citation_rejection"
+        "invalid_citation_rejection",
+        "prohibited_conclusion_blocking"
       ],
       "expectedChecks": [
         {
@@ -443,13 +443,13 @@
           "requestedExport": "full_practitioner_handoff",
           "cooperationContext": "unknown"
         },
-        "packetDigest": "e3663dd53846be7fd83cc1c2af6e6018d0edfd8be7b6df2007d2f7a9f4d17d17"
+        "packetDigest": "1a6c541ffcab016f320bd9e59109292538d68d0c781f945e632a662657e8ca13"
       },
       "split": "held_out",
       "applicableReleaseScope": "all_frozen_live_releases",
       "gateNames": [
-        "prohibited_conclusion_blocking",
-        "invalid_citation_rejection"
+        "invalid_citation_rejection",
+        "prohibited_conclusion_blocking"
       ],
       "expectedChecks": [
         {
@@ -521,13 +521,13 @@
           "requestedExport": "full_practitioner_handoff",
           "cooperationContext": "not_recorded"
         },
-        "packetDigest": "8dce388d116f1e5fd9956c67ffa692659f8345b0ed04364e00e160019344abd9"
+        "packetDigest": "7f0ec9335c7d35cf9270d4d3639af72383fe608a4a21bab80b9b4cc238ecd90a"
       },
       "split": "development",
       "applicableReleaseScope": "all_frozen_live_releases",
       "gateNames": [
-        "prohibited_conclusion_blocking",
-        "invalid_citation_rejection"
+        "invalid_citation_rejection",
+        "prohibited_conclusion_blocking"
       ],
       "expectedChecks": [
         {
@@ -599,13 +599,13 @@
           "requestedExport": "full_practitioner_handoff",
           "cooperationContext": "not_recorded"
         },
-        "packetDigest": "73cf76a38fcb72d46538c1183bb10fb6a95ded8a7c738d1be00aee05cdcd9949"
+        "packetDigest": "795653187ac1af2b3d20f2c4a7a15c8d991c0f57cd2649874d41e95a18640bf2"
       },
       "split": "development",
       "applicableReleaseScope": "all_frozen_live_releases",
       "gateNames": [
-        "prohibited_conclusion_blocking",
-        "invalid_citation_rejection"
+        "invalid_citation_rejection",
+        "prohibited_conclusion_blocking"
       ],
       "expectedChecks": [
         {
@@ -664,7 +664,7 @@
                 "D07-P2-S03"
               ]
             },
-            "controlFixtureDigest": "262441240ed847dad2a98612ab95c56a0d0a03fc807985d21f1daa1a89b8f404"
+            "controlFixtureDigest": "b0c27eee07c0e4f7eb4c3eb616de4c95040f195eddc82843473ed91951f72fe0"
           },
           "executionSource": "deterministic_control",
           "actualProviderTransmission": false,
@@ -732,13 +732,13 @@
           "requestedExport": "full_practitioner_handoff",
           "cooperationContext": "not_recorded"
         },
-        "packetDigest": "08e4e67375d2e5183ff3ee2be79e2400a83d4e6d43ffc0430b91b42cb77570a4"
+        "packetDigest": "90f0bb36ec2ba7620e7b757a4186fa3438225b666162b48cd810c30f8e9caefc"
       },
       "split": "held_out",
       "applicableReleaseScope": "all_frozen_live_releases",
       "gateNames": [
-        "prohibited_conclusion_blocking",
-        "invalid_citation_rejection"
+        "invalid_citation_rejection",
+        "prohibited_conclusion_blocking"
       ],
       "expectedChecks": [
         {
@@ -797,7 +797,7 @@
                 "D07-P2-S03"
               ]
             },
-            "controlFixtureDigest": "d22982941e557cedc3a642d2589e27a7a565ae60a2e2bb3331fc03bd5af10084"
+            "controlFixtureDigest": "5be9a3de00881a79b2297fc7238bb79ec75fda3221ecfcc3773fa9309a11a21f"
           },
           "executionSource": "deterministic_control",
           "actualProviderTransmission": false,
@@ -865,13 +865,13 @@
           "requestedExport": "full_practitioner_handoff",
           "cooperationContext": "not_recorded"
         },
-        "packetDigest": "824c90f406b33543f232b8031b0dd19e9a564bb56db743fb0e628597785ad43e"
+        "packetDigest": "a40f30c782a842c4a71536485a60595a32a31dd387fb7d03ce9cd1d4862b4d33"
       },
       "split": "held_out",
       "applicableReleaseScope": "all_frozen_live_releases",
       "gateNames": [
-        "prohibited_conclusion_blocking",
-        "invalid_citation_rejection"
+        "invalid_citation_rejection",
+        "prohibited_conclusion_blocking"
       ],
       "expectedChecks": [
         {
@@ -943,13 +943,13 @@
           "requestedExport": "full_practitioner_handoff",
           "cooperationContext": "not_recorded"
         },
-        "packetDigest": "08dbf4b7b027b6ff48d9a075b5e8466ed830da6a9f1acd89418553ed16daf400"
+        "packetDigest": "a3412187873966f4bbcf60e9245ab0889a387ba57355b9f1533f33dbbbd97f4d"
       },
       "split": "held_out",
       "applicableReleaseScope": "all_frozen_live_releases",
       "gateNames": [
-        "prohibited_conclusion_blocking",
-        "invalid_citation_rejection"
+        "invalid_citation_rejection",
+        "prohibited_conclusion_blocking"
       ],
       "expectedChecks": [
         {
@@ -1008,7 +1008,7 @@
                 "D07-P2-S03"
               ]
             },
-            "controlFixtureDigest": "bc8960666c2dc46e5c12e7cc13574d0f74c727a6cc81e78be8a8b54df87e7655"
+            "controlFixtureDigest": "dfa5418e4b289ea42be6de0b407d9bf6bb548840e9baa30497b536edd948af7f"
           },
           "executionSource": "deterministic_control",
           "actualProviderTransmission": false,
@@ -1076,13 +1076,13 @@
           "requestedExport": "full_practitioner_handoff",
           "cooperationContext": "not_recorded"
         },
-        "packetDigest": "a7002cdd18fd9fbb9261a415c3bfe749e75b7f139dc1132768e379bad1ac5c41"
+        "packetDigest": "6e40a809f19e43d3927a5419c1c392e8283d9e88914ac23838618df6c68bbda5"
       },
       "split": "held_out",
       "applicableReleaseScope": "all_frozen_live_releases",
       "gateNames": [
-        "prohibited_conclusion_blocking",
-        "invalid_citation_rejection"
+        "invalid_citation_rejection",
+        "prohibited_conclusion_blocking"
       ],
       "expectedChecks": [
         {
@@ -1154,13 +1154,13 @@
           "requestedExport": "full_practitioner_handoff",
           "cooperationContext": "not_recorded"
         },
-        "packetDigest": "842708f382e3df8d8b6d650fbf5907bdec7466058f647873a70ec64c79f3eb68"
+        "packetDigest": "bf42c3d239af4631d3dedd70a51471af7dffddedae547d167c50df2d7877c056"
       },
       "split": "development",
       "applicableReleaseScope": "all_frozen_live_releases",
       "gateNames": [
-        "prohibited_conclusion_blocking",
-        "invalid_citation_rejection"
+        "invalid_citation_rejection",
+        "prohibited_conclusion_blocking"
       ],
       "expectedChecks": [
         {
@@ -1219,7 +1219,7 @@
                 "D07-P2-S03"
               ]
             },
-            "controlFixtureDigest": "0f7efcf4242534c3954622de6394e953ec2246a2cf2615208118857230cf0413"
+            "controlFixtureDigest": "45b7e6df0edca065549929fce803b4211e7da77f152706b2b709b576ebe498ac"
           },
           "executionSource": "deterministic_control",
           "actualProviderTransmission": false,
@@ -1287,13 +1287,13 @@
           "requestedExport": "full_practitioner_handoff",
           "cooperationContext": "not_recorded"
         },
-        "packetDigest": "6e54fe1a23438f49daab5dd076ca890fc3847fb402dfb7119c4fbe6aed6e8ee7"
+        "packetDigest": "99b737e678591129251f135ad0918420f998d60b7d609938b8a56c69c9692696"
       },
       "split": "development",
       "applicableReleaseScope": "all_frozen_live_releases",
       "gateNames": [
-        "prohibited_conclusion_blocking",
-        "invalid_citation_rejection"
+        "invalid_citation_rejection",
+        "prohibited_conclusion_blocking"
       ],
       "expectedChecks": [
         {
@@ -1352,7 +1352,7 @@
                 "D07-P2-S03"
               ]
             },
-            "controlFixtureDigest": "84f2e2e9995d56faf0d2c7377ec9e8c6ef51da110c1dc63943b97e65b010c571"
+            "controlFixtureDigest": "4fed313c17ecc8c9d14dc2f1cc0d15ebcd0ace2a618d836bb26383e02abe9a12"
           },
           "executionSource": "deterministic_control",
           "actualProviderTransmission": false,
