@@ -136,7 +136,7 @@ tasks:
     title: PDF source service and coverage engine
     stage: domain
     wave: 4
-    status: ready
+    status: integrated
     risk: high
     dependencies: [TASK-001, TASK-002, TASK-003]
     packet: tasks/TASK-005.md
