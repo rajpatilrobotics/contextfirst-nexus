@@ -155,10 +155,10 @@ Run from the repository root in this exact order:
 
 ```text
 npx vitest run tests/security
+npm run build
 npx playwright test tests/e2e
 npm run test:a11y
 npm run verify
-npm run build
 ```
 
 ## 13. Manual checks

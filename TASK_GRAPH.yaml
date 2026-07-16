@@ -510,10 +510,10 @@ tasks:
       - tests/security/
     verifies:
       - npx vitest run tests/security
+      - npm run build
       - npx playwright test tests/e2e
       - npm run test:a11y
       - npm run verify
-      - npm run build
 
   - id: TASK-025
     title: Performance, release readiness, and deployment rehearsal
