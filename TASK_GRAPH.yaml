@@ -235,7 +235,7 @@ tasks:
     title: Shared AI boundary and provider registry
     stage: providers
     wave: 5
-    status: ready
+    status: integrated
     risk: high
     dependencies: [TASK-001, TASK-002, TASK-003, TASK-006]
     packet: tasks/TASK-011.md
@@ -261,7 +261,7 @@ tasks:
     title: OpenAI analysis adapter
     stage: providers
     wave: 6
-    status: pending
+    status: ready
     risk: high
     dependencies: [TASK-011]
     packet: tasks/TASK-012.md
@@ -277,7 +277,7 @@ tasks:
     title: Gemini analysis adapter
     stage: providers
     wave: 6
-    status: pending
+    status: ready
     risk: high
     dependencies: [TASK-011]
     packet: tasks/TASK-013.md
@@ -293,7 +293,7 @@ tasks:
     title: Mistral analysis adapter
     stage: providers
     wave: 6
-    status: pending
+    status: ready
     risk: high
     dependencies: [TASK-011]
     packet: tasks/TASK-014.md
