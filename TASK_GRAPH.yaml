@@ -602,7 +602,7 @@ tasks:
     title: Evaluation digest and runner wiring bridge
     stage: integration
     wave: 10
-    status: ready
+    status: integrated
     risk: high
     dependencies: [TASK-001, TASK-003, TASK-011, TASK-018, TASK-028]
     packet: tasks/TASK-029.md
