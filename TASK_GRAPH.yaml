@@ -474,7 +474,7 @@ tasks:
     title: Trust, audit, Safety Lab, and guidance UI
     stage: interface
     wave: 10
-    status: ready
+    status: integrated
     risk: medium
     dependencies: [TASK-003, TASK-004, TASK-010, TASK-016, TASK-017, TASK-026, TASK-031]
     packet: tasks/TASK-023.md
