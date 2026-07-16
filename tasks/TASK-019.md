@@ -26,6 +26,7 @@ The practitioner must see exactly what entered the workflow, what was processed,
 - TASK-010 must be integrated and provide canonical document, masking, coverage, processing, audit, persistence, and case-revision state commands.
 - TASK-017 must be integrated and provide the case shell, persistent synthetic banner, Documents navigation state, case status, and Reset Case entry.
 - TASK-018 must be integrated and provide the sole analysis run controller, minimized request construction, live lifecycle dispatch, terminal response mapping, local replay path, and recovery handoff.
+- TASK-027 is integrated and transfers corrective ownership of `components/shell/case-shell.tsx` and `tests/components/shell/shell.test.tsx` to TASK-019 solely to align the existing Documents navigation with this task's canonical `/case/demo/intake` route.
 - Create the worktree from the latest coordinator branch containing all six integrated dependencies and their passing verification. Do not duplicate a missing service in feature code.
 
 ## 5. Required context
@@ -54,14 +55,22 @@ Read in this order before editing:
 - `app/case/demo/intake/page.tsx`
 - `features/documents/`
 - `tests/components/documents/`
+- `components/shell/case-shell.tsx`
+- `tests/components/shell/shell.test.tsx`
 
 No other path may be created, edited, renamed, moved, or deleted.
+
+### Dependency-ordered ownership transfer
+
+- TASK-027 previously owned the shared shell bridge. Because TASK-027 is integrated, corrective ownership of `components/shell/case-shell.tsx` and `tests/components/shell/shell.test.tsx` transfers to TASK-019 without concurrent ownership.
+- The transfer is limited to changing the visible Documents navigation destination to `/case/demo/intake`, making `deriveCurrentStep` identify `/case/demo/intake` as Documents, and adding the focused link and active-step regression test.
+- All other shell navigation, status, Reset Case, shared context, session persistence, keyboard, focus, and accessibility behavior must remain unchanged.
 
 ## 7. Read-only context allowed
 
 - `components/ui/`
 - `components/status/`
-- `components/shell/`
+- `components/shell/`, except the transferred `components/shell/case-shell.tsx`
 - `lib/contracts/`
 - `lib/documents/`
 - `lib/redaction/`
@@ -77,11 +86,11 @@ No other path may be created, edited, renamed, moved, or deleted.
 - `features/analysis/run-controller/`
 - `package.json` and shared test configuration, only to understand installed interfaces and commands
 
-All document services, redaction services, fixtures, assets, state logic, provider UI, and shared files are read-only.
+All document services, redaction services, fixtures, assets, state logic, provider UI, shared files, and non-transferred shell files are read-only.
 
 ## 8. Out of scope
 
-- Editing PDF extraction, coverage, masking, leak-scan, state, fixture, contract, provider, replay, prompt, shell, or export logic.
+- Editing PDF extraction, coverage, masking, leak-scan, state, fixture, contract, provider, replay, prompt, export, or shell logic beyond the transferred Documents destination and active-step correction.
 - Adding OCR, image interpretation, upload, drag and drop, arbitrary files, real data, child cases, harmless-public material, source editing, or a second fixture.
 - Building an `AnalyzeRequest` or model payload, calling `POST /api/analyze` directly, mapping terminal response unions, loading replay outside the TASK-018 controller, attaching recovery metadata, or implementing provider failure recovery.
 - Treating a missing or unreadable page as empty success, guessing text, silently skipping a page, or claiming the packet is complete.
@@ -91,6 +100,8 @@ All document services, redaction services, fixtures, assets, state logic, provid
 ## 9. Frozen contracts and invariants
 
 - The route exposes only `CFN-DEMO-001`, fixture version `1.0.0`, with seven visibly synthetic text PDFs D01 through D07. There is no arbitrary upload control.
+- The shell keeps the visible navigation label `Documents`, links it to `/case/demo/intake`, and identifies `/case/demo/intake` as the Documents step through `deriveCurrentStep`. The nonexistent `/case/demo/documents` destination is not retained.
+- Every other shell destination, navigation label, status, Reset Case action, shared-context behavior, persistence behavior, and accessibility behavior remains unchanged.
 - The source copy is application-managed and read-only. Processing creates or uses a separate working derivative and never modifies the original fixture.
 - PDF.js runs in the browser through the pinned same-origin worker. Raw PDF bytes never enter state persistence, logs, provider requests, or server reconstruction inputs. Resources are released through the TASK-005 lifecycle.
 - P0 has no OCR. Missing, unreadable, image-only, extraction-failed, skipped, manually excluded, and segment-mismatch states remain distinct and explicit.
@@ -114,17 +125,20 @@ All document services, redaction services, fixtures, assets, state logic, provid
 ## 10. Implementation steps
 
 1. Inspect Git status, owned files, canonical document and masking contracts, TASK-005 service APIs, TASK-006 review and reveal APIs, and TASK-010 commands. Stop if an interface would need to be guessed.
-2. Compose the Documents route from feature components without placing extraction, masking, coverage, or state policy inside the page file.
-3. Implement source cards for all seven fixture documents with synthetic label, type, expected pages, language, processing state, and explicit page-level availability.
-4. Implement `ProcessingStageList`, `CoverageManifest`, `MaskingReviewPanel`, and intentional `SensitiveReveal` behavior from canonical records. Keep safe view as the default and retain completed work after a later failure.
-5. Wire intake, processing, ephemeral local sensitive-term suggestion refresh, safe mask add or removal, mask decisions, mask-review completion, retryable local stages, coverage limitation review, reveal, and analysis-prerequisite state through the integrated services and central commands. Never render, persist, log, or transmit entered sensitive terms outside the immediate browser-local detector action.
-6. Render Start analysis only when all canonical prerequisites pass, invoke the TASK-018 run controller without building a payload or handling recovery locally, and render explicit pending, succeeded, failed, and rejected-before-run results.
-7. Add focused component tests for document counts and metadata, D04 page 3, D07 instruction containment, every stage status, failed-stage persistence and retry, declared mask classes, mask editing and approval, leak-scan blocking, safe default and reveal, empty and unavailable extraction, inert rendering, hidden-until-ready Start analysis, one controller invocation, terminal results sourced from canonical `CaseCandidate[]` without mirrored arrays, and accessible progress or error announcements.
-8. Run every verification command, complete the manual checks, and inspect the diff for unowned paths, source mutation, raw-content logging, upload controls, unsupported claims, secrets, debug output, direct API calls, local payload construction, or duplicated recovery behavior.
+2. Correct the shell's existing Documents link to `/case/demo/intake` and update `deriveCurrentStep` to identify that route as Documents, preserving the label and all unrelated shell behavior.
+3. Compose the Documents route from feature components without placing extraction, masking, coverage, or state policy inside the page file.
+4. Implement source cards for all seven fixture documents with synthetic label, type, expected pages, language, processing state, and explicit page-level availability.
+5. Implement `ProcessingStageList`, `CoverageManifest`, `MaskingReviewPanel`, and intentional `SensitiveReveal` behavior from canonical records. Keep safe view as the default and retain completed work after a later failure.
+6. Wire intake, processing, ephemeral local sensitive-term suggestion refresh, safe mask add or removal, mask decisions, mask-review completion, retryable local stages, coverage limitation review, reveal, and analysis-prerequisite state through the integrated services and central commands. Never render, persist, log, or transmit entered sensitive terms outside the immediate browser-local detector action.
+7. Render Start analysis only when all canonical prerequisites pass, invoke the TASK-018 run controller without building a payload or handling recovery locally, and render explicit pending, succeeded, failed, and rejected-before-run results.
+8. Add focused component tests for the shell Documents link and active step, document counts and metadata, D04 page 3, D07 instruction containment, every stage status, failed-stage persistence and retry, declared mask classes, mask editing and approval, leak-scan blocking, safe default and reveal, empty and unavailable extraction, inert rendering, hidden-until-ready Start analysis, one controller invocation, terminal results sourced from canonical `CaseCandidate[]` without mirrored arrays, and accessible progress or error announcements.
+9. Run every verification command, complete the manual checks, and inspect the diff for unowned paths, source mutation, raw-content logging, upload controls, unsupported claims, secrets, debug output, direct API calls, local payload construction, duplicated recovery behavior, or unrelated shell changes.
 
 ## 11. Acceptance criteria
 
 - `/case/demo/intake` lists D01 through D07 with the correct source type, expected page count, English language metadata, synthetic identity, and current processing state.
+- The shell's visible `Documents` link targets `/case/demo/intake`, and `deriveCurrentStep` marks Documents active for `/case/demo/intake`; focused shell tests protect both behaviors.
+- All other shell navigation, status, Reset Case, shared-context, persistence, keyboard, focus, and accessibility behavior is preserved.
 - The route has no upload control and never asks the user to paste or enter narrative, identifiers, or real case material.
 - Processing visibly represents all eight frozen stages and every canonical stage status. A later failure preserves completed safe stages and identifies the affected document or page without exposing its text.
 - Coverage shows expected and available documents and pages plus distinct open issues. D04 page 3 is exactly identified as unavailable because it is missing, and no completeness score is displayed.
@@ -144,13 +158,13 @@ All document services, redaction services, fixtures, assets, state logic, provid
 Run from the repository root in this exact order:
 
 ```text
-npx vitest run tests/components/documents
+npx vitest run tests/components/documents tests/components/shell
 npm run build
 ```
 
 ## 13. Manual checks
 
-1. Open `/case/demo/intake` from a completed synthetic Purpose Brief. Confirm seven document cards appear in D01 through D07 order with synthetic labels, types, page counts, language, and no upload or free-text case input.
+1. Use the shell's visible Documents link and confirm it opens `/case/demo/intake`, remains identified as the active Documents step, and does not alter any other shell navigation or behavior. Confirm seven document cards appear in D01 through D07 order with synthetic labels, types, page counts, language, and no upload or free-text case input.
 2. Inspect Coverage. Confirm D04 expects four pages, page 3 reads as unavailable and missing, the issue remains visible, and unrelated document states are not marked failed.
 3. Inspect the processing list while a local extraction failure fixture is active. Confirm completed stages remain visible, the failed stage names the affected document or page, only a permitted targeted retry is offered, and no blank panel or completion claim appears.
 4. Review each declared mask class, edit one readable replacement, reject one optional suggestion, and leave one required suggestion pending. Confirm the review and analysis prerequisites remain blocked and Start analysis is not rendered until the required set is approved and leak scan passes.
@@ -170,7 +184,7 @@ Return a self-contained handoff containing:
 
 - `Task: TASK-019, Intake, masking, processing, and coverage UI` and outcome `Complete`, `Partial`, or `Blocked`.
 - Every changed path, listed exactly.
-- The document, progress, coverage, masking, reveal, prerequisite, controller-backed Start analysis, and result behavior now observable.
+- The shell Documents destination and active-step correction plus the document, progress, coverage, masking, reveal, prerequisite, controller-backed Start analysis, and result behavior now observable.
 - Confirmation that browser-only PDF processing, no OCR, immutable source, synthetic-only input, missing-page visibility, instruction containment, human-approved masking, no anonymization claim, controller-only analysis start, no local payload construction, and no duplicated recovery invariants were preserved.
 - Each acceptance criterion with its result.
 - Each required command and manual check with `PASS`, `FAIL`, or `NOT RUN` and a reason for any unrun check.
@@ -183,7 +197,7 @@ Stop and notify the coordinator if:
 
 - Any dependency is not integrated, an expected service or command is absent, or the base fails its existing verification.
 - The task graph and this packet disagree about title, dependencies, owned paths, or verification commands.
-- Completing the route requires editing a document service, redaction service, fixture, public PDF, state reducer, provider feature, route, contract, shell, UI primitive, package file, test configuration, or another unowned path.
+- Completing the route requires editing a document service, redaction service, fixture, public PDF, state reducer, provider feature, route, contract, non-transferred shell file or behavior, UI primitive, package file, test configuration, or another unowned path.
 - A new package, worker asset, source format, OCR capability, upload path, environment variable, provider call, fixture, contract value, or deployment setting appears necessary.
 - Start analysis would require bypassing the TASK-018 controller, constructing a payload in this feature, calling the route directly, implementing response mapping or recovery, or dispatching run lifecycle commands from the Documents UI.
 - D04 page 3, D07 instruction eligibility, the seven-document manifest, seeded identifier classes, or canonical mask and coverage behavior conflicts with the authoritative fixture or contract documents.
