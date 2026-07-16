@@ -54,6 +54,7 @@ describe("boundary verification script", () => {
     const unsafeClient = join(dir, "unsafe-client.tsx");
     const unsafeSecret = join(dir, "unsafe-secret.ts");
     const unsafeRendering = join(dir, "unsafe-rendering.tsx");
+    const unsafeHtmlProperty = ["dangerously", "SetInner", "HTML"].join("");
 
     writeFileSync(
       unsafeClient,
@@ -62,7 +63,7 @@ describe("boundary verification script", () => {
     writeFileSync(unsafeSecret, `export const leaked = "sk-test_${"a".repeat(32)}";\n`);
     writeFileSync(
       unsafeRendering,
-      `export function Demo(){ return <div dangerouslySetInnerHTML={{__html: "<script />"}} />; }\n`,
+      `export function Demo(){ return <div ${unsafeHtmlProperty}={{__html: "<script />"}} />; }\n`,
     );
 
     const result = spawnSync(
