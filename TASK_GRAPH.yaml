@@ -1,7 +1,7 @@
 schema_version: "1.0.0"
 project: contextfirst-nexus
 graph_status: approved_for_implementation
-task_count: 35
+task_count: 36
 
 authority:
   repository_rules: AGENTS.md
@@ -520,9 +520,9 @@ tasks:
     title: Performance, release readiness, and deployment rehearsal
     stage: release
     wave: 13
-    status: ready
+    status: blocked
     risk: high
-    dependencies: [TASK-024]
+    dependencies: [TASK-024, TASK-036]
     packet: tasks/TASK-025.md
     outcome: Perform local release preparation, measure the frozen budgets, update truthful setup guidance, prepare the release checklist, and preserve all unrun manual evidence; deployment and production verification remain separately approval-gated.
     readiness_scope: local_release_preparation_only
@@ -765,4 +765,26 @@ tasks:
       - npx vitest run tests/components/review/source/source-drawer.test.tsx tests/components/review/timeline/timeline.test.tsx
       - npm run test:components
       - npm run verify
+      - git diff --check
+
+  - id: TASK-036
+    title: Restore CSP-compatible local PDF generation
+    stage: quality
+    wave: 13
+    status: ready
+    risk: high
+    dependencies: [TASK-022, TASK-024]
+    packet: tasks/TASK-036.md
+    outcome: Reproduce and correct the WebAssembly CSP boundary blocking local PDF generation using only the narrow wasm-unsafe-eval token, while preserving every other security directive and application boundary.
+    owns:
+      - lib/security/http-headers.ts
+      - tests/security/security-boundaries.test.ts
+      - tests/e2e/task-036-pdf-csp.spec.ts
+    verifies:
+      - npx vitest run tests/security
+      - npm run build
+      - npx playwright test tests/e2e/task-036-pdf-csp.spec.ts
+      - npm run test:e2e
+      - npm run verify
+      - node scripts/verify-boundaries.mjs
       - git diff --check
