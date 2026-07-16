@@ -332,7 +332,7 @@ tasks:
     title: Evaluation harness and admission reporting
     stage: quality
     wave: 8
-    status: blocked
+    status: ready
     risk: high
     dependencies: [TASK-003, TASK-007, TASK-008, TASK-009, TASK-010, TASK-015, TASK-027, TASK-028]
     packet: tasks/TASK-016.md
@@ -453,7 +453,7 @@ tasks:
     title: Export experience and local renderers
     stage: interface
     wave: 9
-    status: blocked
+    status: ready
     risk: high
     dependencies: [TASK-004, TASK-009, TASK-010, TASK-017, TASK-027, TASK-028]
     packet: tasks/TASK-022.md
@@ -577,7 +577,7 @@ tasks:
     title: Canonical review fixture reconciliation
     stage: integration
     wave: 9
-    status: ready
+    status: integrated
     risk: high
     dependencies: [TASK-003, TASK-008, TASK-010, TASK-020]
     packet: tasks/TASK-028.md
