@@ -10,6 +10,7 @@ export default defineConfig({
       "tests/contracts/**/*.test.{ts,tsx}",
       "tests/components/**/*.test.{ts,tsx}",
       "tests/evals/**/*.test.{ts,tsx}",
+      "tests/security/**/*.test.{ts,tsx}",
     ],
     exclude: ["node_modules/**", ".next/**"],
   },
