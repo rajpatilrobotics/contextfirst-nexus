@@ -23,7 +23,7 @@ A hackathon demo needs a repeatable setup, honest limitations, measured performa
 - TASK-024 must be integrated and its complete deterministic, end-to-end, accessibility, security, privacy, header, and production-build verification must pass.
 - Preserve every TASK-024 manual `NOT RUN` result as `NOT RUN` in `RELEASE_CHECKLIST.md` unless that exact check is later performed with its required approval and evidence. Local automated results must not promote a manual result.
 - Every earlier task is a transitive dependency through TASK-024 and must be integrated on the base branch. A completed but unintegrated worktree does not satisfy this requirement.
-- Create the worktree from the latest coordinator branch containing TASK-024 and its passing handoff. Confirm the release scripts named in the graph already exist in `package.json`; this task cannot add or change scripts there.
+- Create the worktree from the latest coordinator branch containing TASK-024 and its passing handoff. TASK-025 may add only the exact missing `measure:performance` script binding defined in Section 6; every other package field and script remains frozen.
 - Actual deployment, a push that triggers deployment, any change to Vercel project settings, environment values, production secrets, firewall, rate controls, billing, quota, provider accounts, or any repository configuration change that alters deployed behavior requires separate explicit user approval. Task assignment or commit permission alone does not grant it.
 - The stable URL rehearsal at `https://contextfirst-nexus.vercel.app` may run only after the user separately approves deployment or production verification and the coordinator confirms the approved build is present there. Without that approval, do not access the stable URL, do not claim TASK-025 Complete, and report the release task as Partial or Blocked as applicable.
 - Public live analysis remains disabled unless the user separately approves its budget, abuse controls, provider settings, and production enablement. Approval to deploy replay-only does not approve public live analysis.
@@ -55,11 +55,25 @@ Read in this order before editing:
 
 ## 6. Exclusive write scope
 
+- `package.json`, only for the exact script binding defined below
 - `README.md`
 - `RELEASE_CHECKLIST.md`
 - `scripts/measure-performance.mjs`
 - `tests/performance/`
 - `vercel.json`
+
+Within `package.json`, TASK-025 may add exactly this one entry to the existing
+`scripts` object:
+
+```json
+"measure:performance": "node scripts/measure-performance.mjs"
+```
+
+No other `package.json` field or script may change. Every pre-existing script
+name and value must remain byte-for-byte unchanged. `package-lock.json` must
+remain unchanged, and no dependency may be added, removed, or updated. Before
+handoff, parse and inspect `package.json` and its diff to verify that the exact
+binding exists and that it is the only package-file change.
 
 No other path may be created, edited, renamed, moved, or deleted.
 
@@ -79,7 +93,6 @@ No other path may be created, edited, renamed, moved, or deleted.
 - `.env.example`
 - `.gitignore`
 - `.vercel/README.txt`
-- `package.json`
 - `package-lock.json`
 - `tsconfig.json`
 - shared lint, Vitest, Playwright, Next.js, and test setup files
@@ -89,7 +102,7 @@ These paths are read-only. Never read or report secret values from `.env.local`,
 ## 8. Out of scope
 
 - Fixing application, feature, domain, contract, fixture, state, provider, renderer, accessibility, security, or test defects outside the Exclusive write scope.
-- Adding or changing dependencies, package scripts, lockfiles, framework configuration outside `vercel.json`, environment templates, provider registry entries, models, prompts, fixtures, stable IDs, or evaluation results.
+- Adding, removing, or updating dependencies; changing `package-lock.json`; changing any `package.json` field or script other than adding the exact `measure:performance` binding in Section 6; or changing framework configuration outside `vercel.json`, environment templates, provider registry entries, models, prompts, fixtures, stable IDs, or evaluation results.
 - Running live-provider evaluation or unmocked model calls without a separate current call-count, cost estimate, credential authorization, and explicit user spend approval.
 - Enabling public live analysis, changing credentials, rotating keys, pooling keys, changing provider accounts, quotas, billing, training settings, retention settings, or model access.
 - Deploying, pushing, linking a new Vercel project, changing the deployment target, modifying production environment settings, or changing firewall or rate controls without separate explicit user approval.
@@ -118,10 +131,11 @@ These paths are read-only. Never read or report secret values from `.env.local`,
 - `RELEASE_CHECKLIST.md` separates completed evidence, failed evidence, not-run checks, manual checks, approvals, and deployment state. A checkbox is marked complete only after its named evidence actually passed.
 - Before public claims or provider enablement, current official challenge, provider model, pricing, quota, data-use, retention, SDK advisory, Next.js, Vercel, PDF, export, testing, and WCAG sources are rechecked. If a fact changed, stop for coordinated authority updates instead of editing frozen truth locally.
 - Actual deployment, production-setting changes, stable-URL access, public live analysis, credentials, spend, push, and commit are separate approval gates. Approval for one does not authorize another.
+- The exact `package.json` script binding is `"measure:performance": "node scripts/measure-performance.mjs"`. Every pre-existing script remains byte-for-byte unchanged, `package-lock.json` remains unchanged, and dependencies remain identical.
 
 ## 10. Implementation steps
 
-1. Inspect Git status, TASK-024 handoff, all owned files, package scripts, current build and test behavior, stable fixture paths, and existing Vercel linkage metadata without reading secrets. Stop on an unresolved critical integration failure.
+1. Inspect Git status, TASK-024 handoff, all owned files, package scripts, current build and test behavior, stable fixture paths, and existing Vercel linkage metadata without reading secrets. Confirm `measure:performance` is absent before adding its exact Section 6 binding and stop on an unresolved critical integration failure.
 2. Implement a deterministic `scripts/measure-performance.mjs` prepared-checkpoint mode that measures the real integrated paths, records environment and run metadata, performs the required warm-up and measured iterations, calculates valid summary statistics, checks frozen budgets, and never calls a live provider.
 3. Add performance tests that validate measurement selection, warm-up exclusion, sample count, p95 calculation, threshold reporting, failed-budget behavior, checkpoint and replay provenance, and machine-readable results without using artificial sleeps as proof of application performance.
 4. Update README with exact local setup, supported Node range, synthetic demo flow, replay and live-provider boundaries, server-only environment names, verification commands, Reset Case, known limitations, and truthful public claims. Do not include a credential value.
@@ -137,6 +151,7 @@ These paths are read-only. Never read or report secret values from `.env.local`,
 - Performance tests detect incorrect warm-up inclusion, insufficient samples, wrong percentile calculation, missing checkpoint provenance, a hidden threshold miss, or an attempted live call.
 - README gives a beginner-safe setup for the existing npm project and supported Node range, identifies the synthetic-only demo and replay labels, documents only server-side provider configuration names, and states that public live analysis and real data are not enabled.
 - README contains no secret, private URL, account, billing, production-readiness, real-case, legal-validation, accessibility-conformance, zero-retention, anonymity, or provider-superiority claim.
+- `package.json` contains the exact `measure:performance` binding, every pre-existing script is byte-for-byte unchanged, `package-lock.json` is unchanged, and no dependency changed.
 - `RELEASE_CHECKLIST.md` maps each release gate to actual evidence and clearly distinguishes Passed, Failed, and Not run results plus required separate approvals.
 - The checklist records the complete deterministic suite, golden and withdrawal flows, two export kinds, PDF or JSON parity, PII and log scans, accessibility automation and manual checks, performance budgets, system-card accuracy, dependency review, and public claims review.
 - Public live analysis remains disabled in every owned release artifact. Replay remains visibly labelled and no release step automatically switches provider or replay.
@@ -172,7 +187,7 @@ The final stable-URL command is mandatory for a Complete handoff but must run on
 7. Inspect the production configuration only if its separate approval was granted. Confirm the existing Vercel target and Node runtime are preserved, public live analysis is disabled, no secret is in `vercel.json`, and replay remains available.
 8. Only after separate approval and confirmed deployment, open `https://contextfirst-nexus.vercel.app` and run five consecutive prepared-checkpoint rehearsals. Confirm the stable URL serves the approved build, every rehearsal finishes within 2 minutes 45 seconds, no live provider transmission occurs, and no run loses the blocked-export or withdrawal moment.
 9. On the approved stable build, compare the visible System Card, footer or release identity, synthetic labels, provider availability, retention limitations, replay and checkpoint provenance, and known limitations with the actual release checklist. Stop on any mismatch.
-10. Inspect final Git status and diff. Confirm only the five owned paths changed, no credential or private data appears, no public-live setting was enabled, no stable-URL result was recorded without approval, and no deployment or push occurred implicitly.
+10. Inspect final Git status and diff. Confirm only the six owned paths changed, the exact `measure:performance` script is the only package-file change, `package-lock.json` and dependencies are unchanged, no credential or private data appears, no public-live setting was enabled, no stable-URL result was recorded without approval, and no deployment or push occurred implicitly.
 
 ## 14. Commit permission and message
 

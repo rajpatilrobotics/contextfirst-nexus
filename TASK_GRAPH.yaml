@@ -534,6 +534,7 @@ tasks:
       - production_setting_changes
       - public_live_analysis
     owns:
+      - package.json
       - README.md
       - RELEASE_CHECKLIST.md
       - scripts/measure-performance.mjs
