@@ -43,13 +43,13 @@ describe("TASK-020 qualified timeline", () => {
     const open = vi.fn();
     render(<Timeline onOpenSource={open} state={state} />);
 
-    await user.selectOptions(screen.getByLabelText("Filter timeline"), "alleged_conduct");
-    expect(screen.getByText("2025-04-02 alleged communication")).toBeInTheDocument();
-    expect(screen.queryByText("Initial customer-support offer")).not.toBeInTheDocument();
+    await user.selectOptions(screen.getByLabelText("Filter timeline"), "control");
+    expect(screen.getByText("2025-04-02 assigned deceptive-message task")).toBeInTheDocument();
+    expect(screen.queryByText("Documented arrival in J-02")).not.toBeInTheDocument();
 
-    await user.click(screen.getByRole("button", { name: /Open exact source: D06/i }));
+    await user.click(screen.getByRole("button", { name: /Open exact source: D05, page 1, D05-P1-S05/i }));
     expect(open).toHaveBeenCalledOnce();
-    expect(screen.getByLabelText("Filter timeline")).toHaveValue("alleged_conduct");
+    expect(screen.getByLabelText("Filter timeline")).toHaveValue("control");
   });
 
   it("shows explicit loading, empty, partial, and error states", () => {

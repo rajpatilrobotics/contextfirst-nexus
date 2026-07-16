@@ -84,7 +84,7 @@ describe("TASK-020 source drawer", () => {
       resolutionMethod: null,
       resolvedBy: null,
     };
-    const candidate = state.candidates.find((item) => item.id === "CAND-PASSPORT-DEBT")!;
+    const candidate = state.candidates.find((item) => item.id === "NEXUS-CONTROL")!;
     const unresolved = {
       ...state,
       citations: state.citations.map((item) => item.id === citation.id ? citation : item),
@@ -106,7 +106,7 @@ describe("TASK-020 source drawer", () => {
     await user.click(choice);
     expect(onCommand).toHaveBeenCalledWith(expect.objectContaining({
       type: "resolve_citation",
-      candidateId: "CAND-PASSPORT-DEBT",
+      candidateId: "NEXUS-CONTROL",
       citationId: "CIT-D02-P2-S05",
       selectedSegmentId: "D02-P2-S05",
       selectedRedactedSegmentRange: expect.objectContaining({ start: expect.any(Number), end: expect.any(Number) }),
