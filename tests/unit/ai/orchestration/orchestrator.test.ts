@@ -179,8 +179,8 @@ describe("TASK-015 live analysis orchestration", () => {
     expect(response.run.status).toBe("failed");
     expect(response.run.candidateCount).toBe(0);
     expect(response.error.failureClassification).toBe("provider_timeout");
-    expect(response.error.recoveryOptions.map((option: any) => option.displayOrder)).toEqual([0, 2, 3, 4, 5]);
-    expect(response.error.recoveryOptions.every((option: any) => option.automatic === false)).toBe(true);
+    expect(response.error.recoveryOptions.map((option) => option.displayOrder)).toEqual([0, 2, 3, 4, 5]);
+    expect(response.error.recoveryOptions.every((option) => option.automatic === false)).toBe(true);
   });
 
   it("reconstructs canonical input server-side before the adapter", async () => {

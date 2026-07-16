@@ -39,10 +39,6 @@ export function selectCanonicalWithdrawalPreview(
     .sort((left, right) => left.id.localeCompare(right.id));
 }
 
-function readable(value: string) {
-  return value.replaceAll("_", " ");
-}
-
 export function DependencyChangePanel({
   state,
   candidateToWithdraw,

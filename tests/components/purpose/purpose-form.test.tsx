@@ -43,12 +43,16 @@ describe("TASK-018 CasePurposeBriefForm", () => {
 
   it("saves the complete canonical brief with every exclusion and replay acknowledgement", async () => {
     const user = userEvent.setup();
-    const onSave = vi.fn((_brief: CasePurposeBrief) => null);
+    const savedBriefs: CasePurposeBrief[] = [];
+    const onSave = vi.fn((brief: CasePurposeBrief) => {
+      savedBriefs.push(brief);
+      return null;
+    });
     render(<CasePurposeBriefForm onSave={onSave} options={selectableProviderOptions()} />);
     await completeForm(user);
     await user.click(screen.getByRole("button", { name: "Save Case Purpose Brief" }));
     expect(onSave).toHaveBeenCalledTimes(1);
-    const brief = onSave.mock.calls[0][0];
+    const brief = savedBriefs[0];
     expect(brief.excludedDecisions).toEqual(RequiredExcludedDecisions);
     expect(brief.providerSelection).toMatchObject({
       providerId: "local_replay",
@@ -65,7 +69,11 @@ describe("TASK-018 CasePurposeBriefForm", () => {
   it("preserves identity and creation time while incrementing an edited purpose revision", async () => {
     const user = userEvent.setup();
     const initialBrief = trustedPurposeBrief();
-    const onSave = vi.fn((_brief: CasePurposeBrief) => null);
+    const savedBriefs: CasePurposeBrief[] = [];
+    const onSave = vi.fn((brief: CasePurposeBrief) => {
+      savedBriefs.push(brief);
+      return null;
+    });
     render(
       <CasePurposeBriefForm
         initialBrief={initialBrief}
@@ -77,12 +85,10 @@ describe("TASK-018 CasePurposeBriefForm", () => {
     await user.type(screen.getByLabelText("Authorized purpose"), "Prepare a revised synthetic review handoff.");
     await user.click(screen.getByRole("button", { name: "Save Case Purpose Brief" }));
     await waitFor(() => expect(onSave).toHaveBeenCalledTimes(1));
-    const firstCall = onSave.mock.calls[0];
-    expect(firstCall).toBeDefined();
-    if (!firstCall) {
+    const saved = savedBriefs[0];
+    if (!saved) {
       throw new Error("Expected onSave to be called before reading the saved brief.");
     }
-    const saved = firstCall[0];
     expect(saved.id).toBe(initialBrief.id);
     expect(saved.createdAt).toBe(initialBrief.createdAt);
     expect(saved.revision).toBe(initialBrief.revision + 1);

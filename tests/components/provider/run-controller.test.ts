@@ -122,9 +122,11 @@ describe("TASK-018 analysis run controller", () => {
       schemaVersion: "1.0.0", outcome: "succeeded", run: liveRun("succeeded"), candidates: [], citations: [], quarantined: [],
     });
     const fetchImpl = vi.fn(async (
-      _input: RequestInfo | URL,
-      _init?: RequestInit,
+      input: RequestInfo | URL,
+      init?: RequestInit,
     ): Promise<Response> => {
+      expect(input).toBe("/api/analyze");
+      expect(init?.method).toBe("POST");
       expect(harness.commands[0].type).toBe("start_live_analysis");
       expect(harness.getState().pendingLiveAnalysis).not.toBeNull();
       return jsonResponse(succeeded);

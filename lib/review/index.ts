@@ -71,12 +71,7 @@ export type ReviewContext = {
 
 const RUN_ID = "RUN-CFN-DEMO-001-REVIEW";
 const CASE_ID = "CFN-DEMO-001";
-const ROLE = "demo_evaluator" as const;
 const LIMITATION_TEXT = cfnDemoFixture.reviewDefinitions.heroTransition.limitationText;
-
-function text(value: unknown): string {
-  return typeof value === "string" ? value : "";
-}
 
 function reviewRequirement(value: string): "individual" | "derived_summary" | "optional" {
   if (value === "derived_summary") return value;
@@ -191,7 +186,6 @@ export function selectReviewQueue(candidates: CaseCandidate[]) { return candidat
 export function isReviewComplete(candidates: CaseCandidate[]) { return selectReviewQueue(candidates).length === 0; }
 export function selectReviewBlockers(candidates: CaseCandidate[]) { return selectReviewQueue(candidates).map((candidate) => ({ id: candidate.id, title: candidate.title, reason: candidate.supportStatus === "insufficient_evidence" ? "Insufficient evidence requires a limitation or rejection." : "Individual review is pending." })); }
 
-function sourceDependencies(candidate: CaseCandidate) { return candidate.dependencies.filter((dependency) => dependency.kind === "source"); }
 function canAccept(candidate: CaseCandidate): boolean {
   return candidate.prohibitedConclusionCheck === "passed" && candidate.supportStatus !== "insufficient_evidence" && candidate.supportStatus !== "citation_unresolved" && candidate.supportStatus !== "not_processed" && candidate.relatedCoverageIssueIds.length === 0;
 }
@@ -270,7 +264,7 @@ export function withdrawCandidate(candidates: CaseCandidate[], candidateId: stri
 type Impact = { id: string; before: CaseCandidate; after: CaseCandidate };
 function recalculateDependencyClosure(candidates: CaseCandidate[], changedId: string): Impact[] {
   const impacted: Impact[] = [];
-  let frontier = [changedId];
+  const frontier = [changedId];
   const seen = new Set(frontier);
   while (frontier.length) {
     const current = frontier.shift()!;

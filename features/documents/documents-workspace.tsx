@@ -7,7 +7,6 @@ import {
   SafeErrorCodeSchema,
   type CaseCommand,
   type FixtureProcessingStageName,
-  type MaskClass,
   type SafeErrorCode,
 } from "../../lib/contracts";
 import {

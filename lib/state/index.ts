@@ -853,12 +853,34 @@ export function projectNonRunAttempts(state: CaseState): NonRunAnalysisAttempt[]
 }
 
 export function toPersistedCaseState(state: CaseState, now = isoNow()): PersistedCaseState {
-  const {
-    caseStatus: _caseStatus,
-    segments: _segments,
-    pendingLiveAnalysis: _pendingLiveAnalysis,
-    ...safeState
-  } = state;
+  const safeState = {
+    schemaVersion: state.schemaVersion,
+    caseId: state.caseId,
+    caseRevision: state.caseRevision,
+    fixtureVersion: state.fixtureVersion,
+    guidancePack: state.guidancePack,
+    purposeBrief: state.purposeBrief,
+    documents: state.documents,
+    selectedSegmentIds: state.selectedSegmentIds,
+    masking: state.masking,
+    coverage: state.coverage,
+    coverageReviews: state.coverageReviews,
+    processing: state.processing,
+    analysisRuns: state.analysisRuns,
+    activeAnalysisRunId: state.activeAnalysisRunId,
+    citations: state.citations,
+    citationResolutions: state.citationResolutions,
+    candidates: state.candidates,
+    reviews: state.reviews,
+    dependencyChanges: state.dependencyChanges,
+    audit: state.audit,
+    exportGate: state.exportGate,
+    exports: state.exports,
+    currentExportId: state.currentExportId,
+    currentExportManifest: state.currentExportManifest,
+    exportedRevision: state.exportedRevision,
+    lastUpdatedAt: state.lastUpdatedAt,
+  };
   const persisted = {
     ...safeState,
     storageKey: CASE_STATE_STORAGE_KEY,

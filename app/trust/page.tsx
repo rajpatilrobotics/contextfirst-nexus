@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { ArrowLeft, ShieldCheck } from "lucide-react";
 import { CaseStateProvider } from "../../components/shell/case-state-context";
 import { Alert, Card, Separator } from "../../components/ui";
@@ -44,9 +45,9 @@ export default function TrustPage() {
 
       <header className="border-b border-[var(--color-border)] bg-[var(--color-surface)]">
         <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-3 px-4 py-4 sm:px-6">
-          <a className="inline-flex min-h-11 items-center gap-2 font-semibold" href="/">
+          <Link className="inline-flex min-h-11 items-center gap-2 font-semibold" href="/">
             <ArrowLeft aria-hidden="true" size={18} /> ContextFirst Nexus
-          </a>
+          </Link>
           <nav aria-label="Trust page sections">
             <ul className="flex flex-wrap gap-x-4 gap-y-2">
               {SECTION_LINKS.map((link) => (

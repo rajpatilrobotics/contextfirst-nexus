@@ -57,7 +57,8 @@ describe("TASK-016 deterministic evaluation", () => {
       expect(report.evidence.filter((item: { status: string }) => item.status === "not_run")).toHaveLength(27);
       expect(report.evidence.filter((item: { executionSource: string }) => item.executionSource === "deterministic_control")).toHaveLength(5);
       expect("aggregateAccuracy" in report).toBe(false);
-      const { reportDigest: _digest, ...projection } = report;
+      const projection: Partial<typeof report> = { ...report };
+      delete projection.reportDigest;
       expect(report.reportDigest).toBe(canonicalDigest(projection));
     }
   });

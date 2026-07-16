@@ -7,11 +7,13 @@ import {
 import { LIVE_PROVIDER_RELEASES } from "./registry";
 import type { AnalysisFailureLike } from "./normalize";
 
+type AnalysisRecoveryOption = typeof AnalysisRecoveryOptionSchema._output;
+
 export function buildRecoveryOptions(
   failure: AnalysisFailureLike,
   selectedReleaseConfigurationId: LiveProviderReleaseConfigurationId,
-): any[] {
-  const options: any[] = [];
+): AnalysisRecoveryOption[] {
+  const options: AnalysisRecoveryOption[] = [];
 
   if (failure.retryableSameProvider) {
     options.push(

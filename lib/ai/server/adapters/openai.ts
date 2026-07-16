@@ -15,7 +15,6 @@ import { LIVE_PROVIDER_RELEASES } from "../registry";
 import {
   ADAPTER_VERSION,
   AI_BOUNDARY_VERSION,
-  SHARED_PROMPT_VERSION,
   type CanonicalProviderInput,
 } from "../types";
 

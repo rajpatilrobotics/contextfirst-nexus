@@ -44,6 +44,60 @@ const GATE_ORDER = [
   "prohibited_conclusion_blocking",
 ] as const;
 
+type EvaluationArtifact = {
+  schemaVersion: "1.0.0";
+  status: "passed" | "failed" | "not_run";
+  evidenceId: string;
+  variantId: EvaluationDefinition["variantId"];
+  fixtureId: string;
+  split: EvaluationDefinition["split"];
+  executionSource: string;
+  [key: string]: unknown;
+};
+
+type AdmissionReportArtifact = {
+  schemaVersion: "1.0.0";
+  releaseConfigurationId: typeof LIVE_RELEASES[number]["releaseConfigurationId"];
+  status: "passed" | "failed" | "incomplete";
+  evidence: EvaluationArtifact[];
+  gates: Array<{
+    name: typeof GATE_ORDER[number];
+    status: "passed" | "failed" | "not_run";
+    evidence: Array<{
+      fixtureId: string;
+      variantId: EvaluationDefinition["variantId"];
+      split: EvaluationDefinition["split"];
+      evidenceId: string;
+    }>;
+  }>;
+  reportDigest: string;
+  [key: string]: unknown;
+};
+
+type ReplayContinuityArtifact = {
+  schemaVersion: "1.0.0";
+  resultKind: "replay_continuity";
+  replayBundleId: typeof TRUSTED_REPLAY_BUNDLE_ID;
+  fixtureId: "CFN-DEMO-001";
+  fixtureVersion: "1.0.0";
+  promptVersion: "1.0.0";
+  responseSchemaVersion: "1.0.0";
+  rulesetVersion: "1.0.0";
+  status: "passed" | "failed";
+  checks: EvaluationCheck[];
+  runAt: string;
+  analysisRunId: string;
+  executionSource: "deterministic_replay";
+  actualProviderTransmission: false;
+  terminalStatus: "succeeded";
+  runMode: "deterministic_replay";
+  provider: ReturnType<typeof resolveTrustedReplayBundle> extends { ok: true; bundle: infer Bundle }
+    ? Bundle extends { replayRun: { provider: infer Provider } }
+      ? Provider
+      : unknown
+    : unknown;
+};
+
 export const LIVE_RELEASES = [
   { providerId: "openai", releaseConfigurationId: "openai-quality-v1", requestedModel: "gpt-5.6-sol", serviceTier: "paid", inferenceSetting: { kind: "reasoning_effort", value: "medium" } },
   { providerId: "google_gemini", releaseConfigurationId: "gemini-quality-v1", requestedModel: "gemini-3.5-flash", serviceTier: "unpaid", inferenceSetting: { kind: "thinking_level", value: "medium" } },
@@ -215,11 +269,11 @@ function buildChecks(definition: EvaluationDefinition, control: { passed: boolea
   return definition.expectedChecks.map((check) => ({ ...check, observed: control.observed, passed: control.passed }));
 }
 
-function buildHarnessResult(definition: EvaluationDefinition, control: { passed: boolean; observed: string }): any {
+function buildHarnessResult(definition: EvaluationDefinition, control: { passed: boolean; observed: string }): EvaluationArtifact {
   const scenario = definition.executionRequirement === "deterministic_control"
     ? definition.requiredControlScenarios[0]
     : null;
-  return EvaluationResultSchema.parse({
+  const result: EvaluationArtifact = {
     schemaVersion: VERSION,
     resultKind: "deterministic_harness",
     evidenceId: `EVIDENCE-HARNESS-${definition.variantId}`,
@@ -248,10 +302,12 @@ function buildHarnessResult(definition: EvaluationDefinition, control: { passed:
     terminalStatus: control.passed ? "succeeded" : "failed",
     runMode: null,
     provider: null,
-  });
+  };
+  EvaluationResultSchema.parse(result);
+  return result;
 }
 
-function buildReplayContinuityResult(): any {
+function buildReplayContinuityResult(): ReplayContinuityArtifact {
   const resolved = resolveTrustedReplayBundle({
     mode: "deterministic_replay",
     replayBundleId: TRUSTED_REPLAY_BUNDLE_ID,
@@ -265,7 +321,7 @@ function buildReplayContinuityResult(): any {
     replayVersion: VERSION,
   });
   if (!resolved.ok) throw new Error(`Replay continuity failed: ${resolved.reason}`);
-  return EvaluationResultSchema.parse({
+  const result: ReplayContinuityArtifact = {
     schemaVersion: VERSION,
     resultKind: "replay_continuity",
     replayBundleId: TRUSTED_REPLAY_BUNDLE_ID,
@@ -283,18 +339,20 @@ function buildReplayContinuityResult(): any {
     terminalStatus: "succeeded",
     runMode: "deterministic_replay",
     provider: resolved.bundle.replayRun.provider,
-  });
+  };
+  EvaluationResultSchema.parse(result);
+  return result;
 }
 
 function buildIncompleteAdmissionReport(
   register: ReturnType<typeof loadEvaluationDefinitions>,
   release: typeof LIVE_RELEASES[number],
-): any {
-  const evidence: any[] = [];
+): AdmissionReportArtifact {
+  const evidence: EvaluationArtifact[] = [];
   for (const definition of register.variants) {
     if (definition.executionRequirement === "live_model_run") {
       for (const repetition of definition.requiredRepetitions) {
-        evidence.push(EvaluationResultSchema.parse({
+        const notRunEvidence: EvaluationArtifact = {
           schemaVersion: VERSION,
           evidenceId: `EVIDENCE-${release.releaseConfigurationId}-${definition.variantId}-R${repetition}`,
           variantId: definition.variantId,
@@ -321,12 +379,14 @@ function buildIncompleteAdmissionReport(
           terminalStatus: "not_run",
           runMode: null,
           provider: null,
-        }));
+        };
+        EvaluationResultSchema.parse(notRunEvidence);
+        evidence.push(notRunEvidence);
       }
     } else {
       const scenario = definition.requiredControlScenarios[0];
       const control = runDefinitionControl(definition, assembleCandidates(), release);
-      evidence.push(EvaluationResultSchema.parse({
+      const controlEvidence: EvaluationArtifact = {
         schemaVersion: VERSION,
         evidenceId: `EVIDENCE-${release.releaseConfigurationId}-${definition.variantId}-CONTROL`,
         variantId: definition.variantId,
@@ -356,7 +416,9 @@ function buildIncompleteAdmissionReport(
         terminalStatus: scenario.terminalStatus,
         runMode: null,
         provider: null,
-      }));
+      };
+      EvaluationResultSchema.parse(controlEvidence);
+      evidence.push(controlEvidence);
     }
   }
   const gates = GATE_ORDER.map((name) => {
@@ -397,10 +459,12 @@ function buildIncompleteAdmissionReport(
     gates,
     generatedAt: FIXED_TIME,
   };
-  return ProviderEvaluationAdmissionReportSchema.parse({
+  const report: AdmissionReportArtifact = {
     ...reportWithoutDigest,
     reportDigest: canonicalDigest(reportWithoutDigest),
-  });
+  };
+  ProviderEvaluationAdmissionReportSchema.parse(report);
+  return report;
 }
 
 export function writeEvaluationArtifacts(outputDirectory: string): EvaluationRun {

@@ -4,13 +4,21 @@ import {
   PrivateLiveEvaluationRequestSchema,
   PrivateLiveEvaluationResultSchema,
 } from "../../contracts";
-import { analyze, type AdapterOverrides } from "./orchestrator";
+import { analyze, type AdapterOverrides, type AnalyzeResult } from "./orchestrator";
 import { CFN_DEMO_FIXTURE_BINDING, SHARED_PROMPT_VERSION } from "./types";
+
+type PrivateLiveEvaluationResult = {
+  schemaVersion: "1.0.0";
+  source: "private_evaluation";
+  admissionMutation: false;
+  publicSelectabilityMutation: false;
+  terminalResponse: Extract<AnalyzeResult, { outcome: "succeeded" | "failed" }>;
+};
 
 export async function runPrivateLiveEvaluation(
   value: unknown,
   adapters: AdapterOverrides = {},
-): Promise<any> {
+): Promise<PrivateLiveEvaluationResult> {
   const request = PrivateLiveEvaluationRequestSchema.parse(value);
   if (
     request.caseId !== CFN_DEMO_FIXTURE_BINDING.caseId ||
@@ -60,11 +68,13 @@ export async function runPrivateLiveEvaluation(
     throw new Error("Evaluation preflight unexpectedly rejected the frozen input.");
   }
 
-  return PrivateLiveEvaluationResultSchema.parse({
+  const result: PrivateLiveEvaluationResult = {
     schemaVersion: "1.0.0",
     source: "private_evaluation",
     admissionMutation: false,
     publicSelectabilityMutation: false,
     terminalResponse,
-  });
+  };
+  PrivateLiveEvaluationResultSchema.parse(result);
+  return result;
 }

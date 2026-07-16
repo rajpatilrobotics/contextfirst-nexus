@@ -3,8 +3,12 @@ import "server-only";
 import {
   AnalysisExecutionResultSchema,
   AnalyzeResponseSchema,
+  PreflightApiErrorSchema,
+  QuarantinedProposalSchema,
   StartedLiveApiErrorSchema,
   type AnalysisProviderProvenance,
+  type CaseCandidate,
+  type Citation,
   type LiveAnalysisExecutionResult,
 } from "../../contracts";
 import { preflightLiveProviderRequest } from "../../security/provider-boundary";
@@ -27,12 +31,44 @@ export type AdapterOverrides = {
   mistral?: typeof runMistralAnalysis;
 };
 
-export async function analyze(value: unknown, adapters: AdapterOverrides = {}): Promise<any> {
+type StartedLiveApiError = typeof StartedLiveApiErrorSchema._output;
+type PreflightApiError = typeof PreflightApiErrorSchema._output;
+type QuarantinedProposal = typeof QuarantinedProposalSchema._output;
+
+export type AnalyzeResult =
+  | {
+      schemaVersion: "1.0.0";
+      outcome: "succeeded";
+      run: LiveAnalysisExecutionResult & { status: "succeeded" };
+      candidates: CaseCandidate[];
+      citations: Citation[];
+      quarantined: QuarantinedProposal[];
+    }
+  | {
+      schemaVersion: "1.0.0";
+      outcome: "failed";
+      run: LiveAnalysisExecutionResult & { status: "failed" };
+      candidates: [];
+      citations: [];
+      quarantined: [];
+      error: StartedLiveApiError;
+    }
+  | {
+      schemaVersion: "1.0.0";
+      outcome: "rejected_before_run";
+      run: null;
+      candidates: [];
+      citations: [];
+      quarantined: [];
+      error: PreflightApiError;
+    };
+
+export async function analyze(value: unknown, adapters: AdapterOverrides = {}): Promise<AnalyzeResult> {
   const canonical = hasAdapterOverride(adapters)
     ? buildCanonicalProviderInput(value)
     : preflightLiveProviderRequest(value);
   if (!canonical.ok) {
-    return AnalyzeResponseSchema.parse({
+    const response: AnalyzeResult = {
       schemaVersion: "1.0.0",
       outcome: "rejected_before_run",
       run: null,
@@ -40,7 +76,9 @@ export async function analyze(value: unknown, adapters: AdapterOverrides = {}): 
       citations: [],
       quarantined: [],
       error: canonical.error,
-    });
+    };
+    AnalyzeResponseSchema.parse(response);
+    return response;
   }
 
   return runSelectedProvider(canonical.input, adapters);
@@ -53,7 +91,7 @@ function hasAdapterOverride(adapters: AdapterOverrides): boolean {
 async function runSelectedProvider(
   input: CanonicalProviderInput,
   adapters: AdapterOverrides,
-): Promise<any> {
+): Promise<AnalyzeResult> {
   const runId = nextRunId();
   const startedAt = nowIso();
   const controller = new AbortController();
@@ -68,7 +106,7 @@ async function runSelectedProvider(
 
     const validated = postValidateAnalysisProposal(normalized.proposal, input, runId);
     const completedAt = nowIso();
-    const run = AnalysisExecutionResultSchema.parse({
+    const run = {
       id: runId,
       mode: "live",
       provider: normalized.provenance,
@@ -88,16 +126,19 @@ async function runSelectedProvider(
       tokenUsage: normalized.tokenUsage,
       status: "succeeded",
       failure: null,
-    }) as LiveAnalysisExecutionResult;
+    } satisfies LiveAnalysisExecutionResult & { status: "succeeded" };
+    AnalysisExecutionResultSchema.parse(run);
 
-    return AnalyzeResponseSchema.parse({
+    const response: AnalyzeResult = {
       schemaVersion: "1.0.0",
       outcome: "succeeded",
       run,
       candidates: validated.candidates,
       citations: validated.citations,
       quarantined: validated.quarantined,
-    });
+    };
+    AnalyzeResponseSchema.parse(response);
+    return response;
   } catch {
     const entryFailure = failure(controller.signal.aborted ? "provider_timeout" : "internal_safe_failure");
     return failedResponse(input, runId, startedAt, entryFailure, fallbackProvenance(input));
@@ -134,9 +175,9 @@ function failedResponse(
   failureValue: AnalysisFailureLike,
   provenance: AnalysisProviderProvenance,
   tokenUsage?: LiveAnalysisExecutionResult["tokenUsage"],
-): any {
+): AnalyzeResult {
   const completedAt = nowIso();
-  const run = AnalysisExecutionResultSchema.parse({
+  const run = {
     id: runId,
     mode: "live",
     provider: provenance,
@@ -156,7 +197,8 @@ function failedResponse(
     tokenUsage,
     status: "failed",
     failure: failureValue,
-  }) as LiveAnalysisExecutionResult;
+  } satisfies LiveAnalysisExecutionResult & { status: "failed" };
+  AnalysisExecutionResultSchema.parse(run);
 
   const error = StartedLiveApiErrorSchema.parse({
     schemaVersion: "1.0.0",
@@ -174,7 +216,7 @@ function failedResponse(
     ),
   });
 
-  return AnalyzeResponseSchema.parse({
+  const response: AnalyzeResult = {
     schemaVersion: "1.0.0",
     outcome: "failed",
     run,
@@ -182,7 +224,9 @@ function failedResponse(
     citations: [],
     quarantined: [],
     error,
-  });
+  };
+  AnalyzeResponseSchema.parse(response);
+  return response;
 }
 
 function fallbackProvenance(input: CanonicalProviderInput): AnalysisProviderProvenance {

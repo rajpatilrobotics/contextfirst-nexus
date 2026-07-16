@@ -8,7 +8,6 @@ const ROOT = process.cwd();
 const VERSION = "1.0.0";
 const CASE_ID = "CFN-DEMO-001";
 const GENERATED_AT = "2026-07-16T00:00:00.000Z";
-const LAST_VERIFIED = "2026-07-16";
 
 const documents = [
   {

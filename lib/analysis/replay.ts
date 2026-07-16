@@ -568,8 +568,28 @@ export function createTrustedCheckpointBundle(): DemoCheckpointBundle {
 }
 
 function withoutInputState(run: AnalysisRun) {
-  const { inputState: _inputState, ...bundleRun } = run;
-  return bundleRun;
+  const bundleRun = {
+    id: run.id,
+    mode: run.mode,
+    provider: run.provider,
+    promptVersion: run.promptVersion,
+    requestSchemaVersion: run.requestSchemaVersion,
+    responseSchemaVersion: run.responseSchemaVersion,
+    fixtureVersion: run.fixtureVersion,
+    rulesetVersion: run.rulesetVersion,
+    checkpointProvenance: run.checkpointProvenance,
+    startedAt: run.startedAt,
+    completedAt: run.completedAt,
+    durationMs: run.durationMs,
+    inputSegmentCount: run.inputSegmentCount,
+    candidateCount: run.candidateCount,
+    citationCount: run.citationCount,
+    quarantinedCount: run.quarantinedCount,
+    status: run.status,
+    failure: run.failure,
+    recovery: run.recovery,
+  };
+  return run.tokenUsage ? { ...bundleRun, tokenUsage: run.tokenUsage } : bundleRun;
 }
 
 export function resolveTrustedReplayBundle(request: ReplayRequest): ReplayValidationResult {

@@ -181,7 +181,6 @@ describe("TASK-022 export gate and workspace", () => {
   });
 
   it("supports arrow-key movement between semantic and JSON preview tabs", async () => {
-    const user = userEvent.setup();
     renderWorkspace(createReadyState());
     const semanticTab = screen.getByRole("tab", { name: "Semantic preview" });
     semanticTab.focus();
