@@ -152,7 +152,7 @@ tasks:
     title: Masking, redaction mapping, and leak scanning
     stage: domain
     wave: 4
-    status: ready
+    status: integrated
     risk: high
     dependencies: [TASK-001, TASK-002, TASK-003]
     packet: tasks/TASK-006.md
@@ -168,7 +168,7 @@ tasks:
     title: Citation validation and source resolution
     stage: domain
     wave: 5
-    status: pending
+    status: ready
     risk: high
     dependencies: [TASK-001, TASK-002, TASK-003, TASK-006]
     packet: tasks/TASK-007.md
@@ -235,7 +235,7 @@ tasks:
     title: Shared AI boundary and provider registry
     stage: providers
     wave: 5
-    status: pending
+    status: ready
     risk: high
     dependencies: [TASK-001, TASK-002, TASK-003, TASK-006]
     packet: tasks/TASK-011.md
