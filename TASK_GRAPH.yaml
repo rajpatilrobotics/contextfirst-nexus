@@ -216,7 +216,7 @@ tasks:
     title: Case reducer, audit, persistence, and replay
     stage: domain
     wave: 7
-    status: ready
+    status: integrated
     risk: high
     dependencies: [TASK-002, TASK-003, TASK-005, TASK-006, TASK-007, TASK-008, TASK-009]
     packet: tasks/TASK-010.md
@@ -351,7 +351,7 @@ tasks:
     title: Global shell and landing experience
     stage: interface
     wave: 8
-    status: pending
+    status: ready
     risk: medium
     dependencies: [TASK-004, TASK-010]
     packet: tasks/TASK-017.md
