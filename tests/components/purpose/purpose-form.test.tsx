@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import { CasePurposeBriefForm } from "../../../features/purpose";
@@ -76,7 +76,13 @@ describe("TASK-018 CasePurposeBriefForm", () => {
     await user.clear(screen.getByLabelText("Authorized purpose"));
     await user.type(screen.getByLabelText("Authorized purpose"), "Prepare a revised synthetic review handoff.");
     await user.click(screen.getByRole("button", { name: "Save Case Purpose Brief" }));
-    const saved = onSave.mock.calls[0][0];
+    await waitFor(() => expect(onSave).toHaveBeenCalledTimes(1));
+    const firstCall = onSave.mock.calls[0];
+    expect(firstCall).toBeDefined();
+    if (!firstCall) {
+      throw new Error("Expected onSave to be called before reading the saved brief.");
+    }
+    const saved = firstCall[0];
     expect(saved.id).toBe(initialBrief.id);
     expect(saved.createdAt).toBe(initialBrief.createdAt);
     expect(saved.revision).toBe(initialBrief.revision + 1);
