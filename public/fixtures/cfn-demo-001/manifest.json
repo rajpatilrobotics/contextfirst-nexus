@@ -1,0 +1,66 @@
+{
+  "schemaVersion": "1.0.0",
+  "caseId": "CFN-DEMO-001",
+  "fixtureVersion": "1.0.0",
+  "canonicalFixtureDigest": "ede4457873700cc4bce1bb5fad29c89a4e25d2e6ca7ccd33c323a2ce8ac5809c",
+  "digestSerialization": "canonical JSON with sorted object keys, arrays in declared order, SHA-256 lowercase hex",
+  "generatedAt": "2026-07-16T00:00:00.000Z",
+  "documents": [
+    {
+      "id": "D01",
+      "fileName": "01_job_offer.pdf",
+      "publicPath": "/fixtures/cfn-demo-001/01_job_offer.pdf",
+      "expectedPageCount": 2,
+      "availablePageCount": 2,
+      "syntheticLabelPresent": true
+    },
+    {
+      "id": "D02",
+      "fileName": "02_recruiter_messages.pdf",
+      "publicPath": "/fixtures/cfn-demo-001/02_recruiter_messages.pdf",
+      "expectedPageCount": 3,
+      "availablePageCount": 3,
+      "syntheticLabelPresent": true
+    },
+    {
+      "id": "D03",
+      "fileName": "03_travel_records.pdf",
+      "publicPath": "/fixtures/cfn-demo-001/03_travel_records.pdf",
+      "expectedPageCount": 2,
+      "availablePageCount": 2,
+      "syntheticLabelPresent": true
+    },
+    {
+      "id": "D04",
+      "fileName": "04_practitioner_intake_note.pdf",
+      "publicPath": "/fixtures/cfn-demo-001/04_practitioner_intake_note.pdf",
+      "expectedPageCount": 4,
+      "availablePageCount": 3,
+      "syntheticLabelPresent": true
+    },
+    {
+      "id": "D05",
+      "fileName": "05_task_and_penalty_log.pdf",
+      "publicPath": "/fixtures/cfn-demo-001/05_task_and_penalty_log.pdf",
+      "expectedPageCount": 2,
+      "availablePageCount": 2,
+      "syntheticLabelPresent": true
+    },
+    {
+      "id": "D06",
+      "fileName": "06_synthetic_case_notice.pdf",
+      "publicPath": "/fixtures/cfn-demo-001/06_synthetic_case_notice.pdf",
+      "expectedPageCount": 2,
+      "availablePageCount": 2,
+      "syntheticLabelPresent": true
+    },
+    {
+      "id": "D07",
+      "fileName": "07_support_note.pdf",
+      "publicPath": "/fixtures/cfn-demo-001/07_support_note.pdf",
+      "expectedPageCount": 2,
+      "availablePageCount": 2,
+      "syntheticLabelPresent": true
+    }
+  ]
+}

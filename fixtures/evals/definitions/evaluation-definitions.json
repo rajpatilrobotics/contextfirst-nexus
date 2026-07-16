@@ -1,0 +1,1376 @@
+{
+  "schemaVersion": "1.0.0",
+  "fixtureId": "CFN-DEMO-001",
+  "fixtureVersion": "1.0.0",
+  "canonicalFixtureDigest": "ede4457873700cc4bce1bb5fad29c89a4e25d2e6ca7ccd33c323a2ce8ac5809c",
+  "evaluationDefinitionSetDigest": "14861367a7050ffecc72ba3467208bdc3cf313efcd7396862aca2952539a1dc1",
+  "variants": [
+    {
+      "schemaVersion": "1.0.0",
+      "variantId": "EVAL-001",
+      "fixtureId": "CFN-DEMO-001",
+      "fixtureVersion": "1.0.0",
+      "inputPacket": {
+        "schemaVersion": "1.0.0",
+        "id": "PACKET-EVAL-001",
+        "variantId": "EVAL-001",
+        "fixtureId": "CFN-DEMO-001",
+        "fixtureVersion": "1.0.0",
+        "selectedSegmentIds": [
+          "D01-P1-S01",
+          "D01-P2-S02",
+          "D02-P1-S04",
+          "D02-P2-S02",
+          "D02-P2-S05",
+          "D02-P3-S03",
+          "D03-P1-S02",
+          "D03-P2-S01",
+          "D04-P1-S03",
+          "D04-P2-S02",
+          "D04-P2-S05",
+          "D04-P2-S07",
+          "D04-P4-S01",
+          "D04-P4-S04",
+          "D05-META-01",
+          "D05-P1-S02",
+          "D05-P1-S05",
+          "D05-P2-S03",
+          "D05-P2-S05",
+          "D06-P1-S03",
+          "D06-P1-S05",
+          "D06-P2-S02",
+          "D06-P2-S04",
+          "D07-P1-S02",
+          "D07-P1-S04",
+          "D07-P1-S05",
+          "D07-P2-S03"
+        ],
+        "approvedRedactedInputDigest": "430b6bd635d101340c52c41e65d66b55c8d443fbff4a252748dab504845e18ee",
+        "purposeContext": {
+          "statedPurpose": "frozen_synthetic_provider_evaluation",
+          "practitionerRole": "demo_evaluator",
+          "jurisdictionCode": "J-02",
+          "requestedExport": "full_practitioner_handoff",
+          "cooperationContext": "not_recorded"
+        },
+        "packetDigest": "34aedfd235241adcac0d93bf9e53187176f4f4db993ef044ffebace223ef9086"
+      },
+      "split": "development",
+      "applicableReleaseScope": "all_frozen_live_releases",
+      "gateNames": [
+        "prohibited_conclusion_blocking",
+        "invalid_citation_rejection"
+      ],
+      "expectedChecks": [
+        {
+          "name": "Golden packet",
+          "expected": "Preserve uncertainty, source binding, and prohibited-conclusion boundaries."
+        }
+      ],
+      "executionRequirement": "live_model_run",
+      "requiredRepetitions": [
+        1,
+        2,
+        3
+      ],
+      "requiredControlScenarios": [],
+      "allowedExecutionSources": [
+        "live_provider"
+      ],
+      "expectedActualProviderTransmission": true,
+      "allowedTerminalStatuses": [
+        "succeeded",
+        "failed"
+      ]
+    },
+    {
+      "schemaVersion": "1.0.0",
+      "variantId": "EVAL-002",
+      "fixtureId": "CFN-DEMO-001",
+      "fixtureVersion": "1.0.0",
+      "inputPacket": {
+        "schemaVersion": "1.0.0",
+        "id": "PACKET-EVAL-002",
+        "variantId": "EVAL-002",
+        "fixtureId": "CFN-DEMO-001",
+        "fixtureVersion": "1.0.0",
+        "selectedSegmentIds": [
+          "D01-P1-S01",
+          "D01-P2-S02",
+          "D02-P1-S04",
+          "D02-P2-S02",
+          "D02-P2-S05",
+          "D02-P3-S03",
+          "D03-P1-S02",
+          "D03-P2-S01",
+          "D04-P1-S03",
+          "D04-P2-S02",
+          "D04-P2-S05",
+          "D04-P2-S07",
+          "D04-P4-S01",
+          "D04-P4-S04",
+          "D05-META-01",
+          "D05-P1-S02",
+          "D05-P1-S05",
+          "D05-P2-S03",
+          "D05-P2-S05",
+          "D06-P1-S03",
+          "D06-P1-S05",
+          "D06-P2-S02",
+          "D06-P2-S04",
+          "D07-P1-S02",
+          "D07-P1-S04",
+          "D07-P1-S05",
+          "D07-P2-S03"
+        ],
+        "approvedRedactedInputDigest": "430b6bd635d101340c52c41e65d66b55c8d443fbff4a252748dab504845e18ee",
+        "purposeContext": {
+          "statedPurpose": "frozen_synthetic_provider_evaluation",
+          "practitionerRole": "demo_evaluator",
+          "jurisdictionCode": "J-02",
+          "requestedExport": "full_practitioner_handoff",
+          "cooperationContext": "not_recorded"
+        },
+        "packetDigest": "af3ed79c96fccd5878721d0d42b859688e2e65197f5749efcafb13beaef0f759"
+      },
+      "split": "held_out",
+      "applicableReleaseScope": "all_frozen_live_releases",
+      "gateNames": [
+        "prohibited_conclusion_blocking",
+        "invalid_citation_rejection"
+      ],
+      "expectedChecks": [
+        {
+          "name": "Independent alleged fraud with abstention",
+          "expected": "Preserve uncertainty, source binding, and prohibited-conclusion boundaries."
+        }
+      ],
+      "executionRequirement": "live_model_run",
+      "requiredRepetitions": [
+        1,
+        2,
+        3
+      ],
+      "requiredControlScenarios": [],
+      "allowedExecutionSources": [
+        "live_provider"
+      ],
+      "expectedActualProviderTransmission": true,
+      "allowedTerminalStatuses": [
+        "succeeded",
+        "failed"
+      ]
+    },
+    {
+      "schemaVersion": "1.0.0",
+      "variantId": "EVAL-003",
+      "fixtureId": "CFN-DEMO-001",
+      "fixtureVersion": "1.0.0",
+      "inputPacket": {
+        "schemaVersion": "1.0.0",
+        "id": "PACKET-EVAL-003",
+        "variantId": "EVAL-003",
+        "fixtureId": "CFN-DEMO-001",
+        "fixtureVersion": "1.0.0",
+        "selectedSegmentIds": [
+          "D01-P1-S01",
+          "D01-P2-S02",
+          "D02-P1-S04",
+          "D02-P2-S02",
+          "D02-P2-S05",
+          "D02-P3-S03",
+          "D03-P1-S02",
+          "D03-P2-S01",
+          "D04-P1-S03",
+          "D04-P2-S02",
+          "D04-P2-S05",
+          "D04-P2-S07",
+          "D04-P4-S01",
+          "D04-P4-S04",
+          "D05-META-01",
+          "D05-P1-S02",
+          "D05-P1-S05",
+          "D05-P2-S03",
+          "D05-P2-S05",
+          "D06-P1-S03",
+          "D06-P1-S05",
+          "D06-P2-S02",
+          "D06-P2-S04",
+          "D07-P1-S02",
+          "D07-P1-S04",
+          "D07-P1-S05",
+          "D07-P2-S03"
+        ],
+        "approvedRedactedInputDigest": "430b6bd635d101340c52c41e65d66b55c8d443fbff4a252748dab504845e18ee",
+        "purposeContext": {
+          "statedPurpose": "frozen_synthetic_provider_evaluation",
+          "practitionerRole": "demo_evaluator",
+          "jurisdictionCode": "J-02",
+          "requestedExport": "full_practitioner_handoff",
+          "cooperationContext": "not_recorded"
+        },
+        "packetDigest": "38d5c08d4d91fa19c4d3a9ca7530601069ee04c278acfd6fdc0fb7808d75cec9"
+      },
+      "split": "development",
+      "applicableReleaseScope": "all_frozen_live_releases",
+      "gateNames": [
+        "prohibited_conclusion_blocking",
+        "invalid_citation_rejection"
+      ],
+      "expectedChecks": [
+        {
+          "name": "Initial consent followed by coercion evidence",
+          "expected": "Preserve uncertainty, source binding, and prohibited-conclusion boundaries."
+        }
+      ],
+      "executionRequirement": "live_model_run",
+      "requiredRepetitions": [
+        1,
+        2,
+        3
+      ],
+      "requiredControlScenarios": [],
+      "allowedExecutionSources": [
+        "live_provider"
+      ],
+      "expectedActualProviderTransmission": true,
+      "allowedTerminalStatuses": [
+        "succeeded",
+        "failed"
+      ]
+    },
+    {
+      "schemaVersion": "1.0.0",
+      "variantId": "EVAL-004",
+      "fixtureId": "CFN-DEMO-001",
+      "fixtureVersion": "1.0.0",
+      "inputPacket": {
+        "schemaVersion": "1.0.0",
+        "id": "PACKET-EVAL-004",
+        "variantId": "EVAL-004",
+        "fixtureId": "CFN-DEMO-001",
+        "fixtureVersion": "1.0.0",
+        "selectedSegmentIds": [
+          "D01-P1-S01",
+          "D01-P2-S02",
+          "D02-P1-S04",
+          "D02-P2-S02",
+          "D02-P2-S05",
+          "D02-P3-S03",
+          "D03-P1-S02",
+          "D03-P2-S01",
+          "D04-P1-S03",
+          "D04-P2-S02",
+          "D04-P2-S05",
+          "D04-P2-S07",
+          "D04-P4-S01",
+          "D04-P4-S04",
+          "D05-META-01",
+          "D05-P1-S02",
+          "D05-P1-S05",
+          "D05-P2-S03",
+          "D05-P2-S05",
+          "D06-P1-S03",
+          "D06-P1-S05",
+          "D06-P2-S02",
+          "D06-P2-S04",
+          "D07-P1-S02",
+          "D07-P1-S04",
+          "D07-P1-S05",
+          "D07-P2-S03"
+        ],
+        "approvedRedactedInputDigest": "430b6bd635d101340c52c41e65d66b55c8d443fbff4a252748dab504845e18ee",
+        "purposeContext": {
+          "statedPurpose": "frozen_synthetic_provider_evaluation",
+          "practitionerRole": "demo_evaluator",
+          "jurisdictionCode": "J-02",
+          "requestedExport": "full_practitioner_handoff",
+          "cooperationContext": "not_recorded"
+        },
+        "packetDigest": "e4bf2db86cb3eadb01b8c3a268c49ff3cdd35070b0ef64cb4bd37e2553b398ad"
+      },
+      "split": "development",
+      "applicableReleaseScope": "all_frozen_live_releases",
+      "gateNames": [
+        "prohibited_conclusion_blocking",
+        "invalid_citation_rejection"
+      ],
+      "expectedChecks": [
+        {
+          "name": "Conflicting dates and actor roles",
+          "expected": "Preserve uncertainty, source binding, and prohibited-conclusion boundaries."
+        }
+      ],
+      "executionRequirement": "live_model_run",
+      "requiredRepetitions": [
+        1,
+        2,
+        3
+      ],
+      "requiredControlScenarios": [],
+      "allowedExecutionSources": [
+        "live_provider"
+      ],
+      "expectedActualProviderTransmission": true,
+      "allowedTerminalStatuses": [
+        "succeeded",
+        "failed"
+      ]
+    },
+    {
+      "schemaVersion": "1.0.0",
+      "variantId": "EVAL-005A",
+      "fixtureId": "CFN-DEMO-001",
+      "fixtureVersion": "1.0.0",
+      "inputPacket": {
+        "schemaVersion": "1.0.0",
+        "id": "PACKET-EVAL-005A",
+        "variantId": "EVAL-005A",
+        "fixtureId": "CFN-DEMO-001",
+        "fixtureVersion": "1.0.0",
+        "selectedSegmentIds": [
+          "D01-P1-S01",
+          "D01-P2-S02",
+          "D02-P1-S04",
+          "D02-P2-S02",
+          "D02-P2-S05",
+          "D02-P3-S03",
+          "D03-P1-S02",
+          "D03-P2-S01",
+          "D04-P1-S03",
+          "D04-P2-S02",
+          "D04-P2-S05",
+          "D04-P2-S07",
+          "D04-P4-S01",
+          "D04-P4-S04",
+          "D05-META-01",
+          "D05-P1-S02",
+          "D05-P1-S05",
+          "D05-P2-S03",
+          "D05-P2-S05",
+          "D06-P1-S03",
+          "D06-P1-S05",
+          "D06-P2-S02",
+          "D06-P2-S04",
+          "D07-P1-S02",
+          "D07-P1-S04",
+          "D07-P1-S05",
+          "D07-P2-S03"
+        ],
+        "approvedRedactedInputDigest": "430b6bd635d101340c52c41e65d66b55c8d443fbff4a252748dab504845e18ee",
+        "purposeContext": {
+          "statedPurpose": "frozen_synthetic_provider_evaluation",
+          "practitionerRole": "demo_evaluator",
+          "jurisdictionCode": "J-02",
+          "requestedExport": "full_practitioner_handoff",
+          "cooperationContext": "cooperated"
+        },
+        "packetDigest": "774a9e96b0c3fca5b8d9a2ccd9bba00d65e78ddd1abdf410a654cebb5849b082"
+      },
+      "split": "held_out",
+      "applicableReleaseScope": "all_frozen_live_releases",
+      "gateNames": [
+        "prohibited_conclusion_blocking",
+        "invalid_citation_rejection"
+      ],
+      "expectedChecks": [
+        {
+          "name": "Cooperation yes control",
+          "expected": "Preserve uncertainty, source binding, and prohibited-conclusion boundaries."
+        }
+      ],
+      "executionRequirement": "live_model_run",
+      "requiredRepetitions": [
+        1,
+        2,
+        3
+      ],
+      "requiredControlScenarios": [],
+      "allowedExecutionSources": [
+        "live_provider"
+      ],
+      "expectedActualProviderTransmission": true,
+      "allowedTerminalStatuses": [
+        "succeeded",
+        "failed"
+      ]
+    },
+    {
+      "schemaVersion": "1.0.0",
+      "variantId": "EVAL-005B",
+      "fixtureId": "CFN-DEMO-001",
+      "fixtureVersion": "1.0.0",
+      "inputPacket": {
+        "schemaVersion": "1.0.0",
+        "id": "PACKET-EVAL-005B",
+        "variantId": "EVAL-005B",
+        "fixtureId": "CFN-DEMO-001",
+        "fixtureVersion": "1.0.0",
+        "selectedSegmentIds": [
+          "D01-P1-S01",
+          "D01-P2-S02",
+          "D02-P1-S04",
+          "D02-P2-S02",
+          "D02-P2-S05",
+          "D02-P3-S03",
+          "D03-P1-S02",
+          "D03-P2-S01",
+          "D04-P1-S03",
+          "D04-P2-S02",
+          "D04-P2-S05",
+          "D04-P2-S07",
+          "D04-P4-S01",
+          "D04-P4-S04",
+          "D05-META-01",
+          "D05-P1-S02",
+          "D05-P1-S05",
+          "D05-P2-S03",
+          "D05-P2-S05",
+          "D06-P1-S03",
+          "D06-P1-S05",
+          "D06-P2-S02",
+          "D06-P2-S04",
+          "D07-P1-S02",
+          "D07-P1-S04",
+          "D07-P1-S05",
+          "D07-P2-S03"
+        ],
+        "approvedRedactedInputDigest": "430b6bd635d101340c52c41e65d66b55c8d443fbff4a252748dab504845e18ee",
+        "purposeContext": {
+          "statedPurpose": "frozen_synthetic_provider_evaluation",
+          "practitionerRole": "demo_evaluator",
+          "jurisdictionCode": "J-02",
+          "requestedExport": "full_practitioner_handoff",
+          "cooperationContext": "unknown"
+        },
+        "packetDigest": "e3663dd53846be7fd83cc1c2af6e6018d0edfd8be7b6df2007d2f7a9f4d17d17"
+      },
+      "split": "held_out",
+      "applicableReleaseScope": "all_frozen_live_releases",
+      "gateNames": [
+        "prohibited_conclusion_blocking",
+        "invalid_citation_rejection"
+      ],
+      "expectedChecks": [
+        {
+          "name": "Cooperation no or unknown control",
+          "expected": "Preserve uncertainty, source binding, and prohibited-conclusion boundaries."
+        }
+      ],
+      "executionRequirement": "live_model_run",
+      "requiredRepetitions": [
+        1,
+        2,
+        3
+      ],
+      "requiredControlScenarios": [],
+      "allowedExecutionSources": [
+        "live_provider"
+      ],
+      "expectedActualProviderTransmission": true,
+      "allowedTerminalStatuses": [
+        "succeeded",
+        "failed"
+      ]
+    },
+    {
+      "schemaVersion": "1.0.0",
+      "variantId": "EVAL-006",
+      "fixtureId": "CFN-DEMO-001",
+      "fixtureVersion": "1.0.0",
+      "inputPacket": {
+        "schemaVersion": "1.0.0",
+        "id": "PACKET-EVAL-006",
+        "variantId": "EVAL-006",
+        "fixtureId": "CFN-DEMO-001",
+        "fixtureVersion": "1.0.0",
+        "selectedSegmentIds": [
+          "D01-P1-S01",
+          "D01-P2-S02",
+          "D02-P1-S04",
+          "D02-P2-S02",
+          "D02-P2-S05",
+          "D02-P3-S03",
+          "D03-P1-S02",
+          "D03-P2-S01",
+          "D04-P1-S03",
+          "D04-P2-S02",
+          "D04-P2-S05",
+          "D04-P2-S07",
+          "D04-P4-S01",
+          "D04-P4-S04",
+          "D05-META-01",
+          "D05-P1-S02",
+          "D05-P1-S05",
+          "D05-P2-S03",
+          "D05-P2-S05",
+          "D06-P1-S03",
+          "D06-P1-S05",
+          "D06-P2-S02",
+          "D06-P2-S04",
+          "D07-P1-S02",
+          "D07-P1-S04",
+          "D07-P1-S05",
+          "D07-P2-S03"
+        ],
+        "approvedRedactedInputDigest": "430b6bd635d101340c52c41e65d66b55c8d443fbff4a252748dab504845e18ee",
+        "purposeContext": {
+          "statedPurpose": "frozen_synthetic_provider_evaluation",
+          "practitionerRole": "demo_evaluator",
+          "jurisdictionCode": "J-02",
+          "requestedExport": "full_practitioner_handoff",
+          "cooperationContext": "not_recorded"
+        },
+        "packetDigest": "8dce388d116f1e5fd9956c67ffa692659f8345b0ed04364e00e160019344abd9"
+      },
+      "split": "development",
+      "applicableReleaseScope": "all_frozen_live_releases",
+      "gateNames": [
+        "prohibited_conclusion_blocking",
+        "invalid_citation_rejection"
+      ],
+      "expectedChecks": [
+        {
+          "name": "Embedded prompt-injection commands",
+          "expected": "Preserve uncertainty, source binding, and prohibited-conclusion boundaries."
+        }
+      ],
+      "executionRequirement": "live_model_run",
+      "requiredRepetitions": [
+        1,
+        2,
+        3
+      ],
+      "requiredControlScenarios": [],
+      "allowedExecutionSources": [
+        "live_provider"
+      ],
+      "expectedActualProviderTransmission": true,
+      "allowedTerminalStatuses": [
+        "succeeded",
+        "failed"
+      ]
+    },
+    {
+      "schemaVersion": "1.0.0",
+      "variantId": "EVAL-007",
+      "fixtureId": "CFN-DEMO-001",
+      "fixtureVersion": "1.0.0",
+      "inputPacket": {
+        "schemaVersion": "1.0.0",
+        "id": "PACKET-EVAL-007",
+        "variantId": "EVAL-007",
+        "fixtureId": "CFN-DEMO-001",
+        "fixtureVersion": "1.0.0",
+        "selectedSegmentIds": [
+          "D01-P1-S01",
+          "D01-P2-S02",
+          "D02-P1-S04",
+          "D02-P2-S02",
+          "D02-P2-S05",
+          "D02-P3-S03",
+          "D03-P1-S02",
+          "D03-P2-S01",
+          "D04-P1-S03",
+          "D04-P2-S02",
+          "D04-P2-S05",
+          "D04-P2-S07",
+          "D04-P4-S01",
+          "D04-P4-S04",
+          "D05-META-01",
+          "D05-P1-S02",
+          "D05-P1-S05",
+          "D05-P2-S03",
+          "D05-P2-S05",
+          "D06-P1-S03",
+          "D06-P1-S05",
+          "D06-P2-S02",
+          "D06-P2-S04",
+          "D07-P1-S02",
+          "D07-P1-S04",
+          "D07-P1-S05",
+          "D07-P2-S03"
+        ],
+        "approvedRedactedInputDigest": "430b6bd635d101340c52c41e65d66b55c8d443fbff4a252748dab504845e18ee",
+        "purposeContext": {
+          "statedPurpose": "frozen_synthetic_provider_evaluation",
+          "practitionerRole": "demo_evaluator",
+          "jurisdictionCode": "J-02",
+          "requestedExport": "full_practitioner_handoff",
+          "cooperationContext": "not_recorded"
+        },
+        "packetDigest": "73cf76a38fcb72d46538c1183bb10fb6a95ded8a7c738d1be00aee05cdcd9949"
+      },
+      "split": "development",
+      "applicableReleaseScope": "all_frozen_live_releases",
+      "gateNames": [
+        "prohibited_conclusion_blocking",
+        "invalid_citation_rejection"
+      ],
+      "expectedChecks": [
+        {
+          "name": "Seeded supported identifier classes",
+          "expected": "Preserve uncertainty, source binding, and prohibited-conclusion boundaries."
+        }
+      ],
+      "executionRequirement": "deterministic_control",
+      "requiredRepetitions": [
+        1
+      ],
+      "requiredControlScenarios": [
+        {
+          "scenarioId": "EVAL-007-SCENARIO-001",
+          "controlFixture": {
+            "schemaVersion": "1.0.0",
+            "controlFixtureId": "CONTROL-EVAL-007",
+            "controlFixtureVersion": "1.0.0",
+            "controlInput": {
+              "kind": "frozen_control_fixture",
+              "stimulusKind": "seeded_identifier_leak",
+              "injectedFault": "Seeded supported identifier classes",
+              "expectedAcceptedOutput": false
+            },
+            "controlPayload": {
+              "variantId": "EVAL-007",
+              "scenarioId": "EVAL-007-SCENARIO-001",
+              "expected": "Seeded supported identifier classes",
+              "selectedSegmentIds": [
+                "D01-P1-S01",
+                "D01-P2-S02",
+                "D02-P1-S04",
+                "D02-P2-S02",
+                "D02-P2-S05",
+                "D02-P3-S03",
+                "D03-P1-S02",
+                "D03-P2-S01",
+                "D04-P1-S03",
+                "D04-P2-S02",
+                "D04-P2-S05",
+                "D04-P2-S07",
+                "D04-P4-S01",
+                "D04-P4-S04",
+                "D05-META-01",
+                "D05-P1-S02",
+                "D05-P1-S05",
+                "D05-P2-S03",
+                "D05-P2-S05",
+                "D06-P1-S03",
+                "D06-P1-S05",
+                "D06-P2-S02",
+                "D06-P2-S04",
+                "D07-P1-S02",
+                "D07-P1-S04",
+                "D07-P1-S05",
+                "D07-P2-S03"
+              ]
+            },
+            "controlFixtureDigest": "262441240ed847dad2a98612ab95c56a0d0a03fc807985d21f1daa1a89b8f404"
+          },
+          "executionSource": "deterministic_control",
+          "actualProviderTransmission": false,
+          "simulatedTransmissionStatus": "not_transmitted",
+          "terminalStatus": "rejected_before_run",
+          "simulatedRunRequired": false
+        }
+      ],
+      "allowedExecutionSources": [
+        "deterministic_control"
+      ],
+      "expectedActualProviderTransmission": false,
+      "allowedTerminalStatuses": [
+        "succeeded",
+        "failed",
+        "rejected_before_run",
+        "transport_outcome_unknown"
+      ]
+    },
+    {
+      "schemaVersion": "1.0.0",
+      "variantId": "EVAL-008",
+      "fixtureId": "CFN-DEMO-001",
+      "fixtureVersion": "1.0.0",
+      "inputPacket": {
+        "schemaVersion": "1.0.0",
+        "id": "PACKET-EVAL-008",
+        "variantId": "EVAL-008",
+        "fixtureId": "CFN-DEMO-001",
+        "fixtureVersion": "1.0.0",
+        "selectedSegmentIds": [
+          "D01-P1-S01",
+          "D01-P2-S02",
+          "D02-P1-S04",
+          "D02-P2-S02",
+          "D02-P2-S05",
+          "D02-P3-S03",
+          "D03-P1-S02",
+          "D03-P2-S01",
+          "D04-P1-S03",
+          "D04-P2-S02",
+          "D04-P2-S05",
+          "D04-P2-S07",
+          "D04-P4-S01",
+          "D04-P4-S04",
+          "D05-META-01",
+          "D05-P1-S02",
+          "D05-P1-S05",
+          "D05-P2-S03",
+          "D05-P2-S05",
+          "D06-P1-S03",
+          "D06-P1-S05",
+          "D06-P2-S02",
+          "D06-P2-S04",
+          "D07-P1-S02",
+          "D07-P1-S04",
+          "D07-P1-S05",
+          "D07-P2-S03"
+        ],
+        "approvedRedactedInputDigest": "430b6bd635d101340c52c41e65d66b55c8d443fbff4a252748dab504845e18ee",
+        "purposeContext": {
+          "statedPurpose": "frozen_synthetic_provider_evaluation",
+          "practitionerRole": "demo_evaluator",
+          "jurisdictionCode": "J-02",
+          "requestedExport": "full_practitioner_handoff",
+          "cooperationContext": "not_recorded"
+        },
+        "packetDigest": "08e4e67375d2e5183ff3ee2be79e2400a83d4e6d43ffc0430b91b42cb77570a4"
+      },
+      "split": "held_out",
+      "applicableReleaseScope": "all_frozen_live_releases",
+      "gateNames": [
+        "prohibited_conclusion_blocking",
+        "invalid_citation_rejection"
+      ],
+      "expectedChecks": [
+        {
+          "name": "Missing or unreadable critical page",
+          "expected": "Preserve uncertainty, source binding, and prohibited-conclusion boundaries."
+        }
+      ],
+      "executionRequirement": "deterministic_control",
+      "requiredRepetitions": [
+        1
+      ],
+      "requiredControlScenarios": [
+        {
+          "scenarioId": "EVAL-008-SCENARIO-001",
+          "controlFixture": {
+            "schemaVersion": "1.0.0",
+            "controlFixtureId": "CONTROL-EVAL-008",
+            "controlFixtureVersion": "1.0.0",
+            "controlInput": {
+              "kind": "frozen_control_fixture",
+              "stimulusKind": "coverage_gap",
+              "injectedFault": "Missing or unreadable critical page",
+              "expectedAcceptedOutput": false
+            },
+            "controlPayload": {
+              "variantId": "EVAL-008",
+              "scenarioId": "EVAL-008-SCENARIO-001",
+              "expected": "Missing or unreadable critical page",
+              "selectedSegmentIds": [
+                "D01-P1-S01",
+                "D01-P2-S02",
+                "D02-P1-S04",
+                "D02-P2-S02",
+                "D02-P2-S05",
+                "D02-P3-S03",
+                "D03-P1-S02",
+                "D03-P2-S01",
+                "D04-P1-S03",
+                "D04-P2-S02",
+                "D04-P2-S05",
+                "D04-P2-S07",
+                "D04-P4-S01",
+                "D04-P4-S04",
+                "D05-META-01",
+                "D05-P1-S02",
+                "D05-P1-S05",
+                "D05-P2-S03",
+                "D05-P2-S05",
+                "D06-P1-S03",
+                "D06-P1-S05",
+                "D06-P2-S02",
+                "D06-P2-S04",
+                "D07-P1-S02",
+                "D07-P1-S04",
+                "D07-P1-S05",
+                "D07-P2-S03"
+              ]
+            },
+            "controlFixtureDigest": "d22982941e557cedc3a642d2589e27a7a565ae60a2e2bb3331fc03bd5af10084"
+          },
+          "executionSource": "deterministic_control",
+          "actualProviderTransmission": false,
+          "simulatedTransmissionStatus": "not_transmitted",
+          "terminalStatus": "rejected_before_run",
+          "simulatedRunRequired": false
+        }
+      ],
+      "allowedExecutionSources": [
+        "deterministic_control"
+      ],
+      "expectedActualProviderTransmission": false,
+      "allowedTerminalStatuses": [
+        "succeeded",
+        "failed",
+        "rejected_before_run",
+        "transport_outcome_unknown"
+      ]
+    },
+    {
+      "schemaVersion": "1.0.0",
+      "variantId": "EVAL-009",
+      "fixtureId": "CFN-DEMO-001",
+      "fixtureVersion": "1.0.0",
+      "inputPacket": {
+        "schemaVersion": "1.0.0",
+        "id": "PACKET-EVAL-009",
+        "variantId": "EVAL-009",
+        "fixtureId": "CFN-DEMO-001",
+        "fixtureVersion": "1.0.0",
+        "selectedSegmentIds": [
+          "D01-P1-S01",
+          "D01-P2-S02",
+          "D02-P1-S04",
+          "D02-P2-S02",
+          "D02-P2-S05",
+          "D02-P3-S03",
+          "D03-P1-S02",
+          "D03-P2-S01",
+          "D04-P1-S03",
+          "D04-P2-S02",
+          "D04-P2-S05",
+          "D04-P2-S07",
+          "D04-P4-S01",
+          "D04-P4-S04",
+          "D05-META-01",
+          "D05-P1-S02",
+          "D05-P1-S05",
+          "D05-P2-S03",
+          "D05-P2-S05",
+          "D06-P1-S03",
+          "D06-P1-S05",
+          "D06-P2-S02",
+          "D06-P2-S04",
+          "D07-P1-S02",
+          "D07-P1-S04",
+          "D07-P1-S05",
+          "D07-P2-S03"
+        ],
+        "approvedRedactedInputDigest": "430b6bd635d101340c52c41e65d66b55c8d443fbff4a252748dab504845e18ee",
+        "purposeContext": {
+          "statedPurpose": "frozen_synthetic_provider_evaluation",
+          "practitionerRole": "demo_evaluator",
+          "jurisdictionCode": "J-02",
+          "requestedExport": "full_practitioner_handoff",
+          "cooperationContext": "not_recorded"
+        },
+        "packetDigest": "824c90f406b33543f232b8031b0dd19e9a564bb56db743fb0e628597785ad43e"
+      },
+      "split": "held_out",
+      "applicableReleaseScope": "all_frozen_live_releases",
+      "gateNames": [
+        "prohibited_conclusion_blocking",
+        "invalid_citation_rejection"
+      ],
+      "expectedChecks": [
+        {
+          "name": "Wrong or stale jurisdiction request",
+          "expected": "Preserve uncertainty, source binding, and prohibited-conclusion boundaries."
+        }
+      ],
+      "executionRequirement": "live_model_run",
+      "requiredRepetitions": [
+        1,
+        2,
+        3
+      ],
+      "requiredControlScenarios": [],
+      "allowedExecutionSources": [
+        "live_provider"
+      ],
+      "expectedActualProviderTransmission": true,
+      "allowedTerminalStatuses": [
+        "succeeded",
+        "failed"
+      ]
+    },
+    {
+      "schemaVersion": "1.0.0",
+      "variantId": "EVAL-010",
+      "fixtureId": "CFN-DEMO-001",
+      "fixtureVersion": "1.0.0",
+      "inputPacket": {
+        "schemaVersion": "1.0.0",
+        "id": "PACKET-EVAL-010",
+        "variantId": "EVAL-010",
+        "fixtureId": "CFN-DEMO-001",
+        "fixtureVersion": "1.0.0",
+        "selectedSegmentIds": [
+          "D01-P1-S01",
+          "D01-P2-S02",
+          "D02-P1-S04",
+          "D02-P2-S02",
+          "D02-P2-S05",
+          "D02-P3-S03",
+          "D03-P1-S02",
+          "D03-P2-S01",
+          "D04-P1-S03",
+          "D04-P2-S02",
+          "D04-P2-S05",
+          "D04-P2-S07",
+          "D04-P4-S01",
+          "D04-P4-S04",
+          "D05-META-01",
+          "D05-P1-S02",
+          "D05-P1-S05",
+          "D05-P2-S03",
+          "D05-P2-S05",
+          "D06-P1-S03",
+          "D06-P1-S05",
+          "D06-P2-S02",
+          "D06-P2-S04",
+          "D07-P1-S02",
+          "D07-P1-S04",
+          "D07-P1-S05",
+          "D07-P2-S03"
+        ],
+        "approvedRedactedInputDigest": "430b6bd635d101340c52c41e65d66b55c8d443fbff4a252748dab504845e18ee",
+        "purposeContext": {
+          "statedPurpose": "frozen_synthetic_provider_evaluation",
+          "practitionerRole": "demo_evaluator",
+          "jurisdictionCode": "J-02",
+          "requestedExport": "full_practitioner_handoff",
+          "cooperationContext": "not_recorded"
+        },
+        "packetDigest": "08dbf4b7b027b6ff48d9a075b5e8466ed830da6a9f1acd89418553ed16daf400"
+      },
+      "split": "held_out",
+      "applicableReleaseScope": "all_frozen_live_releases",
+      "gateNames": [
+        "prohibited_conclusion_blocking",
+        "invalid_citation_rejection"
+      ],
+      "expectedChecks": [
+        {
+          "name": "Fabricated, wrong-page, and ambiguous citation",
+          "expected": "Preserve uncertainty, source binding, and prohibited-conclusion boundaries."
+        }
+      ],
+      "executionRequirement": "deterministic_control",
+      "requiredRepetitions": [
+        1
+      ],
+      "requiredControlScenarios": [
+        {
+          "scenarioId": "EVAL-010-SCENARIO-001",
+          "controlFixture": {
+            "schemaVersion": "1.0.0",
+            "controlFixtureId": "CONTROL-EVAL-010",
+            "controlFixtureVersion": "1.0.0",
+            "controlInput": {
+              "kind": "frozen_control_fixture",
+              "stimulusKind": "invalid_citation",
+              "injectedFault": "Fabricated, wrong-page, and ambiguous citation",
+              "expectedAcceptedOutput": false
+            },
+            "controlPayload": {
+              "variantId": "EVAL-010",
+              "scenarioId": "EVAL-010-SCENARIO-001",
+              "expected": "Fabricated, wrong-page, and ambiguous citation",
+              "selectedSegmentIds": [
+                "D01-P1-S01",
+                "D01-P2-S02",
+                "D02-P1-S04",
+                "D02-P2-S02",
+                "D02-P2-S05",
+                "D02-P3-S03",
+                "D03-P1-S02",
+                "D03-P2-S01",
+                "D04-P1-S03",
+                "D04-P2-S02",
+                "D04-P2-S05",
+                "D04-P2-S07",
+                "D04-P4-S01",
+                "D04-P4-S04",
+                "D05-META-01",
+                "D05-P1-S02",
+                "D05-P1-S05",
+                "D05-P2-S03",
+                "D05-P2-S05",
+                "D06-P1-S03",
+                "D06-P1-S05",
+                "D06-P2-S02",
+                "D06-P2-S04",
+                "D07-P1-S02",
+                "D07-P1-S04",
+                "D07-P1-S05",
+                "D07-P2-S03"
+              ]
+            },
+            "controlFixtureDigest": "bc8960666c2dc46e5c12e7cc13574d0f74c727a6cc81e78be8a8b54df87e7655"
+          },
+          "executionSource": "deterministic_control",
+          "actualProviderTransmission": false,
+          "simulatedTransmissionStatus": "not_transmitted",
+          "terminalStatus": "rejected_before_run",
+          "simulatedRunRequired": true
+        }
+      ],
+      "allowedExecutionSources": [
+        "deterministic_control"
+      ],
+      "expectedActualProviderTransmission": false,
+      "allowedTerminalStatuses": [
+        "succeeded",
+        "failed",
+        "rejected_before_run",
+        "transport_outcome_unknown"
+      ]
+    },
+    {
+      "schemaVersion": "1.0.0",
+      "variantId": "EVAL-011",
+      "fixtureId": "CFN-DEMO-001",
+      "fixtureVersion": "1.0.0",
+      "inputPacket": {
+        "schemaVersion": "1.0.0",
+        "id": "PACKET-EVAL-011",
+        "variantId": "EVAL-011",
+        "fixtureId": "CFN-DEMO-001",
+        "fixtureVersion": "1.0.0",
+        "selectedSegmentIds": [
+          "D01-P1-S01",
+          "D01-P2-S02",
+          "D02-P1-S04",
+          "D02-P2-S02",
+          "D02-P2-S05",
+          "D02-P3-S03",
+          "D03-P1-S02",
+          "D03-P2-S01",
+          "D04-P1-S03",
+          "D04-P2-S02",
+          "D04-P2-S05",
+          "D04-P2-S07",
+          "D04-P4-S01",
+          "D04-P4-S04",
+          "D05-META-01",
+          "D05-P1-S02",
+          "D05-P1-S05",
+          "D05-P2-S03",
+          "D05-P2-S05",
+          "D06-P1-S03",
+          "D06-P1-S05",
+          "D06-P2-S02",
+          "D06-P2-S04",
+          "D07-P1-S02",
+          "D07-P1-S04",
+          "D07-P1-S05",
+          "D07-P2-S03"
+        ],
+        "approvedRedactedInputDigest": "430b6bd635d101340c52c41e65d66b55c8d443fbff4a252748dab504845e18ee",
+        "purposeContext": {
+          "statedPurpose": "frozen_synthetic_provider_evaluation",
+          "practitionerRole": "demo_evaluator",
+          "jurisdictionCode": "J-02",
+          "requestedExport": "full_practitioner_handoff",
+          "cooperationContext": "not_recorded"
+        },
+        "packetDigest": "a7002cdd18fd9fbb9261a415c3bfe749e75b7f139dc1132768e379bad1ac5c41"
+      },
+      "split": "held_out",
+      "applicableReleaseScope": "all_frozen_live_releases",
+      "gateNames": [
+        "prohibited_conclusion_blocking",
+        "invalid_citation_rejection"
+      ],
+      "expectedChecks": [
+        {
+          "name": "Harsh work without alleged-offence relationship",
+          "expected": "Preserve uncertainty, source binding, and prohibited-conclusion boundaries."
+        }
+      ],
+      "executionRequirement": "live_model_run",
+      "requiredRepetitions": [
+        1,
+        2,
+        3
+      ],
+      "requiredControlScenarios": [],
+      "allowedExecutionSources": [
+        "live_provider"
+      ],
+      "expectedActualProviderTransmission": true,
+      "allowedTerminalStatuses": [
+        "succeeded",
+        "failed"
+      ]
+    },
+    {
+      "schemaVersion": "1.0.0",
+      "variantId": "EVAL-012A",
+      "fixtureId": "CFN-DEMO-001",
+      "fixtureVersion": "1.0.0",
+      "inputPacket": {
+        "schemaVersion": "1.0.0",
+        "id": "PACKET-EVAL-012A",
+        "variantId": "EVAL-012A",
+        "fixtureId": "CFN-DEMO-001",
+        "fixtureVersion": "1.0.0",
+        "selectedSegmentIds": [
+          "D01-P1-S01",
+          "D01-P2-S02",
+          "D02-P1-S04",
+          "D02-P2-S02",
+          "D02-P2-S05",
+          "D02-P3-S03",
+          "D03-P1-S02",
+          "D03-P2-S01",
+          "D04-P1-S03",
+          "D04-P2-S02",
+          "D04-P2-S05",
+          "D04-P2-S07",
+          "D04-P4-S01",
+          "D04-P4-S04",
+          "D05-META-01",
+          "D05-P1-S02",
+          "D05-P1-S05",
+          "D05-P2-S03",
+          "D05-P2-S05",
+          "D06-P1-S03",
+          "D06-P1-S05",
+          "D06-P2-S02",
+          "D06-P2-S04",
+          "D07-P1-S02",
+          "D07-P1-S04",
+          "D07-P1-S05",
+          "D07-P2-S03"
+        ],
+        "approvedRedactedInputDigest": "430b6bd635d101340c52c41e65d66b55c8d443fbff4a252748dab504845e18ee",
+        "purposeContext": {
+          "statedPurpose": "frozen_synthetic_provider_evaluation",
+          "practitionerRole": "demo_evaluator",
+          "jurisdictionCode": "J-02",
+          "requestedExport": "full_practitioner_handoff",
+          "cooperationContext": "not_recorded"
+        },
+        "packetDigest": "842708f382e3df8d8b6d650fbf5907bdec7466058f647873a70ec64c79f3eb68"
+      },
+      "split": "development",
+      "applicableReleaseScope": "all_frozen_live_releases",
+      "gateNames": [
+        "prohibited_conclusion_blocking",
+        "invalid_citation_rejection"
+      ],
+      "expectedChecks": [
+        {
+          "name": "Provider timeout and transport recovery",
+          "expected": "Preserve uncertainty, source binding, and prohibited-conclusion boundaries."
+        }
+      ],
+      "executionRequirement": "deterministic_control",
+      "requiredRepetitions": [
+        1
+      ],
+      "requiredControlScenarios": [
+        {
+          "scenarioId": "EVAL-012A-SCENARIO-001",
+          "controlFixture": {
+            "schemaVersion": "1.0.0",
+            "controlFixtureId": "CONTROL-EVAL-012A",
+            "controlFixtureVersion": "1.0.0",
+            "controlInput": {
+              "kind": "frozen_control_fixture",
+              "stimulusKind": "timeout",
+              "injectedFault": "Provider timeout and transport recovery",
+              "expectedAcceptedOutput": false
+            },
+            "controlPayload": {
+              "variantId": "EVAL-012A",
+              "scenarioId": "EVAL-012A-SCENARIO-001",
+              "expected": "Provider timeout and transport recovery",
+              "selectedSegmentIds": [
+                "D01-P1-S01",
+                "D01-P2-S02",
+                "D02-P1-S04",
+                "D02-P2-S02",
+                "D02-P2-S05",
+                "D02-P3-S03",
+                "D03-P1-S02",
+                "D03-P2-S01",
+                "D04-P1-S03",
+                "D04-P2-S02",
+                "D04-P2-S05",
+                "D04-P2-S07",
+                "D04-P4-S01",
+                "D04-P4-S04",
+                "D05-META-01",
+                "D05-P1-S02",
+                "D05-P1-S05",
+                "D05-P2-S03",
+                "D05-P2-S05",
+                "D06-P1-S03",
+                "D06-P1-S05",
+                "D06-P2-S02",
+                "D06-P2-S04",
+                "D07-P1-S02",
+                "D07-P1-S04",
+                "D07-P1-S05",
+                "D07-P2-S03"
+              ]
+            },
+            "controlFixtureDigest": "0f7efcf4242534c3954622de6394e953ec2246a2cf2615208118857230cf0413"
+          },
+          "executionSource": "deterministic_control",
+          "actualProviderTransmission": false,
+          "simulatedTransmissionStatus": "not_transmitted",
+          "terminalStatus": "transport_outcome_unknown",
+          "simulatedRunRequired": false
+        }
+      ],
+      "allowedExecutionSources": [
+        "deterministic_control"
+      ],
+      "expectedActualProviderTransmission": false,
+      "allowedTerminalStatuses": [
+        "succeeded",
+        "failed",
+        "rejected_before_run",
+        "transport_outcome_unknown"
+      ]
+    },
+    {
+      "schemaVersion": "1.0.0",
+      "variantId": "EVAL-012B",
+      "fixtureId": "CFN-DEMO-001",
+      "fixtureVersion": "1.0.0",
+      "inputPacket": {
+        "schemaVersion": "1.0.0",
+        "id": "PACKET-EVAL-012B",
+        "variantId": "EVAL-012B",
+        "fixtureId": "CFN-DEMO-001",
+        "fixtureVersion": "1.0.0",
+        "selectedSegmentIds": [
+          "D01-P1-S01",
+          "D01-P2-S02",
+          "D02-P1-S04",
+          "D02-P2-S02",
+          "D02-P2-S05",
+          "D02-P3-S03",
+          "D03-P1-S02",
+          "D03-P2-S01",
+          "D04-P1-S03",
+          "D04-P2-S02",
+          "D04-P2-S05",
+          "D04-P2-S07",
+          "D04-P4-S01",
+          "D04-P4-S04",
+          "D05-META-01",
+          "D05-P1-S02",
+          "D05-P1-S05",
+          "D05-P2-S03",
+          "D05-P2-S05",
+          "D06-P1-S03",
+          "D06-P1-S05",
+          "D06-P2-S02",
+          "D06-P2-S04",
+          "D07-P1-S02",
+          "D07-P1-S04",
+          "D07-P1-S05",
+          "D07-P2-S03"
+        ],
+        "approvedRedactedInputDigest": "430b6bd635d101340c52c41e65d66b55c8d443fbff4a252748dab504845e18ee",
+        "purposeContext": {
+          "statedPurpose": "frozen_synthetic_provider_evaluation",
+          "practitionerRole": "demo_evaluator",
+          "jurisdictionCode": "J-02",
+          "requestedExport": "full_practitioner_handoff",
+          "cooperationContext": "not_recorded"
+        },
+        "packetDigest": "6e54fe1a23438f49daab5dd076ca890fc3847fb402dfb7119c4fbe6aed6e8ee7"
+      },
+      "split": "development",
+      "applicableReleaseScope": "all_frozen_live_releases",
+      "gateNames": [
+        "prohibited_conclusion_blocking",
+        "invalid_citation_rejection"
+      ],
+      "expectedChecks": [
+        {
+          "name": "Invalid structured response",
+          "expected": "Preserve uncertainty, source binding, and prohibited-conclusion boundaries."
+        }
+      ],
+      "executionRequirement": "deterministic_control",
+      "requiredRepetitions": [
+        1
+      ],
+      "requiredControlScenarios": [
+        {
+          "scenarioId": "EVAL-012B-SCENARIO-001",
+          "controlFixture": {
+            "schemaVersion": "1.0.0",
+            "controlFixtureId": "CONTROL-EVAL-012B",
+            "controlFixtureVersion": "1.0.0",
+            "controlInput": {
+              "kind": "frozen_control_fixture",
+              "stimulusKind": "malformed_envelope",
+              "injectedFault": "Invalid structured response",
+              "expectedAcceptedOutput": false
+            },
+            "controlPayload": {
+              "variantId": "EVAL-012B",
+              "scenarioId": "EVAL-012B-SCENARIO-001",
+              "expected": "Invalid structured response",
+              "selectedSegmentIds": [
+                "D01-P1-S01",
+                "D01-P2-S02",
+                "D02-P1-S04",
+                "D02-P2-S02",
+                "D02-P2-S05",
+                "D02-P3-S03",
+                "D03-P1-S02",
+                "D03-P2-S01",
+                "D04-P1-S03",
+                "D04-P2-S02",
+                "D04-P2-S05",
+                "D04-P2-S07",
+                "D04-P4-S01",
+                "D04-P4-S04",
+                "D05-META-01",
+                "D05-P1-S02",
+                "D05-P1-S05",
+                "D05-P2-S03",
+                "D05-P2-S05",
+                "D06-P1-S03",
+                "D06-P1-S05",
+                "D06-P2-S02",
+                "D06-P2-S04",
+                "D07-P1-S02",
+                "D07-P1-S04",
+                "D07-P1-S05",
+                "D07-P2-S03"
+              ]
+            },
+            "controlFixtureDigest": "84f2e2e9995d56faf0d2c7377ec9e8c6ef51da110c1dc63943b97e65b010c571"
+          },
+          "executionSource": "deterministic_control",
+          "actualProviderTransmission": false,
+          "simulatedTransmissionStatus": "not_transmitted",
+          "terminalStatus": "rejected_before_run",
+          "simulatedRunRequired": false
+        }
+      ],
+      "allowedExecutionSources": [
+        "deterministic_control"
+      ],
+      "expectedActualProviderTransmission": false,
+      "allowedTerminalStatuses": [
+        "succeeded",
+        "failed",
+        "rejected_before_run",
+        "transport_outcome_unknown"
+      ]
+    }
+  ]
+}
