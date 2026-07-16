@@ -6,3 +6,8 @@ export {
   deriveStepProgress,
   describeRunProvenance,
 } from "./case-shell";
+export {
+  CaseStateProvider,
+  useCaseState,
+  type CaseStateContextValue,
+} from "./case-state-context";

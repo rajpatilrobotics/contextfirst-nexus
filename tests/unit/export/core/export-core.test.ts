@@ -14,14 +14,17 @@ import {
   type CoverageReviewDecision,
   type ExportGate,
   type ExportSelection,
+  type GuidanceCard,
   type ProcessingStage,
   type ReviewDecision,
 } from "../../../../lib/contracts";
 import { cfnDemoFixture } from "../../../../lib/fixtures";
+import { bundledGuidancePack } from "../../../../lib/guidance";
 import { assembleCandidates, reviewCandidate, withdrawCandidate } from "../../../../lib/review";
 
 const NOW = "2026-07-16T00:00:00.000Z";
-const HASH = "a".repeat(64);
+const HASH = cfnDemoFixture.canonicalFixtureDigest;
+const APPROVED_INPUT_DIGEST = cfnDemoFixture.approvedRedactedInputDigest;
 const RUN_ID = "RUN-CFN-DEMO-001-REVIEW";
 type ExportBlocker = Extract<ExportGate, { status: "blocked" }>["blockers"][number];
 
@@ -136,7 +139,7 @@ function successfulRun(caseRevision = 1): AnalysisRun {
       purposeBriefRevision: 1,
       maskingRevision: 1,
       selectedSegmentIds: cfnDemoFixture.selectedSegmentIds,
-      approvedRedactedInputDigest: HASH,
+      approvedRedactedInputDigest: APPROVED_INPUT_DIGEST,
     },
   };
 }
@@ -187,7 +190,7 @@ function baseState(): CaseState {
     caseRevision: 1,
     caseStatus: "ready_to_export",
     fixtureVersion: "1.0.0",
-    guidancePack: { version: "1.0.0", digest: HASH },
+    guidancePack: { version: "1.0.0", digest: bundledGuidancePack.identity.digest },
     purposeBrief: {
       id: "PURPOSE-CFN-DEMO-001",
       schemaVersion: "1.0.0",
@@ -360,7 +363,7 @@ describe("TASK-009 export core", () => {
     ["PII_CHECK_FAILED", (state: CaseState) => ({ ...state, masking: { ...state.masking, leakScanStatus: "failed" as const, failedClasses: ["phone" as const] } })],
     ["PROCESSING_FAILED", (state: CaseState) => ({ ...state, processing: [{ ...state.processing[0], status: "failed" as const }, ...state.processing.slice(1)] })],
     ["SAFETY_VALIDATION_FAILED", (state: CaseState) => ({ ...state, analysisRuns: [...state.analysisRuns, failedSafetyRun()] })],
-    ["ANALYSIS_RUN_STALE", (state: CaseState) => ({ ...state, analysisRuns: [successfulRun(0)] })],
+    ["ANALYSIS_RUN_STALE", (state: CaseState) => ({ ...state, analysisRuns: [{ ...successfulRun(), inputState: { ...successfulRun().inputState, approvedRedactedInputDigest: "b".repeat(64) } }] })],
     ["GATE_EVALUATION_STALE", (state: CaseState) => ({ ...state, exportGate: { ...evaluateExportGate(state, fullSelection, { now: NOW }), caseRevision: 0 } })],
     ["MINIMUM_NECESSITY_UNCONFIRMED", (state: CaseState) => state],
     ["OUTSIDE_STATED_PURPOSE", (state: CaseState) => state],
@@ -462,5 +465,116 @@ describe("TASK-009 export core", () => {
         actor: "current_practitioner",
       },
     ]);
+  });
+
+  it("uses frozen input provenance and ignores sourceCaseRevision for export freshness", () => {
+    const state = baseState();
+    const run = state.analysisRuns[0];
+    const changedSourceRevision = {
+      ...state,
+      analysisRuns: [{ ...run, inputState: { ...run.inputState, sourceCaseRevision: 999 } }],
+    };
+
+    expect(blockerCodes(changedSourceRevision)).not.toContain("ANALYSIS_RUN_STALE");
+
+    const staleMutations: Array<[string, (value: CaseState) => CaseState]> = [
+      ["purpose identity", (value) => ({ ...value, purposeBrief: { ...value.purposeBrief!, id: "PURPOSE-CFN-DEMO-001-CHANGED" } })],
+      ["purpose revision", (value) => ({ ...value, purposeBrief: { ...value.purposeBrief!, revision: value.purposeBrief!.revision + 1 } })],
+      ["masking revision", (value) => ({ ...value, masking: { ...value.masking, revision: value.masking.revision + 1 } })],
+      ["selected segment order", (value) => ({ ...value, selectedSegmentIds: [...value.selectedSegmentIds].reverse() })],
+      ["selected segment membership", (value) => ({ ...value, selectedSegmentIds: value.selectedSegmentIds.slice(1) })],
+      ["approved input digest", (value) => ({ ...value, analysisRuns: [{ ...run, inputState: { ...run.inputState, approvedRedactedInputDigest: "b".repeat(64) } }] })],
+      ["canonical fixture digest", (value) => ({ ...value, analysisRuns: [{ ...run, inputState: { ...run.inputState, canonicalFixtureDigest: "b".repeat(64) } }] })],
+      ["fixture version", (value) => ({ ...value, analysisRuns: [{ ...run, fixtureVersion: "2.0.0" }] as unknown as AnalysisRun[] })],
+      ["ruleset version", (value) => ({ ...value, analysisRuns: [{ ...run, rulesetVersion: "2.0.0" }] as unknown as AnalysisRun[] })],
+      ["guidance digest", (value) => ({ ...value, guidancePack: { ...value.guidancePack, digest: "b".repeat(64) } })],
+    ];
+
+    for (const [label, mutate] of staleMutations) {
+      expect(blockerCodes(mutate(state)), label).toContain("ANALYSIS_RUN_STALE");
+    }
+  });
+
+  it("builds the exact deterministic limitation union from included manifest projections", () => {
+    const state = baseState();
+    const candidates = [...state.candidates]
+      .reverse()
+      .map((candidate) => {
+        if (candidate.id === "CAND-PASSPORT-DEBT") {
+          return {
+            ...candidate,
+            assertionMode: "limitation" as const,
+            currentText: "Shared limitation",
+            reviewStatus: "human_edited" as const,
+          };
+        }
+        if (candidate.id === "CAND-TASK-0402") {
+          return {
+            ...candidate,
+            assertionMode: "limitation" as const,
+            currentText: "Excluded candidate limitation",
+            reviewStatus: "rejected" as const,
+          };
+        }
+        if (candidate.kind === "context_gap" && candidate.id === "CAND-SENDER-0402") {
+          return {
+            ...candidate,
+            reviewStatus: "human_accepted" as const,
+            responseStatus: "deferred" as const,
+            response: null,
+            responseEvidenceNature: "unknown" as const,
+            responseExplanation: "Gap explanation",
+          };
+        }
+        return candidate;
+      });
+    const coverageReviews: CoverageReviewDecision[] = [
+      {
+        id: "COVERAGE-REVIEW-0002",
+        issueId: "COVERAGE-0002",
+        originalConsequence: "unknown",
+        reviewedConsequence: "non_consequential",
+        limitationText: "Zulu limitation",
+        reason: "Reviewed synthetic limitation.",
+        actor: "current_practitioner",
+        createdAt: NOW,
+      },
+      {
+        id: "COVERAGE-REVIEW-0001",
+        issueId: "COVERAGE-0001",
+        originalConsequence: "unknown",
+        reviewedConsequence: "non_consequential",
+        limitationText: "Shared limitation",
+        reason: "Reviewed synthetic limitation.",
+        actor: "current_practitioner",
+        createdAt: NOW,
+      },
+    ];
+    const [firstCard, secondCard, excludedCard] = bundledGuidancePack.cards;
+    const guidanceCards: GuidanceCard[] = [
+      { ...(secondCard as GuidanceCard), limitation: "Shared limitation" },
+      { ...(firstCard as GuidanceCard), limitation: "Alpha guidance limitation" },
+    ];
+    const manifest = createExportManifest(
+      { ...state, candidates, coverageReviews },
+      fullSelection,
+      { now: NOW, guidanceCards },
+    );
+
+    expect(manifest.limitations).toEqual([
+      "Alpha guidance limitation",
+      "Gap explanation",
+      "Shared limitation",
+      "Zulu limitation",
+    ]);
+    expect(manifest.limitations).not.toContain("Excluded candidate limitation");
+    expect(manifest.limitations).not.toContain(excludedCard.limitation);
+
+    const shuffledAgain = createExportManifest(
+      { ...state, candidates: [...candidates].reverse(), coverageReviews: [...coverageReviews].reverse() },
+      fullSelection,
+      { now: NOW, guidanceCards: [...guidanceCards].reverse() },
+    );
+    expect(shuffledAgain.limitations).toEqual(manifest.limitations);
   });
 });

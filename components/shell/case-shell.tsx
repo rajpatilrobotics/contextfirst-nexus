@@ -1,19 +1,16 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { RotateCcw } from "lucide-react";
 import { Button } from "../ui";
 import { CaseStatusBadge, NavigationProgressStatus } from "../status";
 import type { AnalysisRun, CaseCommand, CaseState, CaseStatus, StageStatus } from "../../lib/contracts";
 import {
-  applyCaseCommand,
-  createInitialCaseState,
   deriveCaseStatus,
-  loadCaseState,
-  saveCaseState,
 } from "../../lib/state";
+import { CaseStateProvider, useCaseState } from "./case-state-context";
 
 export const SYNTHETIC_BANNER_TEXT =
   "Synthetic training case. Do not upload or enter real case data.";
@@ -92,29 +89,32 @@ export function describeRunProvenance(run: AnalysisRun | null) {
   };
 }
 
-export function CaseShell({
-  children,
-  initialState,
-  currentPath,
-  onReset,
-  onNavigate,
-}: {
+type CaseShellProps = {
   children: ReactNode;
   initialState?: CaseState;
   currentPath?: string;
   onReset?: (state: CaseState, command: Extract<CaseCommand, { type: "reset_case" }>) => void;
   onNavigate?: (href: string) => void;
-}) {
+};
+
+export function CaseShell({ initialState, ...props }: CaseShellProps) {
+  return (
+    <CaseStateProvider initialState={initialState}>
+      <CaseShellContent {...props} />
+    </CaseStateProvider>
+  );
+}
+
+function CaseShellContent({
+  children,
+  currentPath,
+  onReset,
+  onNavigate,
+}: Omit<CaseShellProps, "initialState">) {
   const pathname = usePathname();
   const router = useRouter();
-  const [state, setState] = useState<CaseState>(() => initialState ?? createInitialCaseState());
+  const { state, dispatchCaseCommand } = useCaseState();
   const [resetMessage, setResetMessage] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (initialState || typeof window === "undefined") return;
-    const restored = loadCaseState(window.sessionStorage);
-    setState(restored.ok ? restored.state : restored.resetState);
-  }, [initialState]);
 
   const currentStep = deriveCurrentStep(currentPath ?? pathname);
   const caseStatus = deriveCaseStatus(state);
@@ -129,13 +129,11 @@ export function CaseShell({
       type: "reset_case",
       meta: commandMeta(state),
     };
-    const result = applyCaseCommand(state, command);
+    const result = dispatchCaseCommand(command);
     if (!result.ok) {
       setResetMessage("Reset could not run because the case state changed. Try again from the current case.");
       return;
     }
-    setState(result.state);
-    if (typeof window !== "undefined") saveCaseState(window.sessionStorage, result.state);
     onReset?.(result.state, command);
     onNavigate?.("/case/demo/purpose");
     if (!onNavigate) router.push("/case/demo/purpose");

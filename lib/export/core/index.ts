@@ -14,6 +14,8 @@ import {
   type GuidanceCard,
   type ReviewDecision,
 } from "../../contracts";
+import { cfnDemoFixture } from "../../fixtures";
+import { bundledGuidancePack } from "../../guidance";
 
 const MANIFEST_SCHEMA_VERSION = "1.0.0" as const;
 const REVIEWED_HASH_PROJECTION_VERSION = "1.0.0" as const;
@@ -105,20 +107,25 @@ function latestSuccessfulActiveRun(state: CaseState): AnalysisRun | null {
   return run.status === "succeeded" ? run : null;
 }
 
-function sameStringSet(left: string[], right: string[]) {
-  return left.length === right.length && [...left].sort().every((value, index) => value === [...right].sort()[index]);
+function sameOrderedStrings(left: string[], right: string[]) {
+  return left.length === right.length && left.every((value, index) => value === right[index]);
 }
 
-function currentRunInputMatchesState(state: CaseState, run: AnalysisRun, normalizedSelection: ExportSelection) {
+function currentRunInputMatchesState(state: CaseState, run: AnalysisRun) {
   if (!state.purposeBrief) return false;
   return (
-    run.inputState.sourceCaseRevision === state.caseRevision &&
     run.inputState.purposeBriefId === state.purposeBrief.id &&
     run.inputState.purposeBriefRevision === state.purposeBrief.revision &&
     run.inputState.maskingRevision === state.masking.revision &&
-    sameStringSet(run.inputState.selectedSegmentIds, state.selectedSegmentIds) &&
+    sameOrderedStrings(run.inputState.selectedSegmentIds, state.selectedSegmentIds) &&
+    run.inputState.approvedRedactedInputDigest === cfnDemoFixture.approvedRedactedInputDigest &&
+    run.inputState.canonicalFixtureDigest === cfnDemoFixture.canonicalFixtureDigest &&
+    run.fixtureVersion === state.fixtureVersion &&
+    state.fixtureVersion === cfnDemoFixture.fixtureVersion &&
+    state.caseId === cfnDemoFixture.caseId &&
     run.rulesetVersion === state.guidancePack.version &&
-    exportSelectionDigest(normalizedSelection) === exportSelectionDigest(normalizedSelection)
+    state.guidancePack.version === bundledGuidancePack.identity.version &&
+    state.guidancePack.digest === bundledGuidancePack.identity.digest
   );
 }
 
@@ -250,7 +257,9 @@ function buildBlockers(state: CaseState, selection: ExportSelection, options: Ex
   if (state.masking.leakScanStatus !== "passed" || state.masking.failedClasses.length > 0) {
     blockers.push(blocker("PII_CHECK_FAILED", state.masking.failedClasses.length ? state.masking.failedClasses : ["pii_scan"], "PII leak scan has not passed.", "Run and pass the PII leak scan."));
   }
-  const failedProcessing = state.processing.filter((stage) => stage.status !== "completed").map((stage) => stage.name);
+  const failedProcessing = state.processing
+    .filter((stage) => stage.name !== "safety_export_gate_checks" && stage.status !== "completed")
+    .map((stage) => stage.name);
   if (failedProcessing.length > 0 || state.documents.some((document) => document.processingStatus === "failed")) {
     blockers.push(blocker("PROCESSING_FAILED", failedProcessing.length ? failedProcessing : ["processing"], "Source processing is not complete.", "Complete source processing before export."));
   }
@@ -262,7 +271,7 @@ function buildBlockers(state: CaseState, selection: ExportSelection, options: Ex
   ) {
     blockers.push(blocker("SAFETY_VALIDATION_FAILED", ["analysis"], "A safety validation failure is present.", "Create a clean successful analysis run."));
   }
-  if (!activeRun || !currentRunInputMatchesState(state, activeRun, normalizedSelection)) {
+  if (!activeRun || !currentRunInputMatchesState(state, activeRun)) {
     blockers.push(blocker("ANALYSIS_RUN_STALE", [state.activeAnalysisRunId ?? "analysis"], "Active analysis run does not match the current reviewed state.", "Run analysis again for the current state."));
   }
   if (state.exportGate && state.exportGate.caseRevision !== state.caseRevision) {
@@ -299,7 +308,7 @@ export function evaluateExportGate(state: CaseState, selection: ExportSelection,
     maskingRevision: state.masking.revision,
     guidancePackVersion: state.guidancePack.version,
     guidancePackDigest: state.guidancePack.digest,
-    rulesetVersion: activeRun?.rulesetVersion ?? state.guidancePack.version,
+    rulesetVersion: state.guidancePack.version,
     exportSelection: normalizedSelection,
     exportSelectionDigest: exportSelectionDigest(normalizedSelection),
     evaluatedAt: options.now ?? DEFAULT_NOW,
@@ -437,6 +446,11 @@ function reviewedStateProjection(manifest: unknown) {
   };
 }
 
+function limitationUnion(values: Array<string | null | undefined>) {
+  return [...new Set(values.filter((value): value is string => Boolean(value?.trim())))]
+    .sort();
+}
+
 export function createExportManifest(state: CaseState, selection: ExportSelection, options: ExportCoreOptions = {}): ExportManifest {
   const gate = evaluateExportGate(state, selection, { ...options, previousGate: options.previousGate ?? state.exportGate });
   if (gate.status !== "ready") {
@@ -456,6 +470,24 @@ export function createExportManifest(state: CaseState, selection: ExportSelectio
       return sourceDependencies.map((dependency) => dependency.citationId);
     }),
   );
+  const includedCandidates = selectedCandidates
+    .map(projectCandidate)
+    .sort((left, right) => left.candidateId.localeCompare(right.candidateId));
+  const coverageLimitations = state.coverageReviews
+    .map(projectCoverageLimitation)
+    .sort((left, right) => left.issueId.localeCompare(right.issueId) || left.decisionId.localeCompare(right.decisionId));
+  const reviewedGaps = state.candidates
+    .filter((candidate): candidate is Extract<CaseCandidate, { kind: "context_gap" }> => candidate.kind === "context_gap" && (candidate.reviewStatus === "human_accepted" || candidate.reviewStatus === "human_edited"))
+    .map(projectGap)
+    .sort((left, right) => left.candidateId.localeCompare(right.candidateId));
+  const guidanceCards = [...(options.guidanceCards ?? [])]
+    .sort((left, right) => left.id.localeCompare(right.id));
+  const limitations = limitationUnion([
+    ...includedCandidates.flatMap((candidate) => candidate.limitationTexts),
+    ...coverageLimitations.map((coverage) => coverage.limitationText),
+    ...reviewedGaps.map((gap) => gap.responseExplanation),
+    ...guidanceCards.map((card) => card.limitation),
+  ]);
   const manifestWithoutHash = {
     schemaVersion: MANIFEST_SCHEMA_VERSION,
     reviewedExportStateHashProjectionVersion: REVIEWED_HASH_PROJECTION_VERSION,
@@ -477,23 +509,20 @@ export function createExportManifest(state: CaseState, selection: ExportSelectio
     labels: LABELS,
     exportSelection: gate.exportSelection,
     exportSelectionDigest: gate.exportSelectionDigest,
-    includedCandidates: selectedCandidates.map(projectCandidate).sort((left, right) => left.candidateId.localeCompare(right.candidateId)),
+    includedCandidates,
     citations: state.citations
       .filter((citation): citation is ResolvedCitation => citationIds.has(citation.id) && isResolvedCitation(citation))
       .map(projectCitation)
       .sort((left, right) => left.citationId.localeCompare(right.citationId)),
     coverage: state.coverage,
-    coverageLimitations: state.coverageReviews.map(projectCoverageLimitation).sort((left, right) => left.decisionId.localeCompare(right.decisionId)),
+    coverageLimitations,
     guidancePackVersion: state.guidancePack.version,
     guidancePackDigest: state.guidancePack.digest,
-    reviewedGaps: state.candidates
-      .filter((candidate): candidate is Extract<CaseCandidate, { kind: "context_gap" }> => candidate.kind === "context_gap" && (candidate.reviewStatus === "human_accepted" || candidate.reviewStatus === "human_edited"))
-      .map(projectGap)
-      .sort((left, right) => left.candidateId.localeCompare(right.candidateId)),
-    guidanceCards: (options.guidanceCards ?? []).sort((left, right) => left.id.localeCompare(right.id)),
+    reviewedGaps,
+    guidanceCards,
     reviewDecisions: state.reviews.map(projectReviewDecision).sort((left, right) => left.decisionId.localeCompare(right.decisionId)),
     auditEvents: state.audit.map(projectAuditEvent).sort((left, right) => left.sequence - right.sequence),
-    limitations: state.coverageReviews.map((review) => review.limitationText).sort(),
+    limitations,
     redactionCheck: "passed" as const,
     gate,
   };

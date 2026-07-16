@@ -1,4 +1,5 @@
-import { render, screen, within } from "@testing-library/react";
+import { useState } from "react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import Home from "../../../app/page";
@@ -8,9 +9,14 @@ import {
   SYNTHETIC_BANNER_TEXT,
   deriveStepProgress,
   describeRunProvenance,
+  useCaseState,
 } from "../../../components/shell";
-import type { AnalysisRun, CaseState } from "../../../lib/contracts";
-import { createInitialCaseState } from "../../../lib/state";
+import type { AnalysisRun, CaseCommand, CaseState } from "../../../lib/contracts";
+import {
+  applyCaseCommand,
+  createInitialCaseState,
+  serializeCaseState,
+} from "../../../lib/state";
 import { createReplayInputState } from "../../../lib/analysis/replay";
 
 const routerPush = vi.fn();
@@ -116,6 +122,68 @@ function stateWithRun(run: AnalysisRun): CaseState {
     analysisRuns: [run],
     activeAnalysisRunId: run.id,
   };
+}
+
+function checkpointState() {
+  const initial = createInitialCaseState(NOW);
+  const result = applyCaseCommand(initial, {
+    type: "load_demo_checkpoint",
+    meta: {
+      commandId: "cmd-shell-checkpoint",
+      idempotencyKey: "idem-shell-checkpoint",
+      expectedCaseRevision: initial.caseRevision,
+      actor: "current_practitioner",
+      createdAt: NOW,
+    },
+    checkpointBundleId: "DEMO-CHECKPOINT-REVIEW",
+  });
+  if (!result.ok) throw new Error(result.reason);
+  return result.state;
+}
+
+function SharedRouteChild() {
+  const { state, dispatchCaseCommand } = useCaseState();
+  const [result, setResult] = useState("not-run");
+
+  function loadCheckpoint() {
+    const command: CaseCommand = {
+      type: "load_demo_checkpoint",
+      meta: {
+        commandId: "cmd-route-checkpoint",
+        idempotencyKey: "idem-route-checkpoint",
+        expectedCaseRevision: state.caseRevision,
+        actor: "current_practitioner",
+        createdAt: NOW,
+      },
+      checkpointBundleId: "DEMO-CHECKPOINT-REVIEW",
+    };
+    const applied = dispatchCaseCommand(command);
+    setResult(applied.ok ? "applied" : applied.reason);
+  }
+
+  function dispatchStaleCommand() {
+    const applied = dispatchCaseCommand({
+      type: "reset_case",
+      meta: {
+        commandId: "cmd-route-stale",
+        idempotencyKey: "idem-route-stale",
+        expectedCaseRevision: state.caseRevision + 1,
+        actor: "current_practitioner",
+        createdAt: NOW,
+      },
+    });
+    setResult(applied.ok ? "applied" : applied.reason);
+  }
+
+  return (
+    <section aria-label="Route state probe">
+      <p data-testid="route-case-revision">{state.caseRevision}</p>
+      <p data-testid="route-run-id">{state.activeAnalysisRunId ?? "no-run"}</p>
+      <p data-testid="route-command-result">{result}</p>
+      <button onClick={loadCheckpoint} type="button">Load checkpoint from route</button>
+      <button onClick={dispatchStaleCommand} type="button">Dispatch stale command</button>
+    </section>
+  );
 }
 
 beforeEach(() => {
@@ -235,6 +303,63 @@ describe("TASK-017 case shell", () => {
     expect(onNavigate).toHaveBeenCalledWith("/case/demo/purpose");
     expect(routerPush).not.toHaveBeenCalled();
     expect(screen.getByRole("status")).toHaveTextContent("Case reset to the synthetic demo start.");
+    expect(JSON.parse(window.sessionStorage.getItem("contextfirst-nexus.case-state.v1") ?? "{}")).toMatchObject({
+      caseRevision: 0,
+      activeAnalysisRunId: null,
+    });
+  });
+
+  it("shares one canonical context and dispatcher between the shell and a route child", async () => {
+    const user = userEvent.setup();
+    render(
+      <CaseShell currentPath="/case/demo/purpose" initialState={createInitialCaseState(NOW)}>
+        <SharedRouteChild />
+      </CaseShell>,
+    );
+
+    expect(screen.getByTestId("route-run-id")).toHaveTextContent("no-run");
+    await user.click(screen.getByRole("button", { name: "Load checkpoint from route" }));
+
+    expect(screen.getByTestId("route-command-result")).toHaveTextContent("applied");
+    expect(screen.getByTestId("route-run-id")).toHaveTextContent("RUN-CHECKPOINT-1");
+    expect(screen.getByText("Bundled deterministic replay, not live AI")).toBeInTheDocument();
+    expect(screen.getByText("Prepared synthetic review checkpoint")).toBeInTheDocument();
+    expect(JSON.parse(window.sessionStorage.getItem("contextfirst-nexus.case-state.v1") ?? "{}")).toMatchObject({
+      activeAnalysisRunId: "RUN-CHECKPOINT-1",
+    });
+  });
+
+  it("hydrates the shared production state from session storage and rejects stale route commands", async () => {
+    const user = userEvent.setup();
+    window.sessionStorage.setItem(
+      "contextfirst-nexus.case-state.v1",
+      serializeCaseState(checkpointState(), NOW),
+    );
+    render(
+      <CaseShell currentPath="/case/demo/review">
+        <SharedRouteChild />
+      </CaseShell>,
+    );
+
+    await waitFor(() => expect(screen.getByTestId("route-run-id")).toHaveTextContent("RUN-CHECKPOINT-1"));
+    expect(screen.getByText("Prepared synthetic review checkpoint")).toBeInTheDocument();
+    const persistedBefore = window.sessionStorage.getItem("contextfirst-nexus.case-state.v1");
+    await user.click(screen.getByRole("button", { name: "Dispatch stale command" }));
+    expect(screen.getByTestId("route-command-result")).toHaveTextContent("stale_case_revision");
+    expect(window.sessionStorage.getItem("contextfirst-nexus.case-state.v1")).toBe(persistedBefore);
+  });
+
+  it("fails closed to the fresh synthetic state for an invalid persisted payload", async () => {
+    window.sessionStorage.setItem("contextfirst-nexus.case-state.v1", JSON.stringify({ unexpected: true }));
+    render(
+      <CaseShell currentPath="/case/demo/purpose">
+        <SharedRouteChild />
+      </CaseShell>,
+    );
+
+    await waitFor(() => expect(screen.getByTestId("route-case-revision")).toHaveTextContent("0"));
+    expect(screen.getByTestId("route-run-id")).toHaveTextContent("no-run");
+    expect(screen.getByLabelText(/Case status: Draft/i)).toBeInTheDocument();
   });
 
   it("keeps controls and navigation available for a narrow viewport render", () => {

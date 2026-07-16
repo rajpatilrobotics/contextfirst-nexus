@@ -29,6 +29,7 @@ import {
   validateTransmissionReadiness,
 } from "../redaction";
 import { respondContextGap, reviewCandidate, withdrawCandidate } from "../review";
+import { resolveCitation, resolveManualCitation } from "../citations";
 import {
   createExportManifest,
   evaluateExportGate as evaluateExportGateCore,
@@ -290,10 +291,21 @@ function applyValidCommand(state: CaseState, command: CaseCommand): CaseCommandR
         coverage: resolved.bundle.coverage,
         coverageReviews: [],
         processing: resolved.bundle.processing,
-        reviews: resolved.bundle.seededDecisions.map((decision) => ({ ...decision, analysisRunId: run.id })),
         caseRevision: state.caseRevision + 1,
       };
-      return activateRun(next, command, run, rewriteRunIds(resolved.bundle.candidates, run.id), rewriteCitationRunIds(resolved.bundle.citations, run.id), "analysis_completed");
+      const seededDecisions = resolved.bundle.seededDecisions.map((decision) => ({
+        ...decision,
+        analysisRunId: run.id,
+      }));
+      return activateRun(
+        next,
+        command,
+        run,
+        rewriteRunIds(resolved.bundle.candidates, run.id),
+        rewriteCitationRunIds(resolved.bundle.citations, run.id),
+        "analysis_completed",
+        { reviews: seededDecisions },
+      );
     }
     case "review_candidate": {
       const active = requireActiveSucceededRun(state);
@@ -353,59 +365,114 @@ function applyValidCommand(state: CaseState, command: CaseCommand): CaseCommandR
       const index = state.citations.findIndex((citation) => citation.id === command.citationId && citation.analysisRunId === active.id);
       if (index < 0) throw new Error("citation_not_found");
       const citation = state.citations[index];
-      const candidate = state.candidates.find((item) => item.id === command.candidateId && item.analysisRunId === active.id);
-      const segment = state.segments.find((item) => item.id === command.selectedSegmentId);
-      if (!candidate || !segment) throw new Error("citation_owner_mismatch");
-      if (command.selectedRedactedSegmentRange.end > segment.redactedText.length) throw new Error("manual_range_invalid");
+      if (citation.validationStatus !== "ambiguous_match") throw new Error("citation_not_ambiguous");
+      const candidate = state.candidates.find(
+        (item) =>
+          item.id === command.candidateId &&
+          item.analysisRunId === active.id &&
+          item.inclusionStatus === "active",
+      );
+      if (!candidate) throw new Error("citation_owner_mismatch");
+      const sourceDependency = candidate.dependencies.find(
+        (dependency) =>
+          dependency.active &&
+          dependency.kind === "source" &&
+          dependency.citationId === citation.id &&
+          dependency.sourceSegmentId === citation.segmentId,
+      );
+      if (!sourceDependency || sourceDependency.kind !== "source") {
+        throw new Error("citation_owner_mismatch");
+      }
+      if (
+        command.selectedSegmentId !== citation.segmentId ||
+        command.selectedSegmentId !== sourceDependency.sourceSegmentId ||
+        !state.segments.some((segment) => segment.id === command.selectedSegmentId) ||
+        !trustedSegments().some((segment) => segment.id === command.selectedSegmentId)
+      ) {
+        throw new Error("manual_segment_invalid");
+      }
+      const recomputed = resolveCitation({
+        id: citation.id,
+        analysisRunId: active.id,
+        candidateId: candidate.id,
+        quotedText: citation.quotedText,
+        documentId: citation.documentId,
+        pageNumber: citation.pageNumber,
+        segmentId: citation.segmentId,
+        purpose: "supporting_candidate",
+        claimedEvidenceNature: sourceDependency.evidenceNature,
+        sourceEvidenceNature: sourceDependency.evidenceNature,
+        now: command.meta.createdAt,
+      });
+      if (recomputed.citation.validationStatus !== "ambiguous_match") {
+        throw new Error("citation_ambiguity_not_recomputed");
+      }
+      const selectedOption = recomputed.ambiguityOptions.find(
+        (option) =>
+          option.segmentId === command.selectedSegmentId &&
+          option.redactedSegmentRange.start === command.selectedRedactedSegmentRange.start &&
+          option.redactedSegmentRange.end === command.selectedRedactedSegmentRange.end,
+      );
+      if (!selectedOption) throw new Error("manual_range_invalid");
+      const resolved = resolveManualCitation(recomputed, {
+        decisionId: `CITATION-RESOLUTION-${state.citationResolutions.length + 1}`,
+        analysisRunId: active.id,
+        candidateId: candidate.id,
+        citationId: citation.id,
+        selectedSegmentId: command.selectedSegmentId,
+        selectedRedactedSegmentRange: command.selectedRedactedSegmentRange,
+        now: command.meta.createdAt,
+      });
+      if ("reason" in resolved) throw new Error(resolved.reason);
       const citations = [...state.citations];
-      citations[index] = {
-        ...citation,
-        segmentId: segment.id,
-        documentId: segment.documentId,
-        pageNumber: segment.pageNumber,
-        quotedText: segment.redactedText.slice(command.selectedRedactedSegmentRange.start, command.selectedRedactedSegmentRange.end),
-        normalizedQuotedText: segment.redactedText.slice(command.selectedRedactedSegmentRange.start, command.selectedRedactedSegmentRange.end).toLowerCase().replace(/\s+/g, " ").trim(),
-        validationStatus: "manually_resolved",
-        redactedSegmentRange: command.selectedRedactedSegmentRange,
-        sourceSegmentRange: command.selectedRedactedSegmentRange,
-        boundingBoxes: segment.boundingBoxes,
-        resolutionMethod: "manual_segment_selection",
-        resolvedBy: "practitioner",
-        validatedAt: command.meta.createdAt,
-      };
+      citations[index] = resolved.citation;
+      const supportStatus = recalculateCandidateSourceSupport(candidate, citations);
+      const candidates = state.candidates.map((item) =>
+        item.id === candidate.id
+          ? {
+              ...item,
+              supportStatus,
+              revision: item.revision + (item.supportStatus === supportStatus ? 0 : 1),
+            }
+          : item,
+      );
       return commit(staleExport(state), command, {
         citations,
-        citationResolutions: [...state.citationResolutions, {
-          id: `CITATION-RESOLUTION-${state.citationResolutions.length + 1}`,
-          caseId: state.caseId,
-          analysisRunId: active.id,
-          candidateId: candidate.id,
-          citationId: citation.id,
-          previousValidationStatus: "ambiguous_match",
-          selectedSegmentId: segment.id,
-          selectedRedactedSegmentRange: command.selectedRedactedSegmentRange,
-          resultingValidationStatus: "manually_resolved",
-          resolutionMethod: "manual_segment_selection",
-          actor: "current_practitioner",
-          createdAt: command.meta.createdAt,
-        }],
+        candidates,
+        citationResolutions: [...state.citationResolutions, resolved.decision],
         caseRevision: state.caseRevision + 1,
-      }, "citation_manually_resolved", [citation.id]);
+      }, "citation_manually_resolved", [citation.id], undefined, true, {
+        analysisRunId: active.id,
+      });
     }
     case "evaluate_export_gate": {
+      validateExportSelection(state, command.selection);
       const normalized = normalizeExportSelection(command.selection);
       const digest = exportSelectionDigest(normalized);
-      const unchanged = state.exportGate?.exportSelectionDigest === digest && state.exportGate.caseRevision === state.caseRevision;
-      const base = unchanged ? state : { ...state, currentExportId: null, currentExportManifest: null, exportedRevision: null };
+      const sameSelection = state.exportGate?.exportSelectionDigest === digest;
+      const currentSameSelection = Boolean(sameSelection && state.exportGate?.caseRevision === state.caseRevision);
+      const selectionChanged = Boolean(state.exportGate && !sameSelection);
+      const base = selectionChanged
+        ? {
+            ...state,
+            caseRevision: state.caseRevision + 1,
+            exportGate: null,
+            currentExportId: null,
+            currentExportManifest: null,
+            exportedRevision: null,
+          }
+        : currentSameSelection
+          ? state
+          : { ...state, exportGate: null };
       const gate = evaluateExportGateCore(base, normalized, {
         now: command.meta.createdAt,
-        previousGate: state.currentExportManifest?.gate ?? state.exportGate,
+        previousGate: currentSameSelection
+          ? state.currentExportManifest?.gate ?? state.exportGate
+          : null,
         guidanceCards: bundledGuidancePack.cards as GuidanceCard[],
       });
-      const revisionBump = state.exportGate && !unchanged ? 1 : 0;
       return commit(base, command, {
         exportGate: gate,
-        caseRevision: base.caseRevision + revisionBump,
       }, gate.status === "ready" ? "export_gate_evaluated" : "export_blocked", [gate.id], gate.status === "blocked" ? gate.blockers[0]?.code : undefined, false);
     }
     case "create_export": {
@@ -517,6 +584,7 @@ function activateRun(
   candidates: CaseState["candidates"],
   citations: CaseState["citations"],
   eventType: AuditEvent["eventType"],
+  retainedRunScopedState: { reviews?: CaseState["reviews"] } = {},
 ): CaseCommandResult {
   const success = run.status === "succeeded";
   return commit(staleExport(state), command, {
@@ -524,7 +592,7 @@ function activateRun(
     activeAnalysisRunId: run.id,
     candidates: success ? candidates : [],
     citations: success ? citations : [],
-    reviews: [],
+    reviews: retainedRunScopedState.reviews ?? [],
     citationResolutions: [],
     dependencyChanges: [],
     pendingLiveAnalysis: null,
@@ -532,7 +600,15 @@ function activateRun(
       ? completeAnalysisProcessing(command.meta.createdAt)
       : upsertStage(state.processing, "candidate_extraction", "failed", command.meta.createdAt, "INTERNAL_SAFE_FAILURE"),
     caseRevision: state.caseRevision + 1,
-  }, eventType, [run.id]);
+  }, eventType, [run.id], undefined, true, {
+    analysisRunId: run.id,
+    recoveryOfRunId: run.recovery.recoveryOfRunId ?? undefined,
+    providerId: run.provider.providerId,
+    releaseConfigurationId: run.provider.releaseConfigurationId,
+    providerDisclosureVersion: run.provider.disclosureVersion,
+    promptVersion: run.promptVersion,
+    rulesetVersion: run.rulesetVersion,
+  });
 }
 
 function audit(
@@ -632,6 +708,57 @@ function requireActiveSucceededRun(state: CaseState) {
   const run = state.analysisRuns.find((item) => item.id === state.activeAnalysisRunId);
   if (!run || run.status !== "succeeded") throw new Error("active_successful_run_required");
   return run;
+}
+
+function recalculateCandidateSourceSupport(
+  candidate: CaseState["candidates"][number],
+  citations: CaseState["citations"],
+): CaseState["candidates"][number]["supportStatus"] {
+  const sourceDependencies = candidate.dependencies.filter(
+    (dependency): dependency is Extract<
+      CaseState["candidates"][number]["dependencies"][number],
+      { kind: "source" }
+    > =>
+      dependency.active && dependency.kind === "source",
+  );
+  if (sourceDependencies.length === 0) return candidate.supportStatus;
+  const citationsById = new Map(citations.map((citation) => [citation.id, citation]));
+  const statuses = sourceDependencies.map(
+    (dependency) => citationsById.get(dependency.citationId)?.validationStatus,
+  );
+  if (statuses.some((status) => status === "ambiguous_match" || status === "unvalidated")) {
+    return "citation_unresolved";
+  }
+  if (statuses.some((status) => !status || !["exact_match", "manually_resolved"].includes(status))) {
+    return "not_processed";
+  }
+  if (["partially_supported", "conflicting", "insufficient_evidence"].includes(candidate.supportStatus)) {
+    return candidate.supportStatus;
+  }
+  return "exact_source_supported";
+}
+
+function validateExportSelection(
+  state: CaseState,
+  selection: Extract<CaseCommand, { type: "evaluate_export_gate" }>["selection"],
+) {
+  if (state.purposeBrief && selection.kind !== state.purposeBrief.requestedExport) {
+    throw new Error("export_selection_kind_mismatch");
+  }
+  if (selection.kind === "full_practitioner_handoff") return;
+  const selected = selection.minimumNecessarySelection.selectedCandidateIds;
+  const excluded = selection.minimumNecessarySelection.excludedCandidateIds;
+  if (new Set(selected).size !== selected.length || new Set(excluded).size !== excluded.length) {
+    throw new Error("export_selection_duplicate_id");
+  }
+  const selectedIds = new Set(selected);
+  if (excluded.some((id) => selectedIds.has(id))) {
+    throw new Error("export_selection_overlap");
+  }
+  const knownIds = new Set(state.candidates.map((candidate) => candidate.id));
+  if ([...selected, ...excluded].some((id) => !knownIds.has(id))) {
+    throw new Error("export_selection_unknown_id");
+  }
 }
 
 function deriveLiveRecovery(
