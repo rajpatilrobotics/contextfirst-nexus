@@ -520,7 +520,7 @@ tasks:
     title: Performance, release readiness, and deployment rehearsal
     stage: release
     wave: 13
-    status: blocked
+    status: ready
     risk: high
     dependencies: [TASK-024, TASK-036]
     packet: tasks/TASK-025.md
@@ -771,7 +771,7 @@ tasks:
     title: Restore CSP-compatible local PDF generation
     stage: quality
     wave: 13
-    status: ready
+    status: integrated
     risk: high
     dependencies: [TASK-022, TASK-024]
     packet: tasks/TASK-036.md
