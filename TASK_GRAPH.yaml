@@ -200,7 +200,7 @@ tasks:
     title: Export gate and canonical manifest
     stage: domain
     wave: 6
-    status: ready
+    status: integrated
     risk: high
     dependencies: [TASK-002, TASK-005, TASK-006, TASK-007, TASK-008]
     packet: tasks/TASK-009.md
@@ -216,7 +216,7 @@ tasks:
     title: Case reducer, audit, persistence, and replay
     stage: domain
     wave: 7
-    status: pending
+    status: ready
     risk: high
     dependencies: [TASK-002, TASK-003, TASK-005, TASK-006, TASK-007, TASK-008, TASK-009]
     packet: tasks/TASK-010.md
