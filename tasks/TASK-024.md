@@ -53,6 +53,7 @@ Read in this order before editing:
 
 - `next.config.ts`
 - `vitest.config.ts`
+- `app/page.tsx`
 - `app/error.tsx`
 - `app/global-error.tsx`
 - `app/loading.tsx`
@@ -68,6 +69,16 @@ Within `vitest.config.ts`, TASK-024 may only add the exact glob
 every existing include, setup file, environment, and exclusion. Do not change
 reporters, environments, timeouts, aliases, coverage, or otherwise weaken test
 discovery.
+
+Within `app/page.tsx`, TASK-024 may only correct the Start demo anchor text
+color by applying a narrowly scoped important white-text utility that overrides
+the unlayered global anchor rule. Preserve the existing structure, wording, link
+destination, background, border, focus behavior, and layout.
+
+`app/not-found.tsx` is already TASK-024-owned and may receive the equivalent
+local contrast fix. `tests/a11y/task-024-a11y.spec.ts` is already covered by the
+owned `tests/a11y/` path and may narrow the Purpose summary locator to the
+specifically named alert. These two corrections require no additional ownership.
 
 No other path may be created, edited, renamed, moved, or deleted.
 
@@ -97,6 +108,7 @@ All read-only application, domain, fixture, configuration, dependency, and setup
 - Running live provider evaluation, making unmocked paid model calls, adding credentials, checking provider accounts, enabling public live analysis, or changing provider admission.
 - Deploying, pushing, changing Vercel settings, changing billing, quota, firewall, rate controls, environments, production secrets, or deployment targets.
 - Adding middleware, authentication, a database, analytics, external logging, an error-reporting service, upload, real data, or child-case behavior.
+- Editing `app/globals.css`, changing design tokens, changing any other landing-page content or layout, or weakening or suppressing the axe rule that detected the contrast failure.
 - Claiming penetration testing, production security, complete accessibility, WCAG conformance, guaranteed privacy, perfect injection protection, or legal validation.
 
 ## 9. Frozen contracts and invariants
@@ -144,6 +156,7 @@ All read-only application, domain, fixture, configuration, dependency, and setup
 - End-to-end tests complete the full golden flow, exact early blocker flow, hero withdrawal and renewed review, full handoff, separate safe-share handoff, audit and Trust checks, ID-only replay and checkpoint provenance, atomic corrupted-bundle rejection, Reset Case, and negative or failure paths.
 - Provider recovery tests prove no automatic attempt, frozen option order, new acknowledgement, separate linked run, failed-run preservation, no output merging, and no switching bypass for safety failures. Transport tests prove that network loss and invalid response envelopes clear pending state, preserve the prior active run, show unknown remote outcome, and create no run or recovery link.
 - Automated accessibility scans report zero unwaived violations for the installed A and AA rules on every enumerated core state.
+- The Start demo anchor uses the narrowly scoped important white-text utility, retains its existing content and behavior, and passes the unchanged axe contrast rule without global CSS or design-token changes.
 - Browser assertions prove the active step, form error summary, source drawer modes, modal containment, focus restoration, dependency focus, blocker focus, semantic Nexus, semantic source, semantic export, status text, and reduced-motion behavior.
 - Captured server logs, browser console, error responses, Playwright traces, and test reports contain no raw case content, exact quote, seeded identifier, prompt, model body, API key, cookie, export content, or sensitive review reason.
 - No test uses a real or private record, makes a live provider call, changes cloud state, or claims broader security, privacy, accessibility, or legal assurance than was actually verified.
