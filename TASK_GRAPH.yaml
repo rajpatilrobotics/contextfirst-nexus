@@ -391,9 +391,9 @@ tasks:
     title: Intake, masking, processing, and coverage UI
     stage: interface
     wave: 10
-    status: ready
+    status: blocked
     risk: high
-    dependencies: [TASK-004, TASK-005, TASK-006, TASK-010, TASK-017, TASK-018, TASK-027]
+    dependencies: [TASK-004, TASK-005, TASK-006, TASK-010, TASK-017, TASK-018, TASK-027, TASK-030]
     packet: tasks/TASK-019.md
     outcome: Implement document cards, browser processing, stage progress, coverage manifest, masking review, safe default source view, intentional reveal, analysis prerequisites, and the explicit controller-backed Start analysis flow.
     owns:
@@ -628,7 +628,7 @@ tasks:
     risk: high
     dependencies: [TASK-008, TASK-009, TASK-010, TASK-027, TASK-028]
     packet: tasks/TASK-030.md
-    outcome: Reconcile historical non-source dependency edges during renewed review so the canonical withdrawal flow can clear unresolved dependency blockers without losing provenance or weakening export gates.
+    outcome: Reconcile historical non-source dependency edges during renewed review so the canonical withdrawal flow can clear unresolved dependency blockers without losing provenance or weakening export gates, and restore the required audited intentional source reveal without making reveal material.
     owns:
       - lib/review/index.ts
       - lib/state/index.ts
