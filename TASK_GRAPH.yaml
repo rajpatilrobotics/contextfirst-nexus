@@ -74,7 +74,7 @@ tasks:
     title: Shared TypeScript and Zod contracts
     stage: foundation
     wave: 2
-    status: ready
+    status: integrated
     risk: high
     dependencies: [TASK-001]
     packet: tasks/TASK-002.md
@@ -90,7 +90,7 @@ tasks:
     title: Synthetic case, evaluation definitions, and guidance pack
     stage: foundation
     wave: 3
-    status: pending
+    status: ready
     risk: high
     dependencies: [TASK-001, TASK-002]
     packet: tasks/TASK-003.md
@@ -114,7 +114,7 @@ tasks:
     title: Design foundations and UI primitives
     stage: foundation
     wave: 3
-    status: pending
+    status: ready
     risk: medium
     dependencies: [TASK-001, TASK-002]
     packet: tasks/TASK-004.md
