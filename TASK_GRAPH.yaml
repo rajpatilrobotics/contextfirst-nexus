@@ -90,7 +90,7 @@ tasks:
     title: Synthetic case, evaluation definitions, and guidance pack
     stage: foundation
     wave: 3
-    status: ready
+    status: integrated
     risk: high
     dependencies: [TASK-001, TASK-002]
     packet: tasks/TASK-003.md
@@ -136,7 +136,7 @@ tasks:
     title: PDF source service and coverage engine
     stage: domain
     wave: 4
-    status: pending
+    status: ready
     risk: high
     dependencies: [TASK-001, TASK-002, TASK-003]
     packet: tasks/TASK-005.md
@@ -152,7 +152,7 @@ tasks:
     title: Masking, redaction mapping, and leak scanning
     stage: domain
     wave: 4
-    status: pending
+    status: ready
     risk: high
     dependencies: [TASK-001, TASK-002, TASK-003]
     packet: tasks/TASK-006.md
@@ -184,7 +184,7 @@ tasks:
     title: Review policy and dependency engine
     stage: domain
     wave: 4
-    status: pending
+    status: ready
     risk: high
     dependencies: [TASK-001, TASK-002, TASK-003]
     packet: tasks/TASK-008.md
