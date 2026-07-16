@@ -309,7 +309,7 @@ tasks:
     title: Analysis route and deterministic post-validation
     stage: integration
     wave: 7
-    status: ready
+    status: integrated
     risk: high
     dependencies: [TASK-007, TASK-008, TASK-011, TASK-012, TASK-013, TASK-014]
     packet: tasks/TASK-015.md
@@ -332,7 +332,7 @@ tasks:
     title: Evaluation harness and admission reporting
     stage: quality
     wave: 8
-    status: pending
+    status: ready
     risk: high
     dependencies: [TASK-003, TASK-007, TASK-008, TASK-009, TASK-010, TASK-015]
     packet: tasks/TASK-016.md
