@@ -4,6 +4,7 @@ import { describe, expect, it, vi } from "vitest";
 import { LIMITATION_TEXT } from "../../../../lib/review";
 import { applyCaseCommand } from "../../../../lib/state";
 import { NexusMatrix } from "../../../../features/review/nexus";
+import type { CaseCommandDispatcher } from "../../../../features/review/source";
 import {
   checkpointState,
   commandMeta,
@@ -84,7 +85,7 @@ describe("TASK-021 Charge-Coercion Nexus", () => {
   it("shows changed support and permits offence timing only through the exact limitation action after withdrawal", async () => {
     const user = userEvent.setup();
     const state = withdrawnCheckpointState();
-    const onCommand = vi.fn(() => ({ ok: true }));
+    const onCommand = vi.fn<CaseCommandDispatcher>(() => ({ ok: true }));
     render(
       <NexusMatrix
         onCommand={onCommand}
@@ -109,7 +110,12 @@ describe("TASK-021 Charge-Coercion Nexus", () => {
     await user.type(within(timingRow).getByLabelText("Concise reason"), "The assigned-task dependency was withdrawn.");
     await user.click(within(timingRow).getByRole("button", { name: "Record individual action" }));
 
-    expect(onCommand.mock.calls[0][0].intent).toEqual({
+    expect(onCommand).toHaveBeenCalledTimes(1);
+    const call = onCommand.mock.calls[0];
+    if (!call) throw new Error("Expected the Nexus review command to be recorded");
+    const [command] = call;
+    if (command.type !== "review_candidate") throw new Error(`Unexpected command ${command.type}`);
+    expect(command.intent).toEqual({
       candidateId: "NEXUS-OFFENCE-TIMING",
       action: "accept_as_limitation",
       limitationText: LIMITATION_TEXT,

@@ -7,6 +7,7 @@ import {
   CandidateReviewCard,
   ReviewWorkspace,
 } from "../../../../features/review/candidate";
+import type { CaseCommandDispatcher } from "../../../../features/review/source";
 import { createInitialCaseState } from "../../../../lib/state";
 import { checkpointState, NOW } from "./review-test-state";
 
@@ -45,7 +46,7 @@ describe("TASK-021 CandidateReviewCard", () => {
   it("submits only the narrow edit ReviewIntent with changed wording and reason", async () => {
     const user = userEvent.setup();
     const state = checkpointState();
-    const onCommand = vi.fn(() => ({ ok: true }));
+    const onCommand = vi.fn<CaseCommandDispatcher>(() => ({ ok: true }));
     render(
       <CandidateReviewCard
         candidate={candidate(state, "CAND-CTRL-PASSPORT")}
@@ -62,7 +63,11 @@ describe("TASK-021 CandidateReviewCard", () => {
     await user.type(screen.getByLabelText("Concise reason"), "Preserve the different evidence natures.");
     await user.click(screen.getByRole("button", { name: "Record individual action" }));
 
-    const command = onCommand.mock.calls[0][0];
+    expect(onCommand).toHaveBeenCalledTimes(1);
+    const call = onCommand.mock.calls[0];
+    if (!call) throw new Error("Expected the review command to be recorded");
+    const [command] = call;
+    if (command.type !== "review_candidate") throw new Error(`Unexpected command ${command.type}`);
     expect(command.type).toBe("review_candidate");
     expect(command.intent).toEqual({
       candidateId: "CAND-CTRL-PASSPORT",
@@ -106,7 +111,7 @@ describe("TASK-021 CandidateReviewCard", () => {
   it("uses Confirm as unknown for unknown-state candidates", async () => {
     const user = userEvent.setup();
     const state = checkpointState();
-    const onCommand = vi.fn(() => ({ ok: true }));
+    const onCommand = vi.fn<CaseCommandDispatcher>(() => ({ ok: true }));
     render(
       <CandidateReviewCard
         candidate={candidate(state, "CAND-URG-INTERPRETER")}
@@ -118,7 +123,12 @@ describe("TASK-021 CandidateReviewCard", () => {
 
     expect(screen.queryByRole("button", { name: "Accept suggestion" })).not.toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "Confirm as unknown" }));
-    expect(onCommand.mock.calls[0][0].intent).toEqual({
+    expect(onCommand).toHaveBeenCalledTimes(1);
+    const call = onCommand.mock.calls[0];
+    if (!call) throw new Error("Expected the unknown-review command to be recorded");
+    const [command] = call;
+    if (command.type !== "review_candidate") throw new Error(`Unexpected command ${command.type}`);
+    expect(command.intent).toEqual({
       candidateId: "CAND-URG-INTERPRETER",
       action: "confirm_unknown",
       reason: null,

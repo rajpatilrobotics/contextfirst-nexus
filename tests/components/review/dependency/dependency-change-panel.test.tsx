@@ -7,6 +7,7 @@ import {
   DependencyChangePanel,
   selectCanonicalWithdrawalPreview,
 } from "../../../../features/review/dependency";
+import type { CaseCommandDispatcher } from "../../../../features/review/source";
 import { LIMITATION_TEXT } from "../../../../lib/review";
 import { applyCaseCommand } from "../../../../lib/state";
 import {
@@ -63,7 +64,7 @@ describe("TASK-021 dependency change and hero withdrawal", () => {
   it("requires a reason and dispatches only the dedicated withdraw_candidate command", async () => {
     const user = userEvent.setup();
     const state = checkpointState();
-    const onCommand = vi.fn(() => ({ ok: true }));
+    const onCommand = vi.fn<CaseCommandDispatcher>(() => ({ ok: true }));
     render(
       <DependencyChangePanel
         candidateToWithdraw={candidate(state, "CAND-TASK-0402")}
@@ -79,7 +80,10 @@ describe("TASK-021 dependency change and hero withdrawal", () => {
 
     await user.type(screen.getByLabelText("Reason for withdrawal"), "The record should no longer support the handoff.");
     await user.click(screen.getByRole("button", { name: "Withdraw evidence and recalculate" }));
-    const command = onCommand.mock.calls[0][0];
+    expect(onCommand).toHaveBeenCalledTimes(1);
+    const call = onCommand.mock.calls[0];
+    if (!call) throw new Error("Expected the withdrawal command to be recorded");
+    const [command] = call;
     expect(command).toMatchObject({
       type: "withdraw_candidate",
       candidateId: "CAND-TASK-0402",

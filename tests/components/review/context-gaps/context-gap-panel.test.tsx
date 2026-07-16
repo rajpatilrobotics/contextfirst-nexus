@@ -7,6 +7,7 @@ import {
   ContextGapList,
   ContextGapPanel,
 } from "../../../../features/review/context-gaps";
+import type { CaseCommandDispatcher } from "../../../../features/review/source";
 import { applyCaseCommand } from "../../../../lib/state";
 import { checkpointState } from "../candidate/review-test-state";
 
@@ -44,13 +45,17 @@ describe("TASK-021 context gaps", () => {
   it("submits a narrow reviewer-supplied answer intent", async () => {
     const user = userEvent.setup();
     const state = checkpointState();
-    const onCommand = vi.fn(() => ({ ok: true }));
+    const onCommand = vi.fn<CaseCommandDispatcher>(() => ({ ok: true }));
     render(<ContextGapPanel gap={gap(state, "CAND-URG-INTERPRETER")} onCommand={onCommand} state={state} />);
 
     await user.click(screen.getByRole("button", { name: "Answer" }));
     await user.type(screen.getByLabelText("Reviewer-supplied context"), "Interpreter booking is being checked by the practitioner.");
     await user.click(screen.getByRole("button", { name: "Record gap response" }));
-    const command = onCommand.mock.calls[0][0];
+    expect(onCommand).toHaveBeenCalledTimes(1);
+    const call = onCommand.mock.calls[0];
+    if (!call) throw new Error("Expected the context-gap command to be recorded");
+    const [command] = call;
+    if (command.type !== "respond_context_gap") throw new Error(`Unexpected command ${command.type}`);
     expect(command.type).toBe("respond_context_gap");
     expect(command.intent).toEqual({
       gapId: "CAND-URG-INTERPRETER",
