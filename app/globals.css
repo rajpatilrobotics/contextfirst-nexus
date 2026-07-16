@@ -1,8 +1,48 @@
 @import "tailwindcss";
 
 :root {
-  background: #ffffff;
-  color: #111827;
+  --font-sans: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+
+  --color-canvas: #F5F7F6;
+  --color-surface: #FFFFFF;
+  --color-surface-subtle: #EEF2F1;
+  --color-ink: #14212B;
+  --color-ink-muted: #52615F;
+  --color-border: #CDD7D4;
+  --color-border-strong: #91A09C;
+  --color-control-border: #64748B;
+  --color-brand: #5948B8;
+  --color-brand-hover: #463894;
+  --color-brand-subtle: #F0EEFF;
+  --color-link: #315C93;
+  --color-supported: #0F766E;
+  --color-supported-subtle: #ECFDF8;
+  --color-warning: #8A4B08;
+  --color-warning-subtle: #FFF8E7;
+  --color-conflict: #9A3412;
+  --color-conflict-subtle: #FFF3ED;
+  --color-danger: #B42318;
+  --color-danger-subtle: #FEF3F2;
+  --color-neutral: #475569;
+  --color-neutral-subtle: #F1F5F9;
+
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-12: 48px;
+  --space-16: 64px;
+
+  --radius-control: 6px;
+  --radius-card: 10px;
+  --radius-dialog: 12px;
+  --shadow-elevated: 0 18px 45px rgb(20 33 43 / 14%);
+
+  background: var(--color-canvas);
+  color: var(--color-ink);
 }
 
 * {
@@ -13,8 +53,175 @@ html,
 body {
   min-height: 100%;
   margin: 0;
+  background: var(--color-canvas);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+  font-size: 16px;
+  line-height: 24px;
+  text-rendering: optimizeLegibility;
 }
 
 main {
   min-height: 100vh;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+
+a {
+  color: var(--color-link);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+::selection {
+  background: var(--color-brand-subtle);
+}
+
+:focus-visible {
+  outline: 2px solid var(--color-brand);
+  outline-offset: 2px;
+  box-shadow: 0 0 0 4px var(--color-brand-subtle);
+}
+
+.cfn-type-display {
+  font-size: 36px;
+  line-height: 44px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+.cfn-type-heading-1 {
+  font-size: 32px;
+  line-height: 40px;
+  font-weight: 700;
+  letter-spacing: -0.015em;
+}
+
+.cfn-type-heading-2 {
+  font-size: 24px;
+  line-height: 32px;
+  font-weight: 700;
+}
+
+.cfn-type-heading-3 {
+  font-size: 20px;
+  line-height: 28px;
+  font-weight: 700;
+}
+
+.cfn-type-body {
+  font-size: 16px;
+  line-height: 24px;
+}
+
+.cfn-type-body-small {
+  font-size: 14px;
+  line-height: 20px;
+}
+
+.cfn-type-label {
+  font-size: 14px;
+  line-height: 20px;
+  font-weight: 600;
+}
+
+.cfn-type-code {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  line-height: 20px;
+}
+
+.cfn-surface {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-card);
+}
+
+.cfn-reading-column {
+  max-width: 760px;
+}
+
+.cfn-control-target {
+  min-height: 44px;
+  min-width: 44px;
+}
+
+.cfn-compact-row {
+  min-height: 48px;
+}
+
+.cfn-status-token {
+  align-items: center;
+  border: 1px solid currentColor;
+  border-radius: 999px;
+  display: inline-flex;
+  font-size: 14px;
+  font-weight: 600;
+  gap: 6px;
+  line-height: 20px;
+  min-height: 32px;
+  padding: 5px 10px;
+}
+
+.cfn-status-token[data-tone="neutral"] {
+  background: var(--color-neutral-subtle);
+  color: var(--color-neutral);
+}
+
+.cfn-status-token[data-tone="brand"] {
+  background: var(--color-brand-subtle);
+  color: var(--color-brand);
+}
+
+.cfn-status-token[data-tone="supported"] {
+  background: var(--color-supported-subtle);
+  color: var(--color-supported);
+}
+
+.cfn-status-token[data-tone="warning"] {
+  background: var(--color-warning-subtle);
+  color: var(--color-warning);
+}
+
+.cfn-status-token[data-tone="conflict"] {
+  background: var(--color-conflict-subtle);
+  color: var(--color-conflict);
+}
+
+.cfn-status-token[data-tone="danger"] {
+  background: var(--color-danger-subtle);
+  color: var(--color-danger);
+}
+
+.cfn-status-token[data-pattern="dashed"] {
+  border-style: dashed;
+}
+
+@media (max-width: 767px) {
+  .cfn-responsive-stack {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .cfn-table-reflow {
+    display: block;
+    overflow-x: auto;
+    max-width: 100%;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+    transition-duration: 0.001ms !important;
+  }
 }
