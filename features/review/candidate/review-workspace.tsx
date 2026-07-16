@@ -137,9 +137,13 @@ export function ReviewWorkspace() {
   const [withdrawalCandidateId, setWithdrawalCandidateId] = useState<string | null>(null);
   const workspaceRef = useRef<HTMLDivElement>(null);
   const reviewWorkspaceTargetRef = useRef<HTMLElement>(null);
+  const reviewWorkspaceFocusedRef = useRef(false);
   const activeRun = useMemo(
     () => state.analysisRuns.find((run) => run.id === state.activeAnalysisRunId) ?? null,
     [state.activeAnalysisRunId, state.analysisRuns],
+  );
+  const reviewWorkspaceReady = Boolean(
+    activeRun?.status === "succeeded" && state.candidates.length,
   );
   const reviewCandidates = useMemo(
     () =>
@@ -172,14 +176,22 @@ export function ReviewWorkspace() {
   }, [sourceMode, sourceSelection]);
 
   useEffect(() => {
+    if (reviewWorkspaceFocusedRef.current) return;
+    if (!reviewWorkspaceReady) return;
     if (window.location.hash !== "#review-workspace") return;
+    if (!reviewWorkspaceTargetRef.current) return;
 
     const focusTimeout = window.setTimeout(() => {
-      reviewWorkspaceTargetRef.current?.focus({ preventScroll: true });
+      if (reviewWorkspaceFocusedRef.current) return;
+      if (window.location.hash !== "#review-workspace") return;
+      const target = reviewWorkspaceTargetRef.current;
+      if (!target) return;
+      target.focus({ preventScroll: true });
+      reviewWorkspaceFocusedRef.current = true;
     }, 0);
 
     return () => window.clearTimeout(focusTimeout);
-  }, []);
+  }, [reviewWorkspaceReady]);
 
   if (state.pendingLiveAnalysis) {
     return (
