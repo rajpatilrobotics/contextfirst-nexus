@@ -1,17 +1,19 @@
 # Release Checklist
 
-Status: Local release preparation only. TASK-025 cannot be marked complete until separately approved stable-URL production rehearsal is performed against the confirmed approved build.
+Status: Local release preparation is complete, but final TASK-025 production deployment is not yet confirmed. Stable-URL access and five prepared-checkpoint production rehearsals have not yet run, and this checklist does not claim the current stable site contains the final build.
 
 ## Passed
 
 - `npm ci`: Passed locally from the existing lockfile. No dependency or lockfile edit was made. npm reported two moderate advisories for later review; no fix command was run.
-- `npm run verify`: Passed locally after TASK-036 fast-forward and TASK-025 reconciliation. It ran typecheck, lint, unit tests, contract tests, component tests, and build.
+- TASK-037 integration: Passed by rebase onto `origin/main` at `e4c4d055943fefa2fc481fd528a713d512cdd704`.
+- `npm run verify`: Passed locally after TASK-037 rebase and TASK-025 checklist reconciliation. It ran typecheck, lint, unit tests, contract tests, component tests, and build.
 - `npm run test:e2e`: Passed locally. 12 Playwright tests passed, including the TASK-036 PDF CSP check and the TASK-025 prepared-checkpoint rehearsal.
 - `npm run test:a11y`: Passed locally. 9 automated Playwright/axe checks passed. This is automated evidence only, not a WCAG conformance claim.
 - `npm run measure:performance -- --mode prepared-checkpoint`: Passed locally with one warm-up and 20 measured samples. No provider transmission occurred.
 - `npm run build`: Passed locally.
 - `git diff --check`: Passed.
 - `npx vitest run --config tests/performance/vitest.config.ts`: Passed locally after TASK-036 reconciliation. The tests cover mode selection, warm-up exclusion, sample-count enforcement, p95 calculation, threshold misses, checkpoint provenance, replay provenance, and zero provider transmission.
+- External stable target selection: Passed by `PLAYWRIGHT_BASE_URL=https://contextfirst-nexus.vercel.app npx playwright test tests/e2e/demo-rehearsal.spec.ts --list`. It listed one TASK-025 rehearsal test and did not run the browser test, start the local web server, or make a stable-URL request.
 - `vercel.json` absence: Passed by local filesystem inspection. The file remains absent.
 - Local-only release boundary: Passed by owned-file review. No deployment, push, Vercel setting, production setting, credential action, spend, stable-URL access, or live provider call was performed.
 - Package script scope: Passed by diff review. `package.json` adds only `"measure:performance": "node scripts/measure-performance.mjs"` and `package-lock.json` is unchanged.
@@ -25,9 +27,9 @@ Status: Local release preparation only. TASK-025 cannot be marked complete until
 
 ## Not Run
 
-- Stable production URL rehearsal: Not run. The URL `https://contextfirst-nexus.vercel.app` was not accessed because deployment or production verification approval was not present.
-- Deployment: Not run and unapproved.
-- Vercel project, environment, firewall, billing, quota, or production-setting checks: Not run and unapproved.
+- Stable production URL rehearsal: Not run. Stable-URL access is approved only after the final build is confirmed deployed; the external-target `--list` command was discovery-only and did not execute the rehearsal.
+- Replay-only production deployment through the existing connected project: Not run. It is approved, but final TASK-025 production deployment is not yet confirmed.
+- Vercel project, environment, firewall, billing, quota, or other production-setting changes: Not run and explicitly not approved.
 - Public live AI analysis: Not run and unapproved.
 - Live provider evaluation or provider-account checks: Not run; no credential, spend, or account action was approved.
 - TASK-024 manual production or stable-URL checks: Not run in TASK-025. No complete TASK-024 handoff artifact was present in this worktree, so unverifiable manual NOT RUN evidence is preserved as not run rather than promoted from local automation.
@@ -36,7 +38,7 @@ Status: Local release preparation only. TASK-025 cannot be marked complete until
 - Manual 320 CSS pixel reflow check: Not run manually in TASK-025. Automated 320px reflow test passed under `npm run test:a11y`.
 - Manual reduced-motion check: Not run manually in TASK-025. Automated reduced-motion smoke coverage remains from `npm run test:e2e`.
 - Manual full-practitioner and minimum-necessary safe-share off-camera purpose rehearsal: Not run in TASK-025.
-- Manual stopwatch five-run stable URL rehearsal: Not run and unapproved.
+- Manual stopwatch five-run stable URL rehearsal: Not run. Five prepared-checkpoint production rehearsals are approved only after the final build is confirmed deployed.
 
 ## Required Local Verification Results
 
@@ -45,6 +47,8 @@ Status: Local release preparation only. TASK-025 cannot be marked complete until
 - `npm run test:a11y`: Passed.
 - `npm run measure:performance -- --mode prepared-checkpoint`: Passed.
 - `npm run build`: Passed.
+- `npx vitest run --config tests/performance/vitest.config.ts`: Passed.
+- `PLAYWRIGHT_BASE_URL=https://contextfirst-nexus.vercel.app npx playwright test tests/e2e/demo-rehearsal.spec.ts --list`: Passed; listed one test without stable-URL access.
 - `git diff --check`: Passed.
 
 ## Performance Evidence
@@ -65,33 +69,46 @@ Final ordered prepared-checkpoint measurement:
 
 | Operation | Median | p95 | Threshold | Result |
 |---|---:|---:|---:|---|
-| Loaded local review action feedback | 1.43 ms | 3.02 ms | 100.00 ms | Pass |
-| Source drawer open and exact segment focus | 1.37 ms | 1.71 ms | 300.00 ms | Pass |
-| Dependency recalculation and blocker update | 1.60 ms | 2.12 ms | 300.00 ms | Pass |
-| Seven-document fixture extraction after assets load | 15.16 ms | 20.94 ms | 5000.00 ms | Pass |
-| Prepared review checkpoint load | 1.76 ms | 2.68 ms | 1500.00 ms | Pass |
-| Export preview after approved state | 2.61 ms | 3.08 ms | 2000.00 ms | Pass |
-| Deterministic replay completion | 0.54 ms | 0.94 ms | 8000.00 ms | Pass |
+| Loaded local review action feedback | 1.40 ms | 2.43 ms | 100.00 ms | Pass |
+| Source drawer open and exact segment focus | 1.31 ms | 1.98 ms | 300.00 ms | Pass |
+| Dependency recalculation and blocker update | 1.40 ms | 2.25 ms | 300.00 ms | Pass |
+| Seven-document fixture extraction after assets load | 13.17 ms | 17.54 ms | 5000.00 ms | Pass |
+| Prepared review checkpoint load | 1.48 ms | 2.43 ms | 1500.00 ms | Pass |
+| Export preview after approved state | 2.09 ms | 3.35 ms | 2000.00 ms | Pass |
+| Deterministic replay completion | 0.49 ms | 0.70 ms | 8000.00 ms | Pass |
 
 ## Manual Checks
 
 - README beginner setup and limitations: Passed by line-by-line local review.
 - README environment names and provider boundaries: Passed by line-by-line local review; names only, no values.
 - Performance output consistency: Passed by final ordered measurement review.
+- TASK-037 external-target selection: Passed by `--list`; stable target selection is configured and discoverable without executing the stable rehearsal.
 - Local prepared checkpoint judged sequence: Passed by local Playwright E2E rehearsal, including successful local PDF generation after TASK-036 reconciliation.
 - Full-practitioner and minimum-necessary safe-share separate off-camera purposes: Not run.
 - Checklist evidence review: Passed after final command output update.
-- `vercel.json` absence and deployment state: Passed locally; deployment checks remain not run and unapproved.
-- Stable URL and stable System Card comparison: Not run and unapproved.
-- Final git status and diff scope review: Passed. Current uncommitted diff is limited to `README.md`, `RELEASE_CHECKLIST.md`, `package.json`, `scripts/measure-performance.mjs`, `tests/e2e/demo-rehearsal.spec.ts`, and `tests/performance/`.
+- `vercel.json` absence and deployment state: Passed locally; final replay-only production deployment remains not run and not yet confirmed.
+- Stable URL and stable System Card comparison: Not run. Stable-URL access is approved only after the final build is confirmed deployed.
+- Final git status and diff scope review: Passed. Current uncommitted follow-up diff is limited to `RELEASE_CHECKLIST.md`.
 - Generated Playwright artifact review: Passed. No generated Playwright artifact folder remains.
 
 ## Approval Gates
 
-- Deployment approval: Absent.
-- Production verification or stable-URL access approval: Absent.
-- Public live analysis approval: Absent.
-- Credential or provider-account action approval: Absent.
-- Spend approval: Absent.
-- Push approval: Absent.
-- Commit approval: Present in the follow-up TASK-025 commit request for message `chore: prepare performance and release readiness`.
+Approved:
+- Main push for the final replay-only build
+- Replay-only production deployment through the existing connected project
+- Stable-URL access after the final build is confirmed deployed
+- Five prepared-checkpoint production rehearsals
+
+Explicitly not approved:
+- Public live AI
+- Live provider calls or evaluation
+- Credential or provider-account changes
+- Billing or spend changes
+- Firewall, quota, or other Vercel/production-setting changes
+
+Current execution state:
+- Final TASK-025 production deployment is not yet confirmed.
+- Stable-URL access and five rehearsals have not yet run.
+- Do not convert those execution results to PASS yet.
+- Do not claim the current stable site contains the final build.
+- Commit approval: Present for `docs: record approved production rehearsal gate`.
