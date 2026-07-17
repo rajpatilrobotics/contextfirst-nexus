@@ -1,7 +1,7 @@
 schema_version: "1.0.0"
 project: contextfirst-nexus
 graph_status: approved_for_implementation
-task_count: 37
+task_count: 38
 
 authority:
   repository_rules: AGENTS.md
@@ -520,12 +520,12 @@ tasks:
     title: Performance, release readiness, and deployment rehearsal
     stage: release
     wave: 13
-    status: ready
+    status: blocked
     risk: high
-    dependencies: [TASK-024, TASK-036, TASK-037]
+    dependencies: [TASK-024, TASK-036, TASK-037, TASK-038]
     packet: tasks/TASK-025.md
     outcome: Perform local release preparation, measure the frozen budgets, update truthful setup guidance, prepare the release checklist, and preserve all unrun manual evidence; deployment and production verification remain separately approval-gated.
-    readiness_scope: local_release_reconciliation_only
+    readiness_scope: blocked_until_task_038_integrates
     manual_evidence_rule: Preserve every TASK-024 manual NOT RUN result as NOT RUN in the TASK-025 release checklist unless that exact check is later performed under its required approval.
     approved_scope:
       - replay_only_deployment_after_task_037
@@ -810,4 +810,27 @@ tasks:
       - npm run test:e2e
       - npm run verify
       - PLAYWRIGHT_BASE_URL=https://contextfirst-nexus.vercel.app npx playwright test tests/e2e/task-036-pdf-csp.spec.ts --list
+      - git diff --check
+
+  - id: TASK-038
+    title: Enforce replay-only public analysis gate
+    stage: release
+    wave: 13
+    status: ready
+    risk: high
+    dependencies: [TASK-015, TASK-026, TASK-037]
+    packet: tasks/TASK-038.md
+    outcome: Derive one fail-closed server live-analysis policy from the exact server environment flag, expose truthful disabled availability, and reject disabled POST requests before orchestration or provider work while preserving local replay.
+    owns:
+      - app/api/analyze/route.ts
+      - lib/ai/server/live-analysis-policy.ts
+      - features/trust/trust-data.server.ts
+      - tests/contracts/api/analyze-route.test.ts
+      - tests/unit/ai/shared/live-analysis-policy.test.ts
+    verifies:
+      - npx vitest run tests/contracts/api tests/unit/ai/shared
+      - npm run typecheck
+      - npm run lint
+      - npm run build
+      - npm run verify
       - git diff --check
