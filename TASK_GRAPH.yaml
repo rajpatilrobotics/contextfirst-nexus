@@ -520,12 +520,12 @@ tasks:
     title: Performance, release readiness, and deployment rehearsal
     stage: release
     wave: 13
-    status: ready
+    status: integrated
     risk: high
     dependencies: [TASK-024, TASK-036, TASK-037, TASK-038]
     packet: tasks/TASK-025.md
     outcome: Perform local release preparation, measure the frozen budgets, update truthful setup guidance, prepare the release checklist, and preserve all unrun manual evidence; deployment and production verification remain separately approval-gated.
-    readiness_scope: final_production_reconciliation_only
+    readiness_scope: replay_only_production_verified
     manual_evidence_rule: Preserve every TASK-024 manual NOT RUN result as NOT RUN in the TASK-025 release checklist unless that exact check is later performed under its required approval.
     approved_scope:
       - replay_only_deployment_after_task_037
