@@ -7,6 +7,7 @@ import {
 import { buildAnalyzeAvailabilityResponse } from "../../../lib/ai/server/registry";
 import { analyze, type AnalyzeResult } from "../../../lib/ai/server/orchestrator";
 import { makePreflightError } from "../../../lib/ai/server/errors";
+import { isLiveAnalysisEnabled } from "../../../lib/ai/server/live-analysis-policy";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -15,7 +16,11 @@ export const maxDuration = 60;
 const MAX_BODY_BYTES = 1_000_000;
 
 export async function GET() {
-  return json(AnalyzeAvailabilityResponseSchema.parse(buildAnalyzeAvailabilityResponse({ liveAnalysisEnabled: true })));
+  return json(
+    AnalyzeAvailabilityResponseSchema.parse(
+      buildAnalyzeAvailabilityResponse({ liveAnalysisEnabled: isLiveAnalysisEnabled() }),
+    ),
+  );
 }
 
 export async function POST(request: NextRequest) {
@@ -33,6 +38,13 @@ export async function POST(request: NextRequest) {
     body = JSON.parse(bodyText);
   } catch {
     return json(rejected(makePreflightError("INVALID_REQUEST", "json_parse")), 400);
+  }
+
+  if (!isLiveAnalysisEnabled()) {
+    return json(
+      rejected(makePreflightError("LIVE_ANALYSIS_DISABLED", "live_analysis_policy")),
+      400,
+    );
   }
 
   const result = await analyze(body);

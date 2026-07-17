@@ -18,6 +18,7 @@ import {
 import { createTrustedCheckpointBundle } from "../../lib/analysis/replay";
 import { bundledGuidancePack } from "../../lib/guidance";
 import { STATIC_ADMISSION_RECORDS } from "../../lib/ai/server/admission";
+import { isLiveAnalysisEnabled } from "../../lib/ai/server/live-analysis-policy";
 import { buildAnalyzeAvailabilityResponse } from "../../lib/ai/server/registry";
 import { CFN_DEMO_FIXTURE_BINDING } from "../../lib/ai/server/types";
 
@@ -88,8 +89,9 @@ export function getTrustPageData(): TrustPageData {
       expectedChecks: parsed.expectedChecks,
     };
   });
-  const liveAnalysisEnabled = process.env.ENABLE_LIVE_ANALYSIS === "true";
-  const availability = buildAnalyzeAvailabilityResponse({ liveAnalysisEnabled });
+  const availability = buildAnalyzeAvailabilityResponse({
+    liveAnalysisEnabled: isLiveAnalysisEnabled(),
+  });
   const checkpoint = createTrustedCheckpointBundle();
 
   const checkpointReference: NonNullable<SystemCard["activeCheckpoint"]> = {
