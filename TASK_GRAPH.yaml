@@ -1,7 +1,7 @@
 schema_version: "1.0.0"
 project: contextfirst-nexus
 graph_status: approved_for_implementation
-task_count: 38
+task_count: 40
 
 authority:
   repository_rules: AGENTS.md
@@ -829,6 +829,80 @@ tasks:
       - tests/unit/ai/shared/live-analysis-policy.test.ts
     verifies:
       - npx vitest run tests/contracts/api tests/unit/ai/shared
+      - npm run typecheck
+      - npm run lint
+      - npm run build
+      - npm run verify
+      - git diff --check
+
+  - id: TASK-039
+    title: Simplify replay-only analysis UX
+    stage: product_ux
+    wave: 14
+    status: ready
+    risk: high
+    dependencies: [TASK-018, TASK-025, TASK-038]
+    packet: tasks/TASK-039.md
+    outcome: Remove practitioner-facing provider and model controls, auto-bind only the sole selectable bundled replay release, and provide one fail-closed plain-language Start analysis experience while preserving truthful replay provenance.
+    owns:
+      - features/purpose/case-purpose-brief-form.tsx
+      - features/purpose/purpose-workspace.tsx
+      - features/analysis/provider-selection/
+      - features/analysis/provider-recovery/
+      - features/analysis/run-controller/index.ts
+      - components/shell/case-shell.tsx
+      - tests/components/purpose/
+      - tests/components/provider/
+      - tests/components/shell/shell.test.tsx
+      - tests/e2e/task-039-simplified-analysis.spec.ts
+      - tests/a11y/task-039-purpose-a11y.spec.ts
+    verifies:
+      - npx vitest run tests/components/purpose tests/components/provider tests/components/shell
+      - npm run typecheck
+      - npm run lint
+      - npm run build
+      - npx playwright test tests/e2e/task-039-simplified-analysis.spec.ts
+      - npx playwright test tests/a11y/task-039-purpose-a11y.spec.ts
+      - git diff --check
+
+  - id: TASK-040
+    title: Managed server-side provider routing and safe fallback
+    stage: contracts_and_provider_orchestration
+    wave: 15
+    status: blocked
+    risk: critical
+    dependencies: [TASK-006, TASK-011, TASK-015, TASK-016, TASK-026, TASK-038, TASK-039]
+    packet: tasks/TASK-040.md
+    outcome: Reconcile the live-analysis contracts and architecture, then replace browser-selected live providers with bounded admission-gated server routing that accepts one result, records safe provenance, and never uses replay as a live fallback.
+    owns:
+      - docs/CONTRACTS.md
+      - docs/ARCHITECTURE.md
+      - lib/contracts/index.ts
+      - tests/contracts/shared/contracts.test.ts
+      - app/api/analyze/route.ts
+      - lib/ai/server/canonical-input.ts
+      - lib/ai/server/errors.ts
+      - lib/ai/server/managed-routing.ts
+      - lib/ai/server/orchestrator.ts
+      - lib/ai/server/recovery.ts
+      - lib/ai/server/request-policy.ts
+      - lib/ai/server/registry.ts
+      - lib/ai/server/types.ts
+      - lib/security/provider-boundary.ts
+      - lib/security/safe-logging.ts
+      - features/analysis/run-controller/index.ts
+      - features/purpose/purpose-workspace.tsx
+      - tests/contracts/api/analyze-route.test.ts
+      - tests/components/provider/run-controller.test.ts
+      - tests/components/purpose/purpose-workspace.test.tsx
+      - tests/unit/ai/orchestration/orchestrator.test.ts
+      - tests/unit/ai/orchestration/managed-routing.test.ts
+      - tests/unit/ai/shared/shared-ai-boundary.test.ts
+      - tests/unit/security/managed-routing-boundary.test.ts
+    verifies:
+      - npx vitest run tests/contracts/shared tests/contracts/api
+      - npx vitest run tests/unit/ai/orchestration tests/unit/ai/shared tests/unit/security/managed-routing-boundary.test.ts
+      - npx vitest run tests/components/provider/run-controller.test.ts tests/components/purpose/purpose-workspace.test.tsx
       - npm run typecheck
       - npm run lint
       - npm run build

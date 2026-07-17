@@ -16,6 +16,12 @@ It is the single source of truth for:
 
 No real person, organization, court, proceeding, place, identifier, or private case record may be used.
 
+### 1.1 Current analysis-entry direction
+
+The public judged flow is replay-only and shows one plain-language Start analysis action. It does not ask the practitioner to select a provider or model. Exactly one selectable bundled replay release is auto-bound and remains visibly local with `providerTransmission: false`; no service or multiple selectable services fail closed. The prepared checkpoint remains a separate action.
+
+Future managed live routing is outside the current public demo and remains subject to TASK-040 contract reconciliation plus every evaluation, admission, credential, spend, provider-call, and deployment approval.
+
 ## 2. Demo objective
 
 The demo must prove one focused proposition:
@@ -463,14 +469,14 @@ An optional run comparison may show that D08 adds partial corroboration only to 
 
 - Select the synthetic adult packet.
 - Complete or show the Case Purpose Brief.
-- Point to the synthetic-data disclosure and the selected live-provider or bundled-replay disclosure.
-- Confirm that analysis has not started merely because the purpose or provider choice was saved.
+- Point to the synthetic-data and consolidated bundled-replay disclosure.
+- Confirm that analysis has not started merely because the purpose was saved.
 
 ### 0:30 to 0:50, processing and coverage
 
 - Show the packet coverage manifest.
 - Show suggested masking and safe view.
-- Confirm that purpose, authority, coverage, masking, leak scan, release selection, and the matching disclosure acknowledgement are complete, then use the explicit Start analysis action once.
+- Confirm that purpose, authority, coverage, masking, leak scan, and the consolidated replay disclosure are complete, then use the explicit Start analysis action once.
 - For the judged replay path, state that Start analysis dispatches local deterministic replay and does not call a live provider.
 - Point out the missing non-critical page and explain that consequential missing coverage would block export.
 - Show the embedded instruction quarantined as untrusted content.
@@ -533,7 +539,7 @@ The first implementation must support at least ten lightweight fixture families.
 | EVAL-012A | Provider timeout | Preserve safe work, show stage failure, create no partial brief, and offer only explicit eligible operational recovery |
 | EVAL-012B | Invalid structured response | Reject the response, create no partial brief, and do not offer provider switching as a bypass |
 
-EVAL-012A must be exercised against each statically admitted OpenAI, Gemini, and Mistral live adapter. It must prove that any available retry, alternate admitted provider, and bundled deterministic replay actions are explicit and that no action starts automatically. The stateless API response must contain no recovery metadata. The browser reducer must validate the pending command and preserved failed run before creating a separate linked run, and proposals from separate runs must never be merged. It must also simulate a browser network loss and invalid response envelope, prove that pending state clears through `record_live_analysis_transport_failure`, preserve the prior active run, and create no run or recovery link for the unknown remote outcome. EVAL-012B must prove that invalid structured output is rejected and never presents provider switching as a safety bypass.
+EVAL-012A must exercise each separately approved and statically admitted live adapter through the managed-routing harness. It proves deterministic order, eligible operational fallback, forbidden-failure stops, one canonical input, one accepted result, no proposal merging, safe attempt provenance, and no replay substitution. Browser network loss and invalid response envelopes must stop on unknown remote outcome. EVAL-012B proves that invalid structured output is rejected and never triggers another provider as a safety bypass.
 
 EVAL-010 must also exercise the complete manual ambiguous-citation path. The source, page, and one candidate-eligible canonical segment are known, but the lookup text occurs at multiple bounded exact-codepoint ranges inside that segment. Post-validation returns one candidate with `supportStatus: citation_unresolved` and `reviewStatus: pending`, plus a range-null `ambiguous_match` citation, rather than quarantining it. The practitioner selects only a resolver-recomputed range in that same segment, dispatches `resolve_citation`, waits for the `CitationResolutionDecision`, updated canonical source-slice citation, support recalculation, and safe audit event, and only then opens the chosen source range. A unique normalized lookup may validate an `exact_match` and must store the exact canonical slice. Multiple normalized-only matches, cross-segment ambiguity, a component-side validity change, or direct source opening fail the fixture and quarantine the proposal where applicable.
 
@@ -541,7 +547,7 @@ When the unpaid Gemini configuration is enabled, every evaluation request must u
 
 When the unpaid Mistral configuration is enabled, the same exact allowlisted bundled synthetic fixture restriction applies. A non-allowlisted fixture, wrong digest, wrong origin, or incompatible service tier must be blocked before provider transmission.
 
-Provider continuity is an explicit user-controlled workflow, not a fallback chain. Eligible options are displayed in this order: OpenAI, Gemini, Mistral, then Bundled deterministic replay. A service-tier failure, quota exhaustion, rate limit, timeout, or outage never starts another option automatically. Each selected option produces its own terminal execution. The browser reducer alone creates and links the run after validating local history, preserves any failed run, and keeps proposals separate. A preflight rejection creates no run and preserves the prior active run. The system card must show the actual provider, exact release configuration, requested and returned model when available, service tier, retention setting, and browser-validated recovery linkage.
+The public demo uses bundled replay only and never calls a provider. Future live continuity is a bounded server-managed workflow in OpenAI, Gemini, Mistral, then separately evaluated fourth-provider order. It may advance only for DEC-045's classified operational failures, never merges proposals, stops on unknown remote execution, and never substitutes replay. The system card must show safe attempt metadata plus the actual final provider and exact release when live routing is separately approved.
 
 Evaluation output is versioned admission evidence only. It cannot enable a provider. Runtime authority is the reviewed fail-closed static admission record that matches the report identity, digest, exact release, adapter, settings, fixtures, schemas, ruleset, required runs, and blocking gates. Mistral also requires coordinator-recorded evidence that exact release `mistral-small-2603` is available to the deployed unpaid account. Environment values, runtime report files, and provider responses cannot promote any release.
 
@@ -577,7 +583,7 @@ A failed fixture must remain visible in the Safety Lab and release notes. It mus
 - The missing page is visible.
 - The injected instruction is ignored as a command.
 - The source drawer opens the exact segment used.
-- The explicit Start analysis action remains unavailable until prerequisites pass and invokes only the chosen live release or local replay once.
+- The explicit Start analysis action remains unavailable until prerequisites pass and, in the public demo, invokes only the automatically bound local replay once.
 - A stateless live response contains no recovery metadata; the browser reducer creates or preserves runs and attaches any validated link.
 - A preflight rejection creates no run and preserves any prior active run.
 - The EVAL-010 rehearsal resolves an ambiguous citation only through `resolve_citation`, waits for canonical state and audit, and then opens the selected source.
@@ -587,7 +593,7 @@ A failed fixture must remain visible in the Safety Lab and release notes. It mus
 - Evidence withdrawal reopens dependent items.
 - Early export is blocked.
 - Final PDF and JSON include only reviewed redacted content.
-- The system card reports the selected and attempted providers, release configurations, service tiers, reviewed static admission, matched evaluation evidence, run linkage, provider transmission, prepared-checkpoint provenance, and replay behavior.
-- Off-camera recovery rehearsal covers every statically admitted and enabled OpenAI, Gemini, and Mistral release and proves that quota or outage recovery is explicit, follows the frozen display order, and preserves the failed attempt.
+- The system card reports attempted providers, final accepted provider/release, service tiers, reviewed static admission, matched evaluation evidence, provider transmission, prepared-checkpoint provenance, and replay behavior.
+- Off-camera managed-routing tests cover every statically admitted and enabled release and prove classified fallback, frozen order, isolated attempts, and preserved safe provenance without live calls in the public demo.
 - Off-camera admission rehearsal proves that evaluation report generation cannot enable a release and that Mistral remains unavailable without both matched passed evidence and deployed-account release availability.
 - The full flow completes within three minutes without hiding safety behavior.

@@ -14,6 +14,10 @@ The method uses a rolling pool:
 
 Parallel work reduces waiting only when dependencies and file ownership are respected. It does not permit workers to guess missing contracts or edit the same files concurrently.
 
+### 1.1 DEC-045 continuation sequence
+
+After the integrated TASK-001 through TASK-038 baseline, TASK-039 is the only new worker that may start. It owns the replay-only Purpose UX simplification. TASK-040 remains blocked and receives no worktree until TASK-039 is integrated. TASK-040 then begins with shared contract and architecture reconciliation before any managed-routing implementation.
+
 ## 2. Roles
 
 ### Coordinator
@@ -175,7 +179,7 @@ A feature worker must not:
 - add a competing local type for convenience;
 - widen an API request with raw text, direct identifiers, arbitrary providers, or browser-supplied model settings;
 - weaken provider, review, citation, privacy, or export gates;
-- change the frozen provider order or create automatic fallback;
+- change the DEC-045 managed-routing order or create unclassified, browser-controlled, safety-bypassing, or replay-substitution fallback;
 - add a dependency without an approved bootstrap or dependency task.
 
 When a contract change is genuinely necessary:
@@ -204,6 +208,8 @@ Exact task IDs and dependencies live in `TASK_GRAPH.yaml`. Use this dependency o
 10. Integrate the model evaluation harness, then TASK-026 for the reviewed static admission handoff, and then the Trust and Safety Lab that consumes both measured results and admission evidence.
 11. Run cross-feature end-to-end, accessibility, privacy, security, performance, and deterministic verification after every required user-facing flow is integrated.
 12. Perform release integration, rehearsal, and maintainer handoff last.
+13. Integrate TASK-039's replay-only analysis-entry simplification.
+14. Only after TASK-039 integrates, reconcile contracts and architecture and then implement TASK-040's bounded managed server routing.
 
 These are dependency layers, not global waves. Independent work in a later numbered line may start while unrelated work in an earlier line continues when `TASK_GRAPH.yaml` marks it ready. Within one dependency chain, integrate the smallest stable shared dependency before its consumers. A UI can use typed fixture stubs only when its task packet defines them and a later integration task owns replacement with the real service.
 

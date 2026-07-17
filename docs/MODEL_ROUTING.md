@@ -2,7 +2,7 @@
 
 ## 1. Status and purpose
 
-This document freezes the P0 model-provider strategy for ContextFirst Nexus. It defines how the application selects a live provider, how it recovers when a provider is unavailable, and how every provider is held to the same product, safety, citation, and evaluation contracts.
+This document freezes the model-provider strategy for ContextFirst Nexus. It defines replay-only public behavior, future managed live routing, safe fallback classification, and the common product, safety, citation, and evaluation contracts.
 
 It does not claim that any provider is accurate enough for this product. Evaluation produces evidence only. A provider becomes selectable only after a separate reviewed handoff records a matching passed status in the version-controlled, fail-closed static admission registry.
 
@@ -12,6 +12,8 @@ The controlling order is:
 2. `docs/CONTRACTS.md`
 3. `docs/ARCHITECTURE.md`
 4. This document
+
+DEC-045 supersedes practitioner-controlled provider selection and switching. TASK-039 removes those controls from the replay-only public flow. TASK-040 must reconcile shared contracts and architecture before implementing future server-managed live routing.
 
 ## 2. P0 decision
 
@@ -24,7 +26,7 @@ P0 defines three live provider adapters and one local replay path:
 | `mistral-small-free-v1` | Mistral | `mistral-small-2603` | Free-tier live recovery candidate after Gemini | Static admission and deployed-account availability required; initially unselectable |
 | `prepared-replay-v1` | Local fixture | Frozen replay output | Demo continuity when no live provider is used | Deterministic and visibly labelled |
 
-The interface lets the practitioner choose a selectable, statically admitted live-provider release before analysis. The browser switches a release configuration, never an API key. Keys remain server-side.
+The interface does not let the practitioner choose a provider or model. The public deployment automatically binds only its sole selectable local replay release. Future live release selection is server-managed; keys remain server-side.
 
 OpenAI is the initial baseline, not a permanent winner. Gemini or Mistral may become recommended only if the exact release configuration passes the same development and fresh held-out assurance gates, completes the reviewed static admission handoff, and performs better for the project task. The decision must be recorded before the recommendation changes. Mistral remains unselectable until `mistral-small-free-v1` has a matching passed static admission record and a coordinator-recorded `available` deployed-account release status.
 
@@ -73,7 +75,7 @@ The following providers were screened using current official documentation. This
 | OpenRouter free routing | Access to multiple free models | Downstream provider and model availability can change; random routing is unacceptable for evidence processing |
 | DeepSeek V4 | Extremely low price and long context | JSON mode is not strict schema enforcement, empty output is documented, and current data terms are a poor fit for this domain |
 
-Cerebras remains the first reserve evaluation candidate. It is not implemented, shown in the selection list, or offered by the recovery interface until a decision-log entry, the full assurance suite, and a reviewed static handoff admit an exact release configuration.
+DEC-045 identifies Groq `openai/gpt-oss-120b` as the current fourth-provider evaluation candidate. This is a product research direction only: its exact API behavior, structured-output compatibility, data use, retention, deterministic and live evaluation, and static admission remain unverified. It is not implemented, configured, shown, called, or admitted. Earlier reserve rankings are superseded.
 
 ### 4.1 Official screening sources
 
@@ -141,62 +143,53 @@ The safe public projection reports:
 
 It never reports keys, raw environment values, internal endpoints, or provider error bodies. A configured key does not prove provider health.
 
-## 7. Selection and recovery flow
+## 7. Analysis entry and managed routing
 
-### 7.1 Before analysis
+### 7.1 Replay-only public analysis
 
-1. The Purpose screen shows the selectable, statically admitted provider choices returned by `GET /api/analyze`.
-2. The user selects OpenAI, Gemini, Mistral, or the visibly labelled Bundled deterministic replay, not live AI mode. Options are displayed in that order, with replay always last.
-3. A live choice displays its provider, exact model, tier, data flow, retention limitation, training-use disclosure, and last verification date.
-4. The user acknowledges that provider-specific disclosure version.
-5. The browser dispatches `start_live_analysis`, validates the prerequisites and any locally requested recovery relationship, and creates a memory-only pending record.
-6. `POST /api/analyze` receives the strict `AnalyzeRequest`, which contains no `recoveryOfRunId`, and verifies the selected release configuration and acknowledgement before transmission.
+1. The Purpose screen shows no provider or model cards.
+2. The client auto-binds analysis only when the public availability projection contains exactly one selectable local replay release and no selectable live release.
+3. Zero or multiple selectable services fail closed with a plain service-unavailable state.
+4. Start analysis dispatches the trusted local replay command and records `providerTransmission: false`.
+5. The prepared checkpoint remains a separate, explicitly labelled action.
 
-The live route is stateless. It does not receive, verify, echo, log, or persist recovery linkage. It returns a terminal live execution result only. The pending request, start command ID, source case revision, and locally derived recovery metadata remain in browser memory and are excluded from `sessionStorage`.
+### 7.2 Future managed live routing
 
-Starting the pending request does not increment `caseRevision`, and other material commands remain blocked until the request is resolved or reset. If the browser receives no parseable response, it records a safe transport failure, clears the matching pending state, preserves the prior active run, and creates no run or recovery link. The remote outcome is shown as unknown and any later attempt is explicit and unlinked.
+TASK-040 begins by reconciling and versioning the request, attempt, response, audit, disclosure, and run-provenance contracts. Only then may one browser analysis intent enter a bounded server route. Candidate order is:
 
-### 7.2 After a live failure
+1. OpenAI.
+2. Gemini.
+3. Mistral.
+4. Groq `openai/gpt-oss-120b` only after its own frozen configuration, evaluation, reviewed static admission, credentials, spend approval, provider-call approval, and deployment approval.
 
-A failed run remains in the case history. For an eligible operational failure, the interface shows only the actions permitted by the safe error contract:
+Each considered release must have current matching static admission. Missing, stale, mismatched, disabled, or unapproved admission fails closed. The global `ENABLE_LIVE_ANALYSIS` server gate remains authoritative. The public deployment remains replay-only.
 
-- retry the same provider when same-provider retry is safe;
-- switch to any remaining selectable, statically admitted live provider when cross-provider recovery is allowed and after acknowledging its disclosure;
-- choose the bundled deterministic replay when replay recovery is allowed, shown after all eligible live-provider choices.
+The router uses one canonical approved redacted input, records only safe operational attempt metadata, accepts at most one final result, never merges provider outputs, never rotates multiple keys or accounts to evade quota, enforces a hard maximum attempt count, and aborts immediately after acceptance. Final provenance names the actual provider and exact release used. Logs contain no raw provider errors, request bodies, source text, prompts, identifiers, or credentials.
 
-If configuration or release validation rejects the request before a run starts, the response contains `run: null`. The browser reducer clears the matching pending request, records a safe `analysis_preflight_rejected` audit event, creates no run, and preserves the previously active run. The same eligible recovery choices may be shown.
-
-For a terminal started execution, the browser reducer requires the matching pending command and unchanged source case revision. It validates the recovery relationship against the append-only failed-run history, attaches the locally derived recovery metadata, and appends a separate run. Switching providers never overwrites the failed run, and candidates from different live attempts are never merged.
-
-P0 does not silently switch companies. The display order OpenAI, Gemini, Mistral, and replay is not an attempt chain. Every live switch is an explicit practitioner action that creates a separate linked run. This prevents invisible data-flow changes, surprise costs, and safety-rule shopping while preserving immediate recovery choices when credits, quota, or availability fail.
-
-Replay is never automatic and is never described as live AI.
-
-### 7.3 Failures that permit provider switching
+### 7.3 Failures eligible to advance
 
 - provider not configured;
-- provider disabled;
-- provider service tier unavailable;
+- authentication failure before processing;
 - quota exhausted;
 - rate limited;
-- timeout;
-- temporary provider unavailability;
-- provider authentication failure.
+- confirmed temporary provider unavailability;
+- confirmed request not executed.
 
-For not-configured, disabled, service-tier, or authentication failures, the interface may offer the remaining selectable, statically admitted live providers in registry order, followed by bundled replay. It offers same-provider retry only after the deployment configuration or service access changes.
+### 7.4 Failures that stop routing
 
-### 7.4 Failures that do not trigger a provider recovery suggestion
-
-- invalid or prohibited input;
-- privacy leak detection;
+- privacy or leak-scan failure;
+- prohibited input;
 - provider refusal;
-- prompt-injection propagation;
-- prohibited conclusion;
+- unsafe output or prohibited conclusion;
 - invalid citation or quote;
-- semantically invalid structured output;
-- any attempt to bypass a safety result by asking another model.
+- semantic validation failure;
+- malformed structured output;
+- prompt-injection propagation;
+- timeout or transport failure with unknown remote execution;
+- partial or accepted output;
+- any attempt to bypass a safety result.
 
-The user may start a new, separately recorded analysis run after correcting the underlying issue, but the application does not present model switching as a way around a safety rejection.
+Replay is separate from this live chain. It is never presented as another provider's result or silently substituted after a live failure.
 
 ## 8. Provider-specific rules
 
@@ -312,17 +305,17 @@ The dependency-bootstrap task is the only task allowed to add `@google/genai` or
 
 After shared contracts and the release registry are implemented, OpenAI, Gemini, and Mistral adapter tasks may run in parallel. No adapter task may edit shared contracts, the route orchestration, the static admission registry, or another adapter.
 
-The evaluation task produces evidence only. A later reviewed static-admission handoff owns the version-controlled admission update. The provider selector, recovery UI, system card, and route consume that reviewed state after the handoff is integrated.
+The evaluation task produces evidence only. A later reviewed static-admission handoff owns the version-controlled admission update. The managed router, system card, audit, and exports consume that reviewed state after the handoff is integrated.
 
 ## 13. Acceptance criteria
 
 - OpenAI, Gemini, and Mistral are separate server-only adapters behind one application contract.
-- The user switches a selectable, statically admitted release configuration, not a key.
-- A missing or exhausted provider account does not block explicit selection of another statically admitted live configuration.
-- A live-provider outage does not remove the explicit replay path, which remains the last displayed recovery option.
+- The practitioner never selects a provider, release configuration, or key.
+- A missing or exhausted provider may advance only through the classified admitted managed-routing policy.
+- The public replay path remains separate from live-provider outage handling.
 - A failed live run returns no partial candidates.
-- Provider switching is explicit, acknowledged, and recorded.
-- No live attempt silently switches provider or replay mode.
+- Managed provider progression is bounded, classified, and recorded with safe provenance.
+- No live attempt enters replay mode.
 - Free Gemini accepts only the exact bundled synthetic fixture.
 - Free Mistral accepts only the exact bundled synthetic fixture and carries conservative training, 30-day retention, and no-ZDR disclosure.
 - `mistral-small-free-v1` remains unselectable until the exact release has a matching passed static admission and coordinator-recorded deployed-account availability.

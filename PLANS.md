@@ -253,7 +253,7 @@ A worker must stop and request a decision when the work appears to require:
 - a new external service;
 - arbitrary upload or real-data handling;
 - weaker review, citation, privacy, or export gates;
-- automatic provider fallback or replay substitution;
+- unclassified or browser-controlled provider fallback, safety-bypassing fallback, or any replay substitution;
 - cloud, billing, quota, deployment, or production-setting changes;
 - edits outside the exclusive write scope.
 
@@ -269,14 +269,14 @@ Provider work is split into separate bounded layers:
 4. Gemini native adapter.
 5. Mistral native adapter.
 6. Analysis route orchestration and safe errors.
-7. Provider selection and disclosures.
-8. Provider recovery interface.
+7. Replay-only plain-language analysis entry and consolidated disclosure.
+8. Contract-reconciled managed server routing and safe operational fallback.
 9. System card and audit provenance.
 10. Provider contract and evaluation tests.
 
-Adapter tasks may run in parallel only after shared contracts and approved dependencies are integrated. An adapter task must not edit route orchestration, another adapter, the provider selector, or the recovery interface.
+Adapter tasks may run in parallel only after shared contracts and approved dependencies are integrated. An adapter task must not edit route orchestration, another adapter, the practitioner analysis-entry flow, or the managed router.
 
-Every live run calls exactly the selected release. Provider failure recovery is a later explicit user action. Replay remains a separate local path.
+The public flow calls only its sole auto-bound local replay release. Future live work uses the DEC-045 managed order only after contract reconciliation, static admission, and all runtime approvals. Replay remains a separate local path.
 
 ## 11. Approval gates
 

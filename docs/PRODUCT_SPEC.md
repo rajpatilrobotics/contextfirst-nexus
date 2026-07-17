@@ -13,6 +13,14 @@ The controlling order is:
 
 Implementation must not present planned behavior as completed behavior.
 
+### 1.1 Superseding analysis-entry direction
+
+DEC-045 replaces the earlier practitioner-controlled provider-selection and provider-recovery experience. The practitioner sees one plain-language **Start analysis** action and no provider cards, model selectors, release selectors, or provider-switch controls.
+
+For the current replay-only public deployment, the Purpose flow automatically binds the one selectable bundled deterministic replay release. It fails closed with a plain service-unavailable message when replay is unavailable or when more than one service is unexpectedly selectable. The prepared checkpoint remains a separate action. Detailed provenance remains available in Trust, audit, and exports, and replay remains labelled local with `providerTransmission: false`.
+
+TASK-040 will reconcile the live request contracts before implementing future server-managed routing. Until it integrates and receives every separate runtime approval, no live provider is enabled or silently selected.
+
 ## 2. Product statement
 
 ContextFirst Nexus helps an authorized practitioner organize a synthetic trafficking-related forced-criminality case packet into a source-linked timeline, a Charge-Coercion Nexus, separated review lanes, and a reviewed redacted handoff.
@@ -42,7 +50,7 @@ The hackathon version may use a role-selection screen for demonstration. This is
 The practitioner needs to:
 
 - state the authorized purpose before processing;
-- explicitly choose and acknowledge the analysis provider before processing;
+- start analysis without choosing a provider or model and receive a clear unavailable state if the approved service boundary is not singular;
 - understand which pages and source types were processed;
 - inspect and correct suggested masking;
 - see events in chronological context;
@@ -210,9 +218,9 @@ The judged flow can start without external files or end-user accounts. Live anal
 - Country or jurisdiction for later legal verification.
 - Source language and translation status.
 - Data origin: bundled synthetic. Harmless authorized public material remains a future option and is disabled in P0.
-- Analysis mode: OpenAI using the configured approved model, Google using Gemini 3.5 Flash, Mistral AI using the exact statically admitted and deployed-account-available `mistral-small-2603` release, or the separately labelled bundled deterministic replay shown last.
+- Analysis mode: bundled deterministic replay for the public deployment; future managed live analysis remains server-gated and separately approved.
 - Consent or other lawful/organizational authority attestation, where applicable.
-- Selected live-provider data-flow, service-tier, data-use, and retention disclosure acknowledgement, or acknowledgement that replay is frozen local output and not live AI.
+- Consolidated analysis data-flow acknowledgement, including that replay is frozen local output and not live AI in the public deployment.
 - Confirmation that law-enforcement cooperation is not a condition of analysis.
 
 #### Rules
@@ -221,14 +229,14 @@ The judged flow can start without external files or end-user accounts. Live anal
 - The system must not force a false claim of survivor consent when another lawful basis is used.
 - The bundled synthetic fixture records consent or authority basis as Not applicable, synthetic fixture.
 - Real survivor, client, or private case material is rejected in the hackathon prototype even if a user claims authorization.
-- No live provider or replay is silently preselected. The practitioner must choose one analysis mode.
-- The provider choice must show the provider, model, service tier, content categories sent, data-use terms, retention limitation, and known limitations in plain language.
-- Acknowledgement is release-specific. Changing a live provider or moving between live analysis and replay clears the earlier acknowledgement and invalidates export readiness.
+- No live provider is silently selected. The public deployment auto-binds only the sole selectable local replay release and fails closed otherwise.
+- The consolidated disclosure explains the applicable data flow and replay limitation without provider/model controls.
+- Detailed actual provider and release provenance remains available in Trust, audit, and export records.
 - Unpaid Gemini is available only for the verified bundled synthetic fixture and is blocked for every other data origin.
 - Free Mistral is available only for the exact verified bundled synthetic fixture and is blocked for every other data origin. Its disclosure must state whether training use is enabled or opted out for the actual account, that inputs and outputs may be retained for up to 30 days for abuse monitoring, and that free Mistral has no zero-data-retention claim or dependency in P0.
 - A future paid Mistral tier does not authorize real, private, client, or survivor data and does not remove future-pilot requirements.
 - Provider credentials remain server-side and are never shown in the form, browser, URL, error text, or downloadable output.
-- Processing or replay loading is blocked until required fields, authorization attestation, release selection, and its matching acknowledgement are complete.
+- Processing or replay loading is blocked until required fields, authorization attestation, exact-one service availability, and the consolidated acknowledgement are complete.
 
 #### Acceptance
 
@@ -246,7 +254,7 @@ The saved brief appears in the audit history and is referenced by every export.
 - Treat embedded document instructions as untrusted source content.
 - Provide sensitive-content warnings and a redacted view by default.
 - Allow the user to open the original only through an intentional reveal action.
-- After purpose, coverage, masking, and leak-scan prerequisites pass, show one explicit Start analysis action for the already acknowledged live release or replay choice.
+- After purpose, coverage, masking, and leak-scan prerequisites pass, show one explicit Start analysis action. In the replay-only public deployment it invokes only the automatically bound local replay release.
 
 #### Acceptance
 
@@ -272,24 +280,24 @@ The user can identify exactly what the system did not process. A missing or unre
 - A model timeout or invalid structured response must not be presented as a completed analysis.
 - The original packet remains available after a recoverable failure.
 - Every live response passes the same canonical schema, citation, coverage, privacy, prompt-injection, prohibited-inference, and semantic-validation gates regardless of provider.
-- The active provider and live or replay mode remain visible throughout processing and review.
-- A browser run controller builds only the strict ID-and-mask request, dispatches the central start command, makes one selected live request or invokes local replay, and sends the terminal result back through the matching reducer command.
+- The plain-language analysis mode remains visible; detailed actual provider provenance remains in Trust, audit, and exports.
+- In public replay-only mode, the browser run controller invokes only local replay. TASK-040 later replaces the legacy live request with provider-neutral intent after contract reconciliation.
 - The stateless live route does not receive or verify browser recovery history. A pending request is kept in memory only, and the reducer activates a terminal result only when its start command and source case revision still match.
 - Starting a request does not increment the source case revision. Other material changes remain blocked until the matching response, safe preflight rejection, transport failure, or Reset Case clears the pending request.
 - If the browser receives no parseable response, it records a safe transport failure, states that the remote outcome is unknown and no output was accepted, clears pending state, preserves the prior active run, and creates no run or recovery link.
 - Browser persistence pauses while a live request is pending. Refresh restores the prior validated stable snapshot, re-derives case status, and never resumes or retries the request. The interface warns that the remote outcome cannot be inferred after refresh.
 
-#### Provider failure recovery
+#### Managed analysis availability and future recovery
 
-- A provider is never replaced silently or automatically.
-- Provider not configured, provider disabled, service tier unavailable, authentication failure, rate limiting, quota exhaustion, timeout, or transient provider unavailability may offer only the applicable Retry selected provider, Choose another provider, and Use labelled replay actions.
-- The recovery interface lists remaining eligible live providers in OpenAI, Gemini 3.5 Flash, and Mistral Small 4 order, with Bundled deterministic replay, not live AI shown last. This is display order only and never an automatic attempt chain.
-- Choosing another eligible live provider opens its disclosure, requires a fresh provider-specific acknowledgement, and starts a new run that the browser reducer links to the preserved failed run after local validation.
+- The replay-only public deployment shows no provider recovery controls and never enables a live provider. Replay is automatically bound only when it is the sole selectable service.
+- Future live recovery is server-managed, bounded, and limited to DEC-045's classified operational failures after TASK-040 reconciles contracts and architecture.
+- The future order is OpenAI, Gemini, Mistral, then an evaluated and admitted fourth provider; replay is separate and never a live fallback result.
+- Provider attempts retain safe provenance, use one canonical approved redacted input, never merge outputs, and stop immediately after one accepted result.
 - If a valid run began, the earlier failed run remains in audit history and run status. It is not converted into the new run.
 - If provider configuration or release validation rejects the request before a run begins, the interface records a safe preflight audit event and does not invent a failed run.
 - If the browser transport fails or the response envelope cannot be parsed, the interface records a separate safe transport-failure event, creates no run, and treats any later attempt as a new explicit unlinked attempt.
 - A refusal, safety block, privacy block, invalid structured response, failed citation, or semantic-policy failure does not offer provider switching as a bypass.
-- Replay is a separate, version-matched mode selected by the practitioner, shown after all eligible live-provider choices, and always labelled Bundled deterministic replay, not live AI.
+- Replay is a separate, version-matched local mode and is always labelled Bundled deterministic replay, not live AI.
 - `DEMO-CHECKPOINT-REVIEW` resolves only its fixed trusted registry ID and atomically loads the exact versioned synthetic purpose, fixture, approved masking, coverage, completed processing, replay run, candidates, citations, and ordered fixture-reviewer decisions after digest, count, ownership, and canonical outcome-hash checks pass. It accepts no browser-supplied bundle and is not an additional analysis mode, a live-provider result, or a prior user session.
 - Error messages identify a safe category and next action without showing keys, key fragments, secret names, billing details, project details, request content, or raw provider responses.
 
@@ -506,7 +514,7 @@ Must disclose:
 
 - intended and prohibited uses;
 - prototype data rule;
-- selected provider, every attempted provider, exact release configuration and evaluation status, requested and returned model identifiers when known, service tier, and run mode;
+- every attempted provider, the final accepted provider/release and evaluation status when applicable, requested and returned model identifiers when known, service tier, and run mode;
 - separate run history from typed `SystemCard.nonRunAttempts`: a preflight rejection is visibly not transmitted and not started, while a browser transport failure has unknown transmission and unknown remote outcome; both accept no output and neither has a run ID or appears in attempted-run history;
 - static provider-admission status, matched evaluation-report identity and digest, and the safe deployed-account availability status where required;
 - what content is sent to external providers;
@@ -514,7 +522,7 @@ Must disclose:
 - actual provider storage or retention setting plus its limitation, without unsupported zero-retention claims;
 - for free Mistral, the actual training-use or opt-out state, the up-to-30-day abuse-monitoring retention limitation, and the fact that free zero data retention is not enabled or claimed;
 - prepared-checkpoint ID, checkpoint version, replay version, and fixture-reviewer provenance when a checkpoint is active;
-- safe failure categories and any explicit provider switch;
+- safe failure categories and managed attempt progression;
 - human-review requirements;
 - known failure modes;
 - fixture count and measured results;
@@ -533,7 +541,7 @@ The prototype may combine screens to keep the judged flow focused, but it must p
 
 1. Landing and boundaries.
 2. Synthetic case chooser and case workspace.
-3. Case Purpose Brief with analysis-provider selection and disclosure.
+3. Case Purpose Brief with one plain-language analysis start and consolidated data-flow disclosure.
 4. Documents, masking, processing, coverage, and explicit analysis launch.
 5. Main workspace with timeline, Nexus, and source drawer.
 6. Review queue and protection or urgency lane.
@@ -556,16 +564,16 @@ No blank panel may imply that analysis succeeded.
 
 Provider-dependent areas must also define:
 
-- analysis mode not selected;
-- selected provider not configured;
-- provider disabled or authentication failed;
+- analysis service unavailable or unexpectedly ambiguous;
+- analysis service not configured;
+- live analysis disabled or authentication failed;
 - provider rate limited, quota exhausted, timed out, or temporarily unavailable;
 - provider response rejected by shared validation;
 - Mistral exact release admission evidence pending or failed, or deployed-account availability unverified or unavailable, and therefore not selectable;
-- explicit switch awaiting acknowledgement;
+- managed routing stopped or unavailable;
 - failed prior run retained;
 - preflight rejection shown with no invented run;
-- bundled replay selected and visibly labelled.
+- bundled replay bound and visibly labelled.
 - prepared checkpoint backed by bundled replay and loaded with fixture-reviewer provenance.
 
 ## 10. P0 acceptance criteria
@@ -590,10 +598,10 @@ The P0 prototype is accepted only when:
 16. The audit history explains practitioner changes.
 17. The system card and Safety Lab report only measured synthetic results, keep attempted runs separate from typed non-run attempts, and never fabricate a run for preflight or unknown-transport outcomes.
 18. The product makes none of the prohibited claims or inferences in docs/SAFETY_AND_DATA.md.
-19. The provider selector offers exactly three live choices in this order: OpenAI, Gemini 3.5 Flash, and Mistral Small 4, followed by bundled replay last.
-20. Each provider requires its own disclosure acknowledgement, and changing provider starts a new run.
-21. Provider failure recovery lists remaining eligible providers in the approved order, requires an explicit choice, preserves failed runs, and never silently or automatically substitutes a provider or replay.
-22. Refusal, safety, privacy, citation, schema, and semantic-validation failures cannot be bypassed by switching providers.
+19. The practitioner interface offers no provider or model selector; the public deployment auto-binds only the sole selectable local replay.
+20. A consolidated disclosure explains the applicable data flow while Trust, audit, and exports preserve detailed provenance.
+21. Future managed routing uses the admitted OpenAI, Gemini, Mistral, then separately evaluated fourth-provider order, preserves attempts, never merges outputs, and never substitutes replay.
+22. Refusal, safety, privacy, citation, schema, and semantic-validation failures stop managed routing and cannot be bypassed by another provider.
 23. Unpaid Gemini is unavailable unless the server verifies the bundled synthetic fixture.
 24. Free Mistral is unavailable unless the exact `mistral-small-2603` release passes evaluation, the reviewed static admission record confirms that evidence, coordinator-recorded deployed-account release availability is `available`, and the server verifies the exact bundled synthetic fixture; its disclosure reports training-use or opt-out state, up-to-30-day retention, and no free zero data retention.
 25. Provider errors and UI states expose no credentials, account identifiers, billing details, project details, or raw provider diagnostics.

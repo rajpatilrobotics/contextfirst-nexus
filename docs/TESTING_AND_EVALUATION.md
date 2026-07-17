@@ -6,6 +6,12 @@ This document freezes the P0 verification strategy for ContextFirst Nexus. It de
 
 It is not a report of completed tests. Measured results must be added only after the relevant command has actually run.
 
+### 1.1 DEC-045 verification migration
+
+TASK-039 replaces provider-selection component expectations with tests for one Start analysis action, exact-one replay auto-binding, fail-closed zero-or-multiple service availability, separate prepared checkpoint, truthful provenance, and zero provider transmission.
+
+TASK-040 must begin with contract and architecture reconciliation. Its focused tests must prove frozen live order, only eligible operational fallback, forbidden-failure stops, one canonical input per managed request, attempt isolation, no output merging, bounded attempts, safe logs, unknown-timeout stop behavior, exact final provenance, and fail-closed missing or stale admission. Groq `openai/gpt-oss-120b` remains evaluation-only and must not be called or admitted by these documentation changes.
+
 ## 2. Testing principles
 
 1. Test safety-critical rules as deterministic code.
@@ -149,19 +155,19 @@ Enumerated malformed-input matrix:
 Analysis lifecycle and recovery contract tests must also prove that:
 
 - `GET /api/analyze` returns the safe public projection of relevant release configurations and their reviewed static admission state, including safe non-selectable states such as disabled, not configured, not evaluated, failed evaluation, or unavailable deployed release;
-- the browser run controller builds only the strict `AnalyzeRequest`, dispatches `start_live_analysis`, and makes exactly one request to the selected live release only after canonical state contains the matching pending command;
+- after TASK-040 contract reconciliation, the browser run controller builds only the provider-neutral analysis intent and cannot select a live provider or routing order;
 - `POST /api/analyze` returns a terminal live execution result without recovery metadata and never reads browser run history;
 - `complete_live_analysis` or `fail_live_analysis` accepts only the matching in-memory pending command and unchanged source case revision, then the reducer creates the run and locally validates and attaches recovery metadata;
-- switching providers after a started failed run creates a new locally linked run and preserves the failed run;
+- managed attempts preserve safe attempt history and expose only one final accepted result;
 - `reject_live_analysis_preflight` creates no run, clears the matching pending request, preserves the previously active run, and appends only the safe preflight audit event;
 - `start_live_analysis` does not increment `caseRevision`, and every unrelated material command is blocked while its request is pending;
 - `record_live_analysis_transport_failure` accepts only the matching pending start and unchanged source revision, clears pending state, appends `analysis_transport_failed`, preserves the prior active run, and creates no run or recovery link;
 - a network loss, missing response, or invalid response envelope shows an unknown remote outcome and no accepted output, and any later explicit attempt is unlinked;
 - session persistence does not overwrite the last stable snapshot while a request is pending, and refresh restores that snapshot with re-derived non-processing status and no resumed request;
-- no live attempt silently calls another provider or deterministic replay;
+- live routing advances only for the allowlisted classified operational failures and never calls deterministic replay;
 - candidates from different provider attempts are never merged;
 - a refusal, citation failure, injection failure, prohibited conclusion, or semantic-validation failure does not present provider switching as a safety bypass;
-- retry and recovery options are derived from safe application error codes, not raw provider messages.
+- managed fallback classification is derived from safe application error codes, not raw provider messages.
 
 Provider-adapter and recovery tests must include:
 
@@ -178,9 +184,9 @@ Provider-adapter and recovery tests must include:
 | ADMISSION-STATIC-03 | Environment value, runtime report file, or provider response attempts promotion | Runtime admission remains unchanged |
 | ADMISSION-MISTRAL-01 | Passed report with missing or unavailable deployed-account release evidence | `mistral-small-free-v1` remains non-selectable |
 | ADMISSION-MISTRAL-02 | Passed report plus reviewed static admission and deployed-account release availability | Exact `mistral-small-2603` may become selectable only when also configured, enabled, acknowledged, and fixture eligible |
-| RECOVERY-ORDER-01 | Provider choice and alternate-provider recovery order | OpenAI, Gemini, Mistral, then Bundled deterministic replay; an eligible same-provider retry may appear first as its separate action |
-| RECOVERY-NO-AUTO-01 | Service-tier unavailability, quota exhaustion, rate limit, timeout, or outage | No provider or replay attempt starts without an explicit user action and current disclosure acknowledgement |
-| RECOVERY-RUN-01 | User selects an alternate provider | The browser reducer validates the failed-run link, creates a separate linked run from the terminal execution, preserves the failed run, and never merges outputs |
+| ROUTING-ORDER-01 | Managed live candidate order | OpenAI, Gemini, Mistral, then the separately evaluated and admitted fourth provider; replay is excluded |
+| ROUTING-FALLBACK-01 | Classified eligible operational failure | The next admitted live release may be attempted within the hard bound using the same canonical redacted input |
+| ROUTING-STOP-01 | Safety, validation, accepted/partial output, or unknown remote-execution failure | Routing stops, no output is merged, and replay is not substituted |
 
 ### 7.3 Shared domain values
 
@@ -316,7 +322,7 @@ Required behavior:
 
 - synthetic case chooser exposes only the approved bundled fixture and never an arbitrary upload control;
 - purpose form focuses its error summary and links to invalid fields;
-- purpose form requires cooperation neutrality, selected-provider disclosure, provider retention, excluded-decision, synthetic-data, and unverified-authority acknowledgements;
+- purpose form requires cooperation neutrality, consolidated data-flow disclosure, excluded-decision, synthetic-data, and unverified-authority acknowledgements without provider controls;
 - stage list retains completed work after a later failure;
 - coverage list exposes missing-page details;
 - masked content is the default and reveal is intentional;
@@ -333,14 +339,14 @@ Required behavior:
 - blocked Export opens actionable blockers;
 - blocker links move focus to the right remediation target;
 - live and replay labels are always visible when relevant;
-- the explicit Start analysis action remains unavailable until purpose, authority, coverage, masking, leak scan, release selection, and matching disclosure prerequisites pass;
-- one Start analysis activation invokes the browser run controller once, dispatches the matching start command, and never triggers an automatic provider or replay attempt;
+- the explicit Start analysis action remains unavailable until purpose, authority, coverage, masking, leak scan, and consolidated disclosure prerequisites pass;
+- in replay-only public mode, one Start analysis activation invokes exactly the sole auto-bound local replay and makes zero provider calls;
 - a pending live request disables duplicate launch, provider change, and every other material case action;
 - a simulated fetch rejection or invalid response envelope clears pending state through the canonical transport-failure command and shows no invented run;
 - pending live analysis is visible but not persisted to session storage;
 - preflight rejection creates no failed-run card and leaves any prior active run intact;
-- the provider selector shows only registry-approved live releases in the frozen OpenAI, Gemini, and Mistral order, makes only statically admitted, configured, and enabled releases selectable, places Bundled deterministic replay last, and never displays or accepts an API key;
-- provider recovery retains the failed run and requires the alternate provider's current disclosure acknowledgement;
+- no practitioner-facing provider or model selector is rendered;
+- zero or multiple selectable services produce a plain fail-closed unavailable state;
 - every status has text and accessible name, not color alone;
 - SystemCardPanel exposes actual provider and limitation fields, including failed or not-run results;
 - SystemCardPanel exposes the selected release before an attempt, all attempted runs, reviewed static provider admission, matched evaluation-report identity and digest, actual retention settings and limitations, and active checkpoint provenance;
@@ -360,8 +366,8 @@ Required behavior:
 5. Load all seven synthetic documents.
 6. Verify the missing page and unsafe embedded instruction are visible.
 7. Review and approve declared masking.
-8. Select a statically admitted live provider and acknowledge its disclosure, or choose the visibly labelled deterministic replay.
-9. Verify Start analysis is enabled only after every prerequisite passes, activate it once, and verify the browser run controller invokes only the selected live release or local replay.
+8. Confirm the replay-only public flow has automatically bound the visibly labelled deterministic replay and shows no provider controls.
+9. Verify Start analysis is enabled only after every prerequisite passes, activate it once, and verify zero provider transmission.
 10. Verify timeline, Nexus, three lanes, limitations, and unknowns.
 11. Open `CAND-TASK-0402` at `D05-P1-S05`.
 12. Verify `CAND-TL-ARRIVAL` remains an exact documented arrival event.
@@ -402,8 +408,8 @@ Assert:
 - A reviewable repeated-exact citation remains blocked until `resolve_citation` succeeds; the source drawer opens the chosen range only after canonical state and audit update. Multiple normalized-only and other unsafe ambiguity never receive a manual selector.
 - Start analysis cannot run before prerequisites or while another live request is pending.
 - Provider timeout preserves safe local work and creates no partial brief.
-- Provider quota exhaustion offers explicit retry, statically admitted alternate-provider, and replay choices without starting any automatically.
-- A stateless terminal response contains no recovery metadata; switching from a failed provider becomes a separate linked run only after browser-reducer validation and never merges proposals across runs.
+- Provider quota exhaustion may advance only to the next admitted live release inside the bounded managed router; replay is excluded.
+- A managed terminal response exposes safe attempt and final provenance and never merges proposals across attempts.
 - A rejected live preflight creates no run, records a safe audit event, and preserves the prior active run.
 - Free Gemini rejects any payload that is not the exact bundled synthetic fixture.
 - Replay cannot load when the bundle ID, fixture digest, fixture, prompt, response schema, replay version, count, zero-quarantine invariant, record ownership, or dependency closure differs.
@@ -621,9 +627,9 @@ Reliability requirements:
 
 - five consecutive prepared-checkpoint production rehearsals complete;
 - the judged flow finishes within 2 minutes 45 seconds;
-- live failure never silently switches provider or replay mode;
-- service-tier, quota, or outage recovery is displayed in the frozen OpenAI, Gemini, Mistral, then Bundled deterministic replay order without starting any option automatically;
-- explicit provider switching preserves the failed run, and the browser reducer validates and records the recovery link before activating the new run;
+- live failure advances only for an eligible classified operational failure and never switches to replay;
+- managed live order is OpenAI, Gemini, Mistral, then a separately evaluated and admitted fourth provider;
+- safe attempt provenance is preserved and provider outputs are never merged;
 - preflight rejection creates no run and preserves the prior active run;
 - session refresh restores only valid versioned synthetic derived state;
 - Reset Case clears the disclosed session state;
@@ -634,7 +640,7 @@ Reliability requirements:
 The prepared three-minute demonstration must preserve the strongest moments while reducing fragile clicks.
 
 - Prefill the synthetic Case Purpose Brief and require one confirmation.
-- In the full-flow rehearsal, verify that Start analysis appears only after purpose, coverage, masking, leak scan, release selection, and disclosure prerequisites pass, then activate it once through the browser run controller.
+- In the full-flow rehearsal, verify that Start analysis appears only after purpose, coverage, masking, leak scan, and consolidated disclosure prerequisites pass, then activate the sole local replay once.
 - Use `DEMO-CHECKPOINT-REVIEW`, visibly labelled as a prepared synthetic checkpoint with fixture-reviewer provenance.
 - Keep the source drawer open through the main review actions.
 - Prefill the safer edited wording and withdrawal reason, but require the visible human action.
@@ -704,9 +710,9 @@ The prototype is demo-ready only when:
 - Safety-critical policy lives in pure testable modules.
 - Exact fixture IDs and the hero transition are covered.
 - Development and held-out fixtures remain separated.
-- Provider and model selection has an accuracy-first, gate-preserving rule.
+- Managed provider routing has an accuracy-first, admission-gated, fail-closed rule.
 - Evaluation reports are versioned evidence only, and runtime admission remains a reviewed fail-closed static decision.
-- Cross-provider recovery is explicit, preserves provenance, and cannot bypass safety controls.
+- Managed cross-provider recovery preserves safe attempt and final provenance and cannot bypass safety controls.
 - Accessibility combines automated and manual evaluation.
 - Security tests examine every enabled provider adapter, rendering, export, logging, and bypass boundaries.
 - Performance budgets are measurable and appropriate for the MacBook Air M2.

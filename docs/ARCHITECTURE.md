@@ -13,6 +13,12 @@ The controlling order is:
 5. This document for module and runtime decisions.
 6. `docs/MODEL_ROUTING.md` for the more specific provider selection, release eligibility, recovery, and provider-disclosure rules within this architecture.
 
+### 1.1 Approved routing migration
+
+DEC-045 supersedes browser-controlled provider selection and switching. TASK-039 simplifies the replay-only public Purpose flow and automatically binds exactly one selectable local replay release. TASK-040 must first reconcile the contracts and this architecture before implementing any future server-managed live routing.
+
+The future live order is OpenAI, Gemini, Mistral, then a separately evaluated and statically admitted fourth provider. Groq `openai/gpt-oss-120b` is only an evaluation candidate. Replay remains a separate local execution path, never a live fallback. The `ENABLE_LIVE_ANALYSIS` server gate, static admission, credentials, spend approval, and separate production approval remain mandatory.
+
 Any implementation task that needs to change a frozen choice must stop, record the proposed change in `decision-log.md`, and obtain coordinator approval before dependent work continues.
 
 ## 2. Architecture goals
@@ -111,7 +117,7 @@ Prompt Guard 2 may be evaluated later as an advisory signal. It must not hide or
 | Route | Capability | Rendering |
 |---|---|---|
 | `/` | Product boundary, intended user, non-use rules, synthetic demo entry | Server page with small interactive entry control |
-| `/case/demo/purpose` | Case chooser, Case Purpose Brief, and evaluated-provider selection and disclosure | Client form inside case workspace layout |
+| `/case/demo/purpose` | Case chooser, Case Purpose Brief, plain-language analysis start, and consolidated disclosure | Client form inside case workspace layout |
 | `/case/demo/intake` | Document list, extraction, masking preview, coverage, explicit analysis launch, and processing | Client-heavy route; shared PDF source module loaded here |
 | `/case/demo/review` | Timeline, Charge-Coercion Nexus, review lanes, review queue, source drawer, and audit | Client workspace; shared PDF source module loaded only when a citation opens |
 | `/case/demo/export` | Export gate, safe-share selection, preview, PDF, and JSON download | Client route; PDF renderer loaded here only |
@@ -217,12 +223,14 @@ The interface calls this suggested masking or redaction. It never calls it guara
 
 ### 8.4 Model analysis
 
+The field list below documents the integrated pre-TASK-040 live request and remains available only as a migration baseline while public live analysis is disabled. TASK-040 must replace its browser-selected release fields with a versioned provider-neutral intent before managed routing is implemented. TASK-039 uses only the separate local replay command.
+
 The browser sends only:
 
 - request schema, case, fixture, and canonical fixture digest;
 - purpose brief ID and only the allowed role, fictional jurisdiction, source-language, and requested-handoff enums;
 - literal approved mask-review and passed leak-scan states;
-- literal live mode and one live provider and release selection;
+- legacy literal live mode and one provider/release selection, to be removed by TASK-040 contract reconciliation;
 - complete correlated provider-disclosure acknowledgement: provider, release configuration, service tier, disclosure version, three required true attestations, safe acknowledgement ID, and timestamp;
 - selected canonical segment IDs;
 - reviewed mask IDs, segment IDs, ranges, classes, allowlisted replacement tokens, and review states.
@@ -311,9 +319,9 @@ An environment change cannot silently admit or promote a model. Changing any eva
 
 The practitioner manually selects one available evaluated live configuration before analysis and acknowledges that provider's current data flow, or explicitly chooses the separately labelled bundled deterministic replay and acknowledges that it is frozen local output rather than live AI. Display and recovery order is OpenAI, Gemini, Mistral, then replay. This is presentation order, not an automatic attempt chain. OpenAI remains the quality baseline until a recorded evaluation establishes that another exact release satisfies the same gates and performs better for this task.
 
-A failed live run remains visible. A cross-provider recovery is a separate user action with a new provider-specific acknowledgement and a new run linked to the failed run. A configuration or release rejection before a run starts returns `run: null` and records a safe audit event instead of inventing a run. If the interface offers a later choice after that preflight outcome, it starts an explicit unlinked attempt with `recoveryOfRunId: null` and `selectionReason: initial_choice`. Recovery may be offered when a provider is not configured, disabled, on an unavailable service tier, unable to authenticate, rate limited, out of quota, timed out, or temporarily unavailable. Same-provider retry is unavailable for configuration, service-tier, and authentication failures until deployment configuration or service access changes. The application never silently sends the same approved redacted segments to another company.
+A failed live attempt remains visible through safe provenance. Future cross-provider recovery is server-managed, bounded to DEC-045's classified operational failures, and uses one canonical approved redacted input. A configuration or release rejection before a run starts returns `run: null` and records a safe audit event instead of inventing a run. Timeout or transport failure with unknown remote execution never advances to another provider. The router never merges outputs, never evades quota with multiple keys, and stops after one accepted result.
 
-A provider refusal, invalid structured response, prohibited output, citation failure, injection propagation, or other safety-validation failure does not trigger cross-provider recovery. Another model must not be used to shop around a refusal or repair unsafe output invisibly. Deterministic replay remains a separate, explicit, version-matched choice and is never represented as live AI.
+A provider refusal, invalid structured response, prohibited output, citation failure, injection propagation, privacy failure, semantic failure, partial or accepted output, or other safety-validation failure stops routing. Another model must not be used to shop around a refusal or repair unsafe output invisibly. Deterministic replay remains a separate, version-matched local path and is never represented as live AI or a live fallback result.
 
 The project does not publish an overall accuracy percentage from its small synthetic set. Cost and latency are considered only after each compared provider configuration satisfies the same deterministic and model-backed safety gates.
 
@@ -379,8 +387,8 @@ Each required pipeline stage has `pending`, `active`, `completed`, `warning`, or
 - Retry targets only the failed stage when possible.
 - A provider timeout or invalid structure returns a safe error and no candidates.
 - A retry of the same provider is explicit and does not duplicate accepted candidates, review decisions, or audit events.
-- Cross-provider recovery is offered only for the approved operational failure classes defined in `docs/MODEL_ROUTING.md`.
-- Cross-provider recovery requires a new provider-specific acknowledgement, creates a locally linked run, and never happens inside the failed request. The stateless route neither receives nor verifies that browser recovery link.
+- Server-managed cross-provider routing is allowed only for the approved operational failure classes defined in `docs/MODEL_ROUTING.md`, after TASK-040 reconciles and versions the request and attempt contracts.
+- One managed request records bounded safe attempt metadata and one final accepted run; provider outputs are never merged and unknown remote execution stops the chain.
 - A provider refusal, unsafe output, invalid citation, injection propagation, or semantic validation failure cannot trigger another live provider automatically.
 - A deterministic replay command supplies only trusted bundle ID `REPLAY-CFN-DEMO-001-V1`. A compile-time registry instantiates exactly one local successful run with zero quarantined output and only that run's candidates and citations after digest, version, count, ownership, and dependency checks pass.
 - The prepared checkpoint command supplies only `DEMO-CHECKPOINT-REVIEW`. Its trusted bundle atomically validates and loads the complete synthetic purpose, fixture projections, fixture-reviewer masking, coverage, completed processing, one replay run, candidates, citations, and ordered fixture-reviewer decisions. The versioned canonical post-decision outcome hash excludes dynamic activation metadata and must match before any state changes.
@@ -463,12 +471,12 @@ P0 is not an incomplete production architecture. It is a deliberately bounded sy
 - No database or durable server case store exists in P0.
 - Session resume and Reset Case behavior are explicit.
 - Replay is visibly distinguished from live analysis.
-- Manual provider selection and cross-provider recovery are visible, acknowledged, and recorded.
+- Practitioner-facing provider and model controls are absent; detailed final-provider and attempt provenance remains available in Trust, audit, and exports.
 - The live API is stateless; browser state alone verifies recovery linkage and atomically activates terminal results.
-- No provider change or replay substitution happens silently.
+- Managed provider changes occur only inside the bounded admitted server policy; replay is never silently substituted.
 - Unpaid Gemini is restricted to the bundled synthetic fixture.
 - Unpaid Mistral is restricted to the exact bundled synthetic fixture and carries conservative training, 30-day retention, and no-ZDR disclosure.
-- Provider and recovery choices are ordered OpenAI, Gemini, Mistral, and replay, but every live switch and replay action remains explicit.
+- Future admitted live routing is ordered OpenAI, Gemini, Mistral, then the separately evaluated fourth provider; replay remains separate.
 - Runtime provider admission changes only through the reviewed static admission handoff.
 - Model, provider, service tier, data-use and retention limitations, prompt, release configuration, and contract metadata are disclosed.
 - Planned dependencies do not duplicate responsibilities.

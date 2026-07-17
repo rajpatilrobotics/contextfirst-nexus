@@ -1,5 +1,13 @@
 # ContextFirst Nexus Documentation Foundation Plan
 
+## Current program update, 2026-07-17
+
+The original documentation foundation and TASK-001 through TASK-038 implementation program are integrated. The approved next direction removes provider and model selection from the practitioner-facing product because ContextFirst Nexus is a case-preparation application, not a developer platform.
+
+- TASK-039 will simplify the current replay-only public demo to one plain-language `Start analysis` path. It will automatically bind the only selectable bundled replay release, fail closed if replay is unavailable or selection is ambiguous, preserve internal provenance and `providerTransmission: false`, and keep the prepared checkpoint separate.
+- TASK-040 will begin with exact contract and architecture reconciliation, then implement server-managed live-provider routing only behind the existing global server gate and static admission. Its frozen future order is OpenAI, Gemini, Mistral, then an evaluated fourth provider. Groq `openai/gpt-oss-120b` is only the current fourth-provider evaluation candidate and is not admitted, enabled, configured, or approved for calls or deployment.
+- This direction explicitly supersedes the practitioner-controlled provider-selection and provider-switching plan recorded in DEC-025. Replay remains separate from live AI, and no live provider may be enabled without exact evaluation, reviewed static admission, credentials, spend approval, and separate production approval.
+
 ## 1. Goal
 
 Create a complete, consistent documentation foundation that gives Codex enough product, technical, safety, design, testing, and execution context to build ContextFirst Nexus through a rolling pool of separate worktree tasks.
@@ -51,15 +59,17 @@ Add `.codex/config.toml`, `.env.example`, or `.worktreeinclude` only later if th
 3. [x] Review the product-truth documents together and resolve contradictions, unsupported claims, open scope decisions, and non-goals.
 4. [x] Create the engineering documents: architecture, contracts, design system, and testing and evaluation plan.
 5. [x] Review and freeze shared names, data schemas, module boundaries, provider choices, user flows, and quality gates.
-6. [x] Research and freeze safe multi-provider routing with explicit practitioner-controlled recovery, including a synthetic-only free-tier boundary.
+6. [x] Research and freeze the original multi-provider approach; its practitioner-controlled selection and recovery portion is superseded by the 2026-07-17 managed-analysis direction and follow-up TASK-039/TASK-040 reconciliation.
 6a. [x] Add and freeze one evaluated free live option after Gemini, including contracts, disclosures, display order, and tests.
 7. [x] Create the execution documents: `AGENTS.md`, `PLANS.md`, context index, orchestration and integration rules, and decision log.
 8. [x] Create an acyclic `TASK_GRAPH.yaml` with 26 bounded tasks, explicit dependencies, active-write ownership, dependency-ordered ownership transfer, and rolling scheduling rules.
 9. [x] Create one self-contained `tasks/TASK-XXX.md` packet per worktree with exact context, scope, contracts, acceptance criteria, verification, commit permission, and handoff requirements.
 10. [x] Audit the complete document set for missing information, conflicting instructions, unsafe claims, broken paths, excessive context, task ownership, task-graph integrity, and document structure.
 11. [x] Present the final documentation package for approval before any application implementation.
-12. [ ] After explicit approval, commit and push the documentation to the permanent repository.
-13. [ ] Add the exact `contextfirst-nexus` Git repository folder as a Codex project and perform a small worktree-readiness check before launching implementation tasks.
+12. [x] After explicit approval, commit and push the documentation to the permanent repository.
+13. [x] Add the exact `contextfirst-nexus` Git repository folder as a Codex project and complete the rolling implementation and replay-only release program through TASK-038 and TASK-025.
+14. [ ] Implement and integrate TASK-039 to remove practitioner-facing provider/model selection and provide one fail-closed replay-only `Start analysis` experience.
+15. [ ] After TASK-039 integrates, reconcile and implement TASK-040 managed server-side routing with classified safe fallback, exact admission gates, bounded attempts, isolated outputs, and no replay misrepresentation.
 
 ## 6. Acceptance criteria
 
@@ -72,6 +82,9 @@ Add `.codex/config.toml`, `.env.example`, or `.worktreeinclude` only later if th
 - Unsupported legal conclusions, victim or credibility scoring, unsafe data use, and unverified claims are explicitly prohibited.
 - No secrets, private research, credentials, survivor data, or unsupported partnership claims enter the public repository.
 - Application code remains unchanged during this documentation phase.
+- The practitioner-facing Purpose flow contains no provider or model chooser and cannot silently select a live provider.
+- The current public deployment remains replay-only; exactly one selectable replay may be bound automatically, while zero or multiple selectable services fail closed.
+- Future managed live routing is server-owned, bounded, admission-gated, records safe attempt metadata, accepts at most one result, never merges outputs, and falls back only for explicitly classified pre-execution operational failures.
 
 ## 7. Testing plan
 
@@ -88,6 +101,6 @@ Add `.codex/config.toml`, `.env.example`, or `.worktreeinclude` only later if th
 
 - Confirm the final API credentials and external services available before implementation begins. Credentials will never be written into documentation or committed.
 - Decide the final number of active worktree slots after a lightweight setup test on the MacBook Air M2. Start conservatively and increase only if memory and build performance remain stable.
-- Resolved for P0 provider resilience: Mistral Small 4 is the third live candidate after Gemini, subject to the same contract and safety gates and unavailable until the exact release passes evaluation and is exposed by the deployed free account. Cerebras remains a reserve candidate. Provider changes are explicit, keys stay server-side, and deterministic replay remains separate and visibly labelled.
+- Resolved product direction: practitioners do not select providers or models. Current public analysis uses only labelled local replay. Future server-managed live routing is ordered OpenAI, Gemini, Mistral, then an evaluated fourth provider; Groq `openai/gpt-oss-120b` is only the current evaluation candidate and remains unavailable until its exact API behavior, structured output, data-use and retention disclosure, evaluation, static admission, credentials, spend, provider-call approval, and deployment approval are all separately satisfied. Deterministic replay remains separate and visibly labelled, never a disguised live fallback result.
 - Resolved for P0: no OCR, no production authentication, no durable server case store, versioned redacted synthetic state in browser session storage, PDF.js text extraction, and local React-pdf plus JSON exports. Exact installed versions and measured model choices will be recorded before dependent tasks launch.
-- The approved graph contains 26 task packets. Any later count change requires coordinated updates to the graph, affected packets, ownership rules, and integration order.
+- The active graph will contain 40 task packets after TASK-039 and TASK-040 are documented. Any later count change requires coordinated updates to the graph, affected packets, ownership rules, and integration order.

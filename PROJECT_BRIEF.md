@@ -6,6 +6,16 @@ This document defines the approved product direction for the hackathon prototype
 
 If another document conflicts with this brief, implementation must stop and the conflict must be resolved before coding continues. Safety rules in docs/SAFETY_AND_DATA.md always take priority.
 
+### Approved analysis-entry direction, 2026-07-17
+
+The practitioner-facing product presents one plain-language **Start analysis** action, not provider or model controls. Provider details remain available in Trust, safe audit metadata, export provenance, and a consolidated plain-language data-flow disclosure.
+
+The current public deployment remains replay-only. It automatically binds the one selectable bundled deterministic replay release; it never silently enables live AI. If no replay service or more than one service is selectable, analysis fails closed with a simple service-unavailable state.
+
+Future live analysis is a server-managed capability, subject to a separate contract-and-architecture reconciliation. Its frozen candidate order is OpenAI, Gemini, Mistral, then a separately evaluated and admitted fourth provider. Groq `openai/gpt-oss-120b` is only the current fourth-provider evaluation candidate; it is not approved, admitted, configured, selectable, or callable. Every live release still requires evaluation, reviewed static admission, credentials, spend approval, and separate production approval. Bundled replay remains local and separate from live-provider routing.
+
+This direction explicitly replaces practitioner-controlled provider selection and manual provider switching in DEC-025. It does not relax any privacy, safety, citation, review, admission, credential, spend, or production gate.
+
 ## One-sentence description
 
 ContextFirst Nexus is a source-grounded case-preparation workspace that helps qualified practitioners organize evidence and examine the relationship between alleged offending and possible trafficking-related coercion, while keeping every consequential conclusion under human review.
@@ -46,7 +56,7 @@ ContextFirst Nexus turns one permitted case packet into a reviewable workspace c
 5. Individual accept, edit, reject, or mark-uncertain decisions.
 6. A reviewed, redacted practitioner handoff in PDF and structured JSON.
 7. An audit history, system card, and synthetic evaluation view.
-8. A transparent choice among evaluated OpenAI, Google Gemini, and Mistral live configurations, with explicit recovery and a separately labelled deterministic replay.
+8. Transparent run provenance and data-flow disclosure without practitioner-facing provider or model controls; the public demo uses a separately labelled deterministic replay.
 
 The system suggests and organizes. A qualified human decides what can be relied on.
 
@@ -86,11 +96,11 @@ The Nexus is not a trafficking determination, guilt assessment, credibility scor
 ## End-to-end prototype flow
 
 1. The landing page explains what the product does and does not do.
-2. The practitioner completes a short Case Purpose Brief, then explicitly selects an available evaluated live provider or the separately labelled bundled deterministic replay. Provider choices are displayed in the order OpenAI, Gemini, Mistral, and replay, but that order never triggers an automatic call. A live choice requires acknowledgement of that provider's data flow. Replay requires acknowledgement that it is frozen local output, not live AI.
+2. The practitioner completes a short Case Purpose Brief. The replay-only public demo automatically binds its one selectable bundled deterministic replay release and presents one plain-language Start analysis action; no live provider is silently enabled.
 3. The practitioner loads the bundled synthetic case packet.
 4. The system shows document coverage, suggested masking, and processing status.
 5. The practitioner reviews and completes masking, including the deterministic leak scan.
-6. The practitioner explicitly starts the selected live analysis or the separately labelled deterministic replay.
+6. The practitioner explicitly starts analysis. In the public demo this runs only the separately labelled deterministic replay.
 7. The system presents active-run source-linked timeline, Charge-Coercion Nexus, and context-gap candidates.
 8. The practitioner answers, defers, or preserves context gaps as unknown, opens exact source locations, and reviews candidate items.
 9. An early export attempt is blocked because review, citation, privacy, or coverage gates are incomplete.
@@ -131,8 +141,9 @@ Grounding proves that text was found in the processed source. It does not prove 
 - Reviewed PDF and structured JSON handoffs.
 - Minimum-necessary safe-share output.
 - Audit history, system card, and a small synthetic Safety Lab.
-- Manual selection among evaluated OpenAI, Google Gemini, and Mistral live configurations, with provider-specific disclosure.
-- Explicit recovery after a provider outage, with no silent cross-provider failover and a separately labelled deterministic replay shown last.
+- One plain-language Start analysis experience with no practitioner-facing provider or model controls.
+- Fail-closed automatic binding of exactly one selectable bundled deterministic replay in the current public deployment, with no live provider transmission.
+- Consolidated plain-language data-flow disclosure plus detailed provider provenance in Trust, audit, and exports.
 - Unpaid Gemini and Mistral processing limited to the bundled synthetic fixture and prohibited for future real, private, client, or survivor material.
 - Mistral release configuration `mistral-small-free-v1`, using `mistral-small-2603`, remains unavailable until that exact configuration has a matching passed reviewed static admission record and coordinator-recorded deployed-account availability.
 - The unpaid Mistral disclosure conservatively states possible training use unless the account opts out, up to 30-day provider retention, and no zero-data-retention eligibility on the free tier.
@@ -174,7 +185,7 @@ Grounding proves that text was found in the processed source. It does not prove 
 8. No consequential export without completed gates.
 9. International guidance informs review but does not replace domestic legal verification.
 10. Public claims must match measured prototype evidence.
-11. A provider change is visible, acknowledged, and recorded rather than silently routed.
+11. Managed routing is bounded, auditable, admission-gated, and never used to bypass a safety decision; replay is never represented as a live fallback.
 
 ## Strongest demo moment
 
@@ -190,7 +201,7 @@ The prototype is successful when a judge can see, in one short flow, that it:
 - prevents unreviewed or unsupported content from entering an export;
 - reduces exposure through a redacted, minimum-necessary handoff;
 - reports what was measured on synthetic fixtures and is honest about what remains unvalidated;
-- remains usable when a live provider is unavailable by offering an explicit evaluated-provider recovery choice or a clearly labelled bundled replay.
+- remains usable in the public demo through clearly labelled bundled replay with zero provider transmission.
 
 The project must not claim that it identifies victims, proves trafficking, guarantees legal outcomes, or is production ready.
 

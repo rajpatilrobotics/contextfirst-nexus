@@ -12,6 +12,12 @@ The words MUST, MUST NOT, SHOULD, and MAY are requirements:
 
 If this policy conflicts with another project document, this policy controls. A worker must not silently weaken it.
 
+### 1.1 DEC-045 provider-control boundary
+
+The practitioner MUST NOT choose a provider, model, release, credential, or fallback target. The public deployment remains replay-only and may auto-bind only one selectable local replay release. Zero or multiple selectable services MUST fail closed. Detailed provider provenance remains available in Trust, safe audit, and exports.
+
+Future live routing is server-managed and remains disabled until TASK-040 reconciles the contracts and every evaluation, reviewed static admission, credential, spend, and production gate is separately approved. Managed fallback is limited to classified operational failures with confirmed safe retry semantics. Replay is never part of the live fallback chain. DEC-045 supersedes the manual-selection and manual-switching requirements previously stated in this document.
+
 ## 2. Product boundary
 
 ContextFirst Nexus is a hackathon prototype for source-grounded case preparation in trafficking-related forced-criminality matters.
@@ -73,7 +79,7 @@ Processing MUST remain blocked until the practitioner completes a Case Purpose B
 - source language and translation status;
 - data origin and authorization basis;
 - consent status where applicable;
-- selected external provider, data-flow, service-tier, data-use, and retention acknowledgement;
+- consolidated analysis data-flow, data-use, and retention acknowledgement without provider controls;
 - confirmation that cooperation with authorities is not a condition of analysis.
 
 The interface MUST state that the system cannot verify the user's authority.
@@ -165,7 +171,7 @@ The P0 architecture uses browser-side PDF.js processing and permits exactly thre
 2. Google using the stable `gemini-3.5-flash` model.
 3. Mistral AI using the exact `mistral-small-2603` release configuration only after its reviewed static admission record marks the exact release as passed, the coordinator records the deployed account release as available, and the configuration is explicitly enabled.
 
-The practitioner MUST explicitly choose one available provider whose exact release has a reviewed, version-controlled static admission record before any live analysis run. The listed OpenAI, Google, and Mistral order is a presentation and recovery order only. It MUST NOT create an automatic attempt chain. Provider choice is a safety and data-flow decision, not a hidden reliability setting.
+No practitioner-facing provider choice is permitted. Future server-managed live routing may consider only releases with reviewed, version-controlled static admission, in the order OpenAI, Google, Mistral, then a separately evaluated and admitted fourth provider. The public deployment remains replay-only.
 
 The evaluation harness may produce a versioned evidence report and canonical digest, but it MUST NOT change provider selectability. A separate reviewed handoff updates the fail-closed static admission records in `lib/ai/server/admission.ts`. Environment variables, runtime evaluation files, provider responses, configured credentials, and account health MUST NOT promote an unevaluated release.
 
@@ -191,7 +197,7 @@ Implementation and public copy MUST use conservative language and disclose the a
 
 The system card MUST name, when applicable:
 
-- the provider selected by the practitioner and every provider actually attempted;
+- every provider actually attempted and the provider/release of the final accepted result;
 - model name and version or snapshot, exact release configuration, static admission status, and evaluation-report identity when available;
 - service tier, including whether Gemini or Mistral is using unpaid or paid service terms;
 - content categories sent;
@@ -205,7 +211,7 @@ The system card MUST name, when applicable:
 
 The team MAY use a no-store setting where supported, but MUST NOT describe it as zero retention unless the actual provider configuration and terms establish that claim.
 
-The Case Purpose Brief MUST show provider-specific disclosure text and require a new acknowledgement for the selected provider. An acknowledgement for OpenAI, Google, or Mistral does not acknowledge either of the other providers. Changing provider invalidates the prior provider acknowledgement and export readiness.
+The Case Purpose Brief MUST show one consolidated plain-language data-flow disclosure without developer controls. Detailed provider-specific terms and actual attempt provenance remain available in Trust, audit, and exports. TASK-040 must reconcile the exact acknowledgement contract before live routing is implemented.
 
 ### 8.3 Gemini unpaid-service boundary
 
@@ -223,7 +229,7 @@ The disclosure for free Mistral MUST state whether provider training use is enab
 
 Free Mistral MUST NOT process harmless public material, real case material, survivor or client material, private material, or user-entered narrative. Enabling a paid Mistral tier in the future does not authorize real-data use and does not remove the future-pilot requirements below.
 
-### 8.5 Provider selection and failure recovery
+### 8.5 Managed provider routing and failure recovery
 
 `POST /api/analyze` is a stateless execution route. Its strict `AnalyzeRequest` MUST NOT contain `recoveryOfRunId`, and the route MUST NOT receive, verify, echo, or log recovery linkage. The browser dispatches `start_live_analysis`, validates the current prerequisites, and stores the request plus locally derived recovery metadata as a memory-only pending record before the network call.
 
@@ -233,19 +239,19 @@ If the browser receives no parseable response, it MUST dispatch `record_live_ana
 
 The System Card MUST keep real runs separate from typed non-run attempt projections. A preflight rejection records not transmitted and not started. A browser transport failure records unknown transmission and unknown remote outcome. Both record `outputAccepted: false`, safe registry and start-command linkage, and no fabricated run.
 
-- A provider or replay MUST never be silently or automatically substituted before, during, or after a run.
-- A live provider switch MUST require an explicit practitioner action, the new provider disclosure, and a new provider-specific acknowledgement.
-- A switch after a started run MUST create a new run. The failed run and its safe provenance MUST remain visible and MUST NOT be rewritten as successful.
+- Replay MUST never be silently or automatically substituted for live analysis. In the replay-only public deployment it is the declared local service and records `providerTransmission: false`.
+- Future live provider changes occur only inside the bounded server-managed policy after TASK-040 contract reconciliation; the practitioner cannot direct them.
+- Every attempted provider and the final accepted provider/release MUST retain safe provenance. Outputs from separate attempts MUST NOT be merged.
 - A configuration or release rejection before transmission MUST return `run: null`, create no run, and MUST retain only a safe preflight audit event.
-- Operational failures classified as provider not configured, provider disabled, provider service tier unavailable, provider authentication failed, provider rate limited, provider quota exhausted, provider timeout, or provider unavailable MAY offer only applicable Retry selected provider, Choose another provider, or Use labelled replay actions. Remaining eligible live providers MUST be listed in OpenAI, Gemini, and Mistral order, with labelled replay last.
-- Provider order MUST be presentation order only. The application MUST NOT automatically call the next provider or replay, and each provider switch MUST start only after the practitioner selects and acknowledges it.
+- Only provider not configured, authentication failure before processing, quota exhausted, rate limited, confirmed temporary provider unavailability, or confirmed request not executed MAY advance to the next admitted live release.
+- The live routing order MUST be OpenAI, Gemini, Mistral, then a separately evaluated and admitted fourth provider, with a hard maximum attempt count. Replay is not in this order.
 - Same-provider retry MUST NOT be offered for not-configured, disabled, or authentication failures until the deployment configuration changes.
-- A provider refusal, safety block, privacy block, invalid semantic result, prohibited inference, citation failure, or schema-validation failure MUST NOT trigger provider switching as a way to obtain a different answer.
+- Privacy or leak-scan failure, prohibited input, provider refusal, unsafe output, invalid citation, semantic failure, malformed structured output, injection propagation, timeout or transport failure with unknown remote execution, partial or accepted output, and any safety-bypass attempt MUST stop routing.
 - Every provider response MUST pass the same canonical schema validation, citation validation, coverage gates, prompt-injection boundary, prohibited-inference checks, privacy checks, and human-review workflow.
 - Candidates from a failed or rejected run MUST NOT enter the review workspace or export.
 - Error messages MUST use a safe category and local reference ID. They MUST NOT reveal credentials, account state, internal request contents, or raw provider diagnostics.
 
-The deterministic replay is a separate, version-matched demo mode and the last displayed recovery option. It MUST remain visibly labelled replay, MUST require an explicit action, and MUST never appear as a successful live provider response or an automatic fourth attempt. Replay and checkpoint commands MUST supply only their fixed trusted registry IDs and MUST NOT accept a browser-supplied bundle, URL, persisted artifact, environment-selected artifact, or provider output. The prepared video checkpoint MAY package complete trusted synthetic prerequisite state, one replay run, and ordered fixture-reviewer decisions, but it MUST validate digest, versions, exact counts, single-run ownership, zero quarantined output, decision attribution, and the versioned canonical post-decision outcome hash atomically before mutation. It MUST show both replay provenance and prepared-checkpoint provenance.
+The deterministic replay is a separate, version-matched local demo mode. It MUST remain visibly labelled replay and MUST never appear as a successful live provider response, fallback result, or fourth live attempt. Replay and checkpoint commands MUST supply only their fixed trusted registry IDs and MUST NOT accept a browser-supplied bundle, URL, persisted artifact, environment-selected artifact, or provider output. The prepared video checkpoint MAY package complete trusted synthetic prerequisite state, one replay run, and ordered fixture-reviewer decisions, but it MUST validate digest, versions, exact counts, single-run ownership, zero quarantined output, decision attribution, and the versioned canonical post-decision outcome hash atomically before mutation. It MUST show both replay provenance and prepared-checkpoint provenance.
 
 ### 8.6 Future pilot requirements
 
@@ -417,10 +423,10 @@ Valid outcomes include:
 | OCR or parsing failure | Preserve original, identify exact page and failed stage, permit targeted retry, block affected findings |
 | Model timeout | Preserve completed safe work, show failure, retry only the failed stage |
 | Invalid structured response | Reject the response; do not use a prose fallback or partial brief |
-| Provider rate limit, quota, timeout, or transient outage | Retain the failed run; offer only applicable same-provider retry, an acknowledged new run with a remaining eligible provider in OpenAI, Gemini, and Mistral order, or labelled replay last; never call an option automatically |
-| Provider not configured or disabled before a run | Return `run: null`; create no run; retain a safe preflight audit event; offer remaining selectable, statically admitted providers in OpenAI, Gemini, and Mistral order, then labelled replay last |
-| Provider service tier unavailable | Return `run: null` and create no run when blocked in preflight, or retain the failed run when discovered after it starts; offer remaining selectable, statically admitted providers in OpenAI, Gemini, and Mistral order, then labelled replay last; retry the same provider only after service access changes |
-| Provider authentication failed after a run starts | Retain the failed run; offer remaining selectable, statically admitted providers in OpenAI, Gemini, and Mistral order, then labelled replay last, and offer same-provider retry only after deployment configuration changes |
+| Provider rate limit, quota, or confirmed transient outage | Retain safe attempt provenance and advance only within the bounded admitted managed order; never enter replay |
+| Provider not configured before a run | Record a safe non-run attempt and advance only when the next live release is currently admitted; never fabricate a run |
+| Provider service tier unavailable | Fail closed unless the failure is classified as confirmed temporary unavailability under the reconciled managed-routing contract |
+| Provider authentication failed | Advance only when failure is confirmed before processing; otherwise stop with unknown remote outcome |
 | Provider refusal, safety block, or semantic-policy failure | Preserve the failed or rejected run; do not offer provider switching as a bypass |
 | Missing or ambiguous citation | Block candidate acceptance and export until resolved or rejected |
 | Unsupported indicator | Reject or mark insufficient evidence and record the reason |
@@ -430,7 +436,7 @@ Valid outcomes include:
 | Service outage | Preserve local work where safe; never fabricate completion |
 | Negative-control packet | Abstain; do not force a trafficking or non-punishment relationship |
 
-A deterministic bundled replay MAY be used to protect the live demonstration from provider outage only when it is explicitly selected as the last displayed recovery option, clearly labelled as a replay, and never presented as live AI. It MUST NOT start automatically after any live-provider failure. Replay does not erase, replace, or convert the failed live run.
+A deterministic bundled replay MAY protect the public demonstration as its declared local replay-only service. It is clearly labelled and never presented as live AI. It MUST NOT start as a fallback after a live-provider failure and does not erase, replace, or convert a failed live attempt.
 
 ## 14. Evidence change and dependency rules
 
@@ -609,10 +615,10 @@ Before the prototype can be called demo-ready:
 12. Supported seeded identifiers are absent from the safe-share export.
 13. Reset Case clears any disclosed local case state.
 14. Application logs contain no raw packet text, prompts, quotes, identifiers, or secrets.
-15. The system card accurately describes the selected and attempted providers, model, service tier, data flow, data-use terms, retention limitation, run mode, fixture count, and known limitations.
-16. The provider selector offers only statically admitted OpenAI, Gemini 3.5 Flash, and Mistral Small 4 releases as live P0 choices in that order, followed by labelled replay last, and requires the matching acknowledgement. Mistral also requires coordinator-recorded deployed-account availability.
-17. A recoverable provider switch starts only after an explicit selection and acknowledgement, starts a new run, preserves the failed run, and is never silent or automatic.
-18. Refusal, safety, privacy, citation, schema, and semantic-validation failures cannot be bypassed by switching providers.
+15. The system card accurately describes attempted providers, the final accepted provider/model/release when applicable, service tier, data flow, data-use terms, retention limitation, run mode, fixture count, and known limitations.
+16. The practitioner interface exposes no provider or model selector. The public deployment binds only the sole selectable local replay and reports zero provider transmission.
+17. Future managed routing follows the admitted OpenAI, Gemini, Mistral, then separately evaluated fourth-provider order and records safe attempt provenance without merging outputs.
+18. Refusal, safety, privacy, citation, schema, and semantic-validation failures stop managed routing and cannot be bypassed by another provider.
 19. Unpaid Gemini is blocked for every data origin except the verified bundled synthetic fixture.
 20. Free Mistral is blocked until exact release `mistral-small-2603` has a matching passed static admission and coordinator-recorded deployed-account availability, is blocked for every data origin except the exact verified bundled synthetic fixture, and discloses its training-use or opt-out state, up-to-30-day retention limitation, and lack of free zero data retention.
 21. The live-analysis request contains no recovery link, the memory-only pending request is never persisted, and the central reducer alone validates and attaches local recovery metadata.

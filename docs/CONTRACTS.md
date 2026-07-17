@@ -6,6 +6,14 @@ This document freezes the names, schemas, identifiers, states, and boundary beha
 
 Shared contract changes require coordinator approval, a contract-version change when compatibility is affected, updated fixtures, and updated tests. A feature worker must not create a competing local version of a shared type.
 
+### 1.1 DEC-045 staged contract reconciliation
+
+DEC-045 replaces practitioner-controlled live provider selection with a plain-language analysis start and future server-managed routing. The currently implemented `providerSelection`, disclosure-acknowledgement, `selectionReason`, and browser recovery shapes below remain the legacy `1.0.0` implementation baseline only while TASK-039 removes the developer-style UI in the replay-only deployment.
+
+TASK-039 may auto-bind only the sole selectable local replay release through those existing shapes. It must not enable a live provider or redefine shared schemas.
+
+TASK-040 must begin by reconciling and, where incompatible, versioning this document and `docs/ARCHITECTURE.md` before changing live request or orchestration code. The reconciled contracts must express one browser analysis intent, ordered admitted server attempts, safe attempt metadata, one accepted result, no output merging, bounded attempts, forbidden-fallback classifications, exact final provider/release provenance, and replay as a separate local path. Until that reconciliation integrates, the legacy live-selection schemas are not authority for new UI or routing work.
+
 ## 2. Versioning rules
 
 Use independent semantic versions for persisted case state, model output, exports, fixtures, prompts, and guidance.
@@ -1339,7 +1347,7 @@ Server invariants:
 - Load canonical text by allowlisted segment ID, require an exact match to the selected registry entry's single bundled-fixture binding and canonical digest, validate mask spans and allowlisted replacement tokens, and construct the redacted derivative server-side.
 - Re-run a deterministic declared-identifier leak scan server-side.
 - Do not trust client-supplied evidence classification or support status as final.
-- Call exactly the explicitly selected release configuration once. No adapter, retry helper, service-tier handler, or route automatically calls another provider or enters replay.
+- Current pre-TASK-040 runtime calls exactly the legacy selected release once. TASK-040 must replace this invariant only after contract versioning with bounded admitted server routing; no route ever enters replay or merges outputs.
 
 `runPrivateLiveEvaluation` is the sole implementation of `PrivateLiveEvaluationEntry`. It is server-only and has no HTTP route, client export, or runtime-admission import. The local evaluation runner, not this stateless entry, tracks one unique `callOrdinal` for each approved call and rejects a duplicate or ordinal outside `1` through `approvedCallCount`. The entry validates that approval is unexpired, matches the exact correlated release, includes a positive approved call count and non-negative total estimated cost, and receives one permitted ordinal. It may bypass only the public route's static evaluation-status and public-selectability check so it can measure the frozen candidate before admission. It still requires the exact known, enabled, configured release, Mistral account-availability gate where applicable, bundled synthetic fixture and digest, approved mask spans, leak scan, selected segments, prompt, schema, and full post-validation. It reconstructs the approved derivative from canonical fixture text and mask spans, verifies selected segments and digest, then uses the exact adapter, prompt, response schema, and post-validation path. It accepts no raw text, API key, endpoint, model override, provider body, or admission record. It writes evidence only and is structurally unable to mutate admission, registry selectability, public availability, browser state, or a case export.
 
@@ -3185,13 +3193,13 @@ These invariants are mandatory test targets:
 18. A stale case revision, analysis run, mask review, or export gate cannot authorize export.
 19. Canonical instruction-like evidence remains visible but cannot become candidate support or export content.
 20. Prepared checkpoint decisions retain fixture-reviewer provenance.
-21. Provider choice is an explicit registry release selection with a matching current disclosure acknowledgement. Users select releases, never API keys.
-22. No request automatically changes provider or enters replay mode, including after a service-tier or provider failure. Every retry, provider switch, or replay choice is explicit. A choice after a verified terminal failed run creates a separate linked run; a choice after a preflight rejection or transport failure starts unlinked because no failed run exists.
+21. Practitioner-facing provider choice is superseded. TASK-040 must version a provider-neutral browser intent and managed attempt contract; users never select releases or API keys.
+22. Managed live routing advances only for approved classified operational failures and never enters replay mode. Unknown remote execution, partial/accepted output, and every safety or validation failure stop routing.
 23. Current candidates, citations, reviews, the current gate, current export pointers, and current export manifest belong to exactly one active successful run. Immutable historical `ExportRecord[]` entries remain explanatory history and are excluded from this current-run ownership rule. Outputs from separate runs are never copied or merged, even when they use the same fixture or provider.
-24. Provider availability errors remain safe, and a provider change cannot bypass a privacy, citation, prohibited-output, or semantic-safety failure.
+24. Provider availability errors remain safe, and managed progression cannot bypass a privacy, citation, prohibited-output, semantic-safety, malformed-output, injection, or unknown-execution failure.
 25. System cards, evaluation results, audit records, and exports identify the exact provider, release configuration, service tier, model, disclosure, transmission state, and recovery linkage that actually applied.
 26. Every live request matches the selected registry entry's sole `bundled_synthetic` fixture binding, fixture version, and canonical digest before provider transmission.
-27. Provider and recovery projections preserve the fixed order OpenAI `1`, Google Gemini `2`, Mistral `3`, and local replay `4`; replay is never inserted ahead of a live release.
+27. Managed live routing preserves OpenAI `1`, Google Gemini `2`, Mistral `3`, then a separately evaluated/admitted fourth live slot. Local replay is outside this order.
 28. Every P0 provider request is non-streaming, and one selected application run cannot assemble a result from partial streamed output.
 29. The stateless live API never receives or claims recovery linkage. Only the browser reducer may attach recovery metadata after verifying its preserved failed-run history and the permitted recovery class.
 30. A pending live request is in-memory only. Starting it does not increment `caseRevision`, material mutations are blocked while it is pending, and a terminal response activates atomically only when its start command and source case revision still match.
@@ -3220,7 +3228,7 @@ These invariants are mandatory test targets:
 - Service-tier unavailability has a safe availability status, failure classification, and error code.
 - Provider options and recovery options have deterministic display ordering, with replay after all live releases.
 - Every provider transmission is limited to the exact registry-bound bundled fixture and canonical digest.
-- Live provider selection and recovery are explicit, acknowledged, separately recorded, and never automatic.
+- Practitioner-facing live provider selection is superseded by DEC-045; TASK-040 must version and test bounded server-managed routing before runtime adoption.
 - Run history preserves failed attempts while active outputs remain single-run and unmerged.
 - Trusted replay and checkpoint bundles fail closed on any count, ownership, fixture, version, purpose, masking, or provenance mismatch and never accept browser-supplied artifact data.
 - System cards distinguish terminal runs from safe non-run attempt projections.

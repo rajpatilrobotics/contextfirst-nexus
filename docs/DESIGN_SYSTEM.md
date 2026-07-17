@@ -6,6 +6,10 @@ This document freezes the P0 visual language, interaction patterns, component na
 
 It is a design specification, not a claim that the application currently satisfies these requirements. Safety language in `docs/SAFETY_AND_DATA.md`, product behavior in `docs/PRODUCT_SPEC.md`, and shared values in `docs/CONTRACTS.md` take priority.
 
+### 1.1 Superseding analysis interaction
+
+DEC-045 replaces the provider-card, model-selection, and provider-switch interaction below. TASK-039 presents one plain-language Start analysis action, automatically binds only the sole selectable local replay release in the public demo, and fails closed when the service boundary is absent or ambiguous. Provider details move to Trust, safe audit, export provenance, and optional plain-language disclosure. TASK-040 owns later server-managed live-routing interaction reconciliation.
+
 ## 2. Design position
 
 ContextFirst Nexus should feel like a calm, precise legal-workbench product. It must help a practitioner slow down at consequential moments, inspect sources, and understand what remains unknown.
@@ -36,7 +40,7 @@ Do not use:
 6. Blocked states explain the reason and the next safe action.
 7. Sensitive content is masked by default.
 8. Accessibility is part of the primary flow, not a later polish task.
-9. Provider choice, failure, switching, and replay remain visible and require deliberate action.
+9. Analysis availability is plain-language and fail-closed; replay and any actual live-provider provenance remain truthful without exposing developer controls.
 
 ## 4. Foundation tokens
 
@@ -129,8 +133,8 @@ The case header always shows:
 - synthetic case label;
 - case ID and current section;
 - case-level status;
-- selected provider and model for a live run;
-- live or replay mode when applicable;
+- plain-language Analysis status;
+- replay or live provenance when applicable, without a provider selector;
 - Reset Case action.
 
 ### 5.2 Responsive behavior
@@ -245,8 +249,7 @@ Freeze these product component names:
 - `CaseStatusBadge`
 - `CaseStepNavigation`
 - `CasePurposeBriefForm`
-- `ProviderSelectionPanel`
-- `ProviderRecoveryPanel`
+- `AnalysisAvailabilityNotice`
 - `ProcessingStageList`
 - `CoverageManifest`
 - `MaskingReviewPanel`
@@ -295,30 +298,28 @@ The banner remains visible across all case routes. It reads:
 
 It cannot be dismissed in P0.
 
-### 9.2 CasePurposeBriefForm and ProviderSelectionPanel
+### 9.2 CasePurposeBriefForm and analysis availability
 
 - Group related fields with fieldsets and legends.
 - Explain that role selection is not authentication.
-- Present Choose analysis service as a required group with exactly three live options in this order: OpenAI, Google Gemini 3.5 Flash, and Mistral Small 4. Follow them with a visually separate Bundled deterministic replay, not live AI option shown last.
-- Do not silently preselect a provider or replay.
-- Each option card shows the provider, model, service tier, content categories sent, data-use terms, retention limitation, and known limitations in plain language.
+- Present one plain-language Start analysis experience with no provider, model, release, or service-tier controls.
+- In the replay-only public deployment, auto-bind only the sole selectable bundled deterministic replay. Zero, multiple, or live-only selectable services show a plain unavailable state.
+- Show a concise consolidated data-flow disclosure; detailed provider and release provenance belongs in Trust, audit, and exports.
 - The unpaid Gemini option carries a persistent Synthetic fixture only label and states that content may be used to improve Google products and reviewed by humans under the applicable terms.
 - The Mistral option shows exact release `mistral-small-2603` and remains visibly unavailable until a passed versioned evaluation report is matched by the reviewed static admission record and coordinator-recorded deployed-account evidence confirms that exact release is available.
 - When free Mistral is available, its card carries a persistent Exact bundled synthetic fixture only label. It states whether training use is enabled or opted out for the actual account, that inputs and outputs may be retained for up to 30 days for abuse monitoring, and that free zero data retention is not available or claimed.
 - The free Mistral card states that moving to a paid tier would not authorize real, private, client, or survivor data.
 - Do not describe any provider as best, safest, free forever, or guaranteed available.
 - Show unavailable providers as unavailable without revealing keys, secret names, account details, project details, or billing details.
-- Put the selected-provider data-flow acknowledgement next to its full disclosure.
-- The replay option shows its release version, confirms that no provider transmission occurs, and requires acknowledgement that it is frozen local output rather than live AI.
-- Require the synthetic-data, authority-not-verified, selected-release, excluded-decision, and cooperation-neutrality acknowledgements.
-- Changing provider clears the previous provider acknowledgement and explains that a later analysis will be a new run.
+- State that replay is frozen local output rather than live AI and that no provider transmission occurs.
+- Require the synthetic-data, authority-not-verified, analysis-disclosure, excluded-decision, and cooperation-neutrality acknowledgements.
 - On failed submission, focus an error summary and link each error to its field.
 - Save the brief only when every required acknowledgement is complete. Saving the brief never starts analysis.
 
 ### 9.3 ProcessingStageList
 
-- Before processing starts, show one explicit Start analysis action beside a prerequisite summary. It remains unavailable until purpose, authority, coverage, masking, leak scan, release selection, and the matching disclosure acknowledgement are current.
-- Activating Start analysis invokes the browser run controller once. For live mode, the controller builds the strict ID-and-mask request, dispatches `start_live_analysis`, waits for canonical state to contain the matching in-memory pending request, and then calls only the selected live release. For replay mode, it dispatches `run_deterministic_replay` locally and never calls the live route.
+- Before processing starts, show one explicit Start analysis action beside a prerequisite summary. It remains unavailable until purpose, authority, coverage, masking, leak scan, exact-one service availability, and consolidated disclosure acknowledgement are current.
+- In the public deployment, activating Start analysis dispatches `run_deterministic_replay` locally exactly once and never calls the live route. Future live intent remains provider-neutral.
 - While a live request is pending, disable duplicate launch and provider-change actions, show the selected release, and explain that the pending request is not saved across refresh.
 - Disable every other material case action while the live request is pending. Starting the request does not increment the source case revision.
 - Show the name and explicit state of every stage.
@@ -330,7 +331,9 @@ It cannot be dismissed in P0.
 - If the browser loses the network or cannot parse the response envelope, show Remote outcome unknown and No output accepted. Clear pending state through the canonical transport-failure command, preserve the prior active run, and do not show a run or recovery link.
 - Use a polite live region for normal progress and an assertive announcement for failure.
 
-#### ProviderRecoveryPanel
+#### Legacy ProviderRecoveryPanel removal target
+
+The following bullets document the integrated pre-TASK-039 control so the worker can remove it without losing failure provenance. They are not current practitioner-facing requirements.
 
 - Open after a safe operational failure such as not configured, disabled, service tier unavailable, authentication failure, rate limiting, quota exhaustion, timeout, or transient unavailability.
 - State which provider selection or run failed, what local work remains safe, and that no completed analysis was created.
@@ -518,7 +521,7 @@ Every asynchronous or data-dependent product component has designed states for:
 
 A blank panel never means success. Skeletons preserve the expected panel shape and are replaced with explicit empty or failed states.
 
-### 10.1 Provider selection and recovery states
+### 10.1 Analysis availability and recovery states
 
 | State | Required presentation | Safe actions |
 |---|---|---|
@@ -555,9 +558,9 @@ A blank panel never means success. Skeletons preserve the expected panel shape a
 - Keyboard shortcuts are not required for P0.
 - Undo is not presented as deletion of audit history. A new review action supersedes an earlier action.
 - The current mode, live analysis or bundled replay, remains visible after analysis.
-- The selected provider remains visible after live analysis, and an explicit provider switch becomes a separately identified run only after local reducer validation.
-- A failed provider run remains visible in audit history after retry, switching, or replay.
-- Provider and replay order never triggers an automatic request or page advance.
+- The final provider/release remains visible in Trust, audit, and export provenance after an approved live analysis.
+- Failed provider attempts remain visible through safe provenance after managed routing.
+- Replay never enters the managed live-provider order.
 - The UI never reads an evaluation report, environment value, or provider response as authority to enable a release.
 - Preview and download only the handoff kind approved in Purpose. Full practitioner and safe-share flows are tested separately.
 
@@ -629,10 +632,10 @@ Automated checks cannot establish full accessibility. Manual keyboard, zoom, red
 - The Nexus remains understandable without graphics or color.
 - Every consequential item has source access beside its review control.
 - Unknown, conflict, limitation, and failed processing states are first-class designs.
-- The selector contains exactly three live provider choices in OpenAI, Gemini, and Mistral order, followed by bundled replay last, and exposes no credentials or account details.
-- Provider-specific disclosure and acknowledgement are required before a live run.
+- The practitioner interface contains no provider, model, release, or credential controls.
+- Replay-only analysis auto-binds exactly one selectable local replay and fails closed for zero, multiple, or live-only selectable services.
 - Start analysis is a separate explicit action enabled only after every current prerequisite passes, and duplicate launch is blocked while a request is pending.
-- Failed runs remain visible, and provider or replay switching is never silent or automatic.
+- Failed live attempts remain visible through safe provenance; replay is never substituted for live analysis.
 - Refusal, safety, privacy, citation, schema, and semantic-validation failures offer no provider-switch bypass.
 - Unpaid Gemini remains visibly limited to the bundled synthetic fixture.
 - Free Mistral remains unavailable until exact release `mistral-small-2603` has passed evaluation evidence, matching reviewed static admission, and confirmed deployed-account availability. When enabled, it remains visibly limited to the exact bundled synthetic fixture with training-use or opt-out, up-to-30-day retention, and no-free-ZDR copy.

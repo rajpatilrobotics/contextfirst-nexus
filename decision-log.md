@@ -119,8 +119,8 @@ Changing a frozen decision requires:
 ### DEC-012: Routes and server boundary
 
 - Date: 2026-07-15
-- Status: Frozen for P0
-- Decision: Use the six approved user routes plus one Node.js `/api/analyze` route. The route exposes a safe capability projection on `GET` and one bounded selected-provider analysis on `POST`.
+- Status: Amended by DEC-045 on 2026-07-17
+- Decision: Use the six approved user routes plus one Node.js `/api/analyze` route. The route exposes a safe capability projection on `GET`; after TASK-040 contract reconciliation, `POST` accepts one bounded provider-neutral live-analysis intent and applies server-managed routing.
 - Reason: This keeps provider credentials and controls server-side while retaining a small architecture.
 - Authority: `docs/ARCHITECTURE.md`, `docs/CONTRACTS.md`
 
@@ -227,7 +227,7 @@ Changing a frozen decision requires:
 ### DEC-025: Explicit provider selection and recovery
 
 - Date: 2026-07-15
-- Status: Frozen for P0
+- Status: Superseded by DEC-045 on 2026-07-17
 - Decision: Display OpenAI, Gemini, Mistral, then replay. Never treat this order as an automatic chain. Every retry, provider switch, or replay action is explicit. A provider switch requires a fresh disclosure acknowledgement and creates a separate linked run. Outputs from separate runs are never merged.
 - Reason: Provider choice changes data flow, terms, provenance, and cost. It must remain visible and controlled by the practitioner.
 - Authority: `docs/MODEL_ROUTING.md`, `docs/CONTRACTS.md`
@@ -246,7 +246,7 @@ Changing a frozen decision requires:
 - Status: Frozen for P0
 - Decision: Use at most one active project-owned server credential per provider in P0. Do not pool, share, round-robin, or rotate multiple personal, friend, college, or multi-account keys to expand free quota or evade limits. Do not accept browser-supplied keys.
 - Reason: Shared-key pools create security, ownership, audit, terms, and suspension risks and conflict with the responsible provider-selection architecture.
-- Approved resilience: Explicit evaluated-provider recovery, safe retry delays, deterministic replay, synthetic-result caching where later approved, and legitimate provider quota or budget controls.
+- Approved resilience: Bounded evaluated-provider recovery under the managed-routing rules in DEC-045, safe retry delays, deterministic replay, synthetic-result caching where later approved, and legitimate provider quota or budget controls.
 - Authority: `docs/MODEL_ROUTING.md`, `docs/SAFETY_AND_DATA.md`
 
 ### DEC-028: Public live-analysis default
@@ -264,6 +264,19 @@ Changing a frozen decision requires:
 - Decision: A release becomes selectable only after its exact provider, model, adapter, settings, schema, prompt, tier, and fixture binding pass the development and fresh held-out gates. Cost and latency are considered only after all blocking safety gates pass.
 - Reason: Provider marketing and general benchmarks cannot establish fitness for this evidence-processing task.
 - Authority: `docs/TESTING_AND_EVALUATION.md`, `docs/MODEL_ROUTING.md`
+
+### DEC-045: Managed analysis entry and server-side routing
+
+- Date: 2026-07-17
+- Status: Approved product direction; TASK-039 Ready and TASK-040 blocked on TASK-039
+- Decision: Remove provider and model controls from the practitioner-facing flow. Present one plain-language Start analysis action. In the replay-only public deployment, bind exactly one selectable bundled deterministic replay; zero or multiple selectable services fail closed. Keep replay separate from live routing and preserve its `providerTransmission: false` provenance.
+- Future live routing: After contract and architecture reconciliation, the server may attempt statically admitted releases in the frozen order OpenAI, Gemini, Mistral, then a separately evaluated and admitted fourth provider. Groq `openai/gpt-oss-120b` is only the current fourth-provider evaluation candidate and receives no runtime, credential, spend, provider-call, admission, or deployment approval from this decision.
+- Eligible fallback: Only a classified operational failure—provider not configured, authentication failure before processing, quota exhausted, rate limited, confirmed temporary unavailability, or confirmed request not executed—may advance to another admitted live release.
+- Forbidden fallback: Privacy or leak-scan failure, prohibited input, refusal, unsafe output, invalid citation, semantic failure, malformed output, injection propagation, timeout or transport failure with unknown remote execution, partial or accepted output, and every safety-bypass attempt stop routing.
+- Routing guarantees: One canonical approved redacted input, one final accepted result, no cross-provider output merge, no multi-key quota evasion, safe attempt metadata only, exact final provider and release provenance, bounded attempts, immediate stop after acceptance, and fail-closed missing or stale admission. Provider details remain in Trust, safe audit, export provenance, and optional consolidated plain-language disclosure rather than developer controls.
+- Public release boundary: `ENABLE_LIVE_ANALYSIS` remains authoritative and the public deployment remains replay-only until evaluation, reviewed static admission, credentials, spend approval, and separate production approval are all recorded.
+- Supersession: This decision explicitly replaces DEC-025's practitioner-controlled provider selection and switching. DEC-024 replay separation, DEC-026 safety-failure prohibition, DEC-027 single-credential boundary, DEC-028 public-live default, and DEC-029 static admission remain in force.
+- Authority: `PROJECT_BRIEF.md`, `docs/PRODUCT_SPEC.md`, `docs/ARCHITECTURE.md`, `docs/CONTRACTS.md`, `docs/SAFETY_AND_DATA.md`, `docs/MODEL_ROUTING.md`, `docs/TESTING_AND_EVALUATION.md`
 
 ## 6. Rejected or deferred decisions
 
