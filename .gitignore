@@ -17,3 +17,7 @@
 
 # logs
 *.log
+
+# local browser-test artifacts
+/test-results
+/playwright-report
