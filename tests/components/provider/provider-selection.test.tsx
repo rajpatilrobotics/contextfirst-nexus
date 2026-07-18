@@ -1,86 +1,98 @@
-import { render, screen, within } from "@testing-library/react";
+import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import {
-  ProviderSelectionPanel,
+  AnalysisDisclosurePanel,
   REPLAY_VISIBLE_LABEL,
-  providerAvailabilityLabel,
+  resolveReplayAnalysisAvailability,
 } from "../../../features/analysis/provider-selection";
-import { providerOptions, selectableProviderOptions } from "./fixtures";
+import {
+  liveOnlyProviderOptions,
+  multipleSelectableProviderOptions,
+  replayOnlyProviderOptions,
+  zeroSelectableProviderOptions,
+} from "./fixtures";
 
-describe("TASK-018 ProviderSelectionPanel", () => {
+describe("TASK-039 replay-only analysis availability", () => {
+  it("accepts only the exact sole local prepared replay service", () => {
+    const result = resolveReplayAnalysisAvailability(replayOnlyProviderOptions());
+
+    expect(result).toEqual({
+      status: "ready",
+      option: expect.objectContaining({
+        providerId: "local_replay",
+        releaseConfigurationId: "prepared-replay-v1",
+        mode: "deterministic_replay",
+        providerTransmission: false,
+        disclosure: expect.objectContaining({ providerTransmission: false }),
+      }),
+    });
+  });
+
   it.each([
-    ["disabled", "Unavailable in this deployment"],
-    ["not_evaluated", "Admission required"],
-    ["evaluation_failed", "Admission required"],
-    ["not_configured", "Unavailable in this deployment"],
-    ["service_tier_unavailable", "Exact service tier unavailable"],
-    ["deployed_account_release_unavailable", "Admission required"],
-    ["data_policy_blocked", "Unavailable for this data policy"],
-  ] as const)("maps %s to a safe availability explanation", (availabilityStatus, label) => {
-    const option = { ...providerOptions()[0], availabilityStatus, selectable: false };
-    expect(providerAvailabilityLabel(option)).toBe(label);
+    ["zero selectable services", zeroSelectableProviderOptions, "zero_selectable"],
+    ["multiple selectable services", multipleSelectableProviderOptions, "multiple_selectable"],
+    ["one selectable live service", liveOnlyProviderOptions, "live_service_selectable"],
+  ] as const)("fails closed for %s", (_label, buildOptions, reason) => {
+    expect(resolveReplayAnalysisAvailability(buildOptions())).toEqual({
+      status: "unavailable",
+      reason,
+    });
   });
 
-  it("renders the frozen order, truthful availability, Mistral admission state, and separated replay", () => {
+  it("rejects a malformed replay projection even when it is the sole selectable service", () => {
+    const malformed = replayOnlyProviderOptions().map((option) =>
+      option.providerId === "local_replay"
+        ? {
+            ...option,
+            disclosure: { ...option.disclosure, providerTransmission: true },
+          }
+        : option,
+    );
+
+    expect(resolveReplayAnalysisAvailability(malformed)).toEqual({
+      status: "unavailable",
+      reason: "invalid_replay_service",
+    });
+  });
+
+  it("shows one plain-language disclosure without a service-selection control", () => {
     render(
-      <ProviderSelectionPanel
-        disclosureAcknowledged={false}
-        onDisclosureAcknowledgementChange={vi.fn()}
-        onSelectionChange={vi.fn()}
-        options={providerOptions()}
-        selectedReleaseConfigurationId={null}
+      <AnalysisDisclosurePanel
+        acknowledged={false}
+        onAcknowledgementChange={vi.fn()}
       />,
     );
 
-    const radios = screen.getAllByRole("radio");
-    expect(radios.map((radio) => radio.getAttribute("value"))).toEqual([
-      "openai-quality-v1",
-      "gemini-quality-v1",
-      "mistral-small-free-v1",
-      "prepared-replay-v1",
-    ]);
-    expect(radios.every((radio) => !(radio as HTMLInputElement).checked)).toBe(true);
-    expect(screen.getByText("Synthetic fixture only")).toBeInTheDocument();
-    expect(screen.getByText("Exact bundled synthetic fixture only")).toBeInTheDocument();
-    expect(screen.getByText(/Mistral Small 4 is not available until exact release/i)).toHaveTextContent(
-      /mistral-small-2603.*passed evidence/i,
-    );
-    expect(screen.getByText(REPLAY_VISIBLE_LABEL)).toBeInTheDocument();
-    expect(screen.getAllByText("No provider transmission").length).toBeGreaterThan(0);
-    expect(screen.queryByText(/api key|billing identifier|project identifier/i)).not.toBeInTheDocument();
+    expect(screen.getByText(REPLAY_VISIBLE_LABEL, { exact: false })).toBeInTheDocument();
+    expect(screen.getByText(/No case content is sent to an external service/i)).toBeInTheDocument();
+    expect(screen.getByRole("checkbox", { name: /frozen local synthetic output/i })).not.toBeChecked();
+    expect(screen.queryByRole("radio")).not.toBeInTheDocument();
+    expect(screen.queryByRole("combobox")).not.toBeInTheDocument();
+    expect(screen.queryByText(/OpenAI|Gemini|Mistral|service tier|requested model/i)).not.toBeInTheDocument();
   });
 
-  it("clears stale acknowledgement through the parent when the release changes", async () => {
+  it("requires an explicit acknowledgement and never acknowledges on render", async () => {
     const user = userEvent.setup();
-    const onSelectionChange = vi.fn();
+    const onAcknowledgementChange = vi.fn();
     render(
-      <ProviderSelectionPanel
-        disclosureAcknowledged
-        onDisclosureAcknowledgementChange={vi.fn()}
-        onSelectionChange={onSelectionChange}
-        options={selectableProviderOptions()}
-        selectedReleaseConfigurationId="openai-quality-v1"
+      <AnalysisDisclosurePanel
+        acknowledged={false}
+        error="Acknowledge how local analysis works."
+        onAcknowledgementChange={onAcknowledgementChange}
       />,
     );
-    await user.click(screen.getByRole("radio", { name: /Google Gemini/i }));
-    expect(onSelectionChange).toHaveBeenCalledWith(
-      expect.objectContaining({ releaseConfigurationId: "gemini-quality-v1" }),
-    );
-  });
 
-  it("shows the selected release disclosure and exact acknowledgement", () => {
-    render(
-      <ProviderSelectionPanel
-        disclosureAcknowledged={false}
-        onDisclosureAcknowledgementChange={vi.fn()}
-        onSelectionChange={vi.fn()}
-        options={selectableProviderOptions()}
-        selectedReleaseConfigurationId="gemini-quality-v1"
-      />,
-    );
-    const group = screen.getByRole("group", { name: "Choose analysis service" });
-    expect(within(group).getByText(/approved redacted synthetic fixture evidence is sent to Gemini/i)).toBeInTheDocument();
-    expect(within(group).getByRole("checkbox", { name: /service tier, data flow, data-use terms/i })).not.toBeChecked();
+    expect(onAcknowledgementChange).not.toHaveBeenCalled();
+    const acknowledgement = screen.getByRole("checkbox", {
+      name: /sends nothing to an external service/i,
+    });
+    expect(acknowledgement).toHaveAccessibleDescription("Acknowledge how local analysis works.");
+
+    await user.tab();
+    expect(acknowledgement).toHaveFocus();
+    await user.keyboard(" ");
+    expect(onAcknowledgementChange).toHaveBeenCalledTimes(1);
+    expect(onAcknowledgementChange).toHaveBeenCalledWith(true);
   });
 });

@@ -222,8 +222,20 @@ describe("TASK-017 case shell", () => {
     expect(screen.getByText("1.0.0")).toBeInTheDocument();
     expect(screen.getByText("Current section").nextElementSibling).toHaveTextContent("Review");
     expect(screen.getByLabelText(/Case status: Draft/i)).toBeInTheDocument();
+    expect(screen.getByText("Analysis status").nextElementSibling).toHaveTextContent("Not started");
+    expect(screen.queryByText("Mode", { selector: "dt" })).not.toBeInTheDocument();
+    expect(screen.queryByText("Provider", { selector: "dt" })).not.toBeInTheDocument();
+    expect(screen.queryByText("Model", { selector: "dt" })).not.toBeInTheDocument();
 
     const nav = screen.getByRole("navigation", { name: "Case steps" });
+    expect(nav.closest("aside")).toBeNull();
+    expect(within(nav).getByRole("list")).toHaveClass(
+      "grid-cols-2",
+      "min-[520px]:grid-cols-4",
+    );
+    expect(
+      nav.compareDocumentPosition(screen.getByRole("main")) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
     const links = within(nav).getAllByRole("link");
     expect(links.map((link) => link.textContent?.replace(/\s+/g, " ").trim())).toEqual([
       "Purpose Complete",
@@ -246,24 +258,29 @@ describe("TASK-017 case shell", () => {
     expect(deriveStepProgress("export", "documents", "draft")).toBe("pending");
   });
 
-  it("shows live provider and model only from the active canonical run", () => {
+  it("summarizes a safely restored legacy live run without persistent provider or model fields", () => {
     render(
       <CaseShell currentPath="/case/demo/purpose" initialState={stateWithRun(liveRun())}>
         <p>Purpose</p>
       </CaseShell>,
     );
 
-    expect(screen.getByText("Live provider run")).toBeInTheDocument();
-    expect(screen.getByText("OpenAI")).toBeInTheDocument();
-    expect(screen.getByText("gpt-5.6-sol")).toBeInTheDocument();
+    expect(screen.getByText("Analysis status").nextElementSibling).toHaveTextContent("Analysis complete");
+    expect(screen.queryByText("OpenAI")).not.toBeInTheDocument();
+    expect(screen.queryByText("gpt-5.6-sol")).not.toBeInTheDocument();
+    expect(screen.queryByText("Provider", { selector: "dt" })).not.toBeInTheDocument();
+    expect(screen.queryByText("Model", { selector: "dt" })).not.toBeInTheDocument();
     expect(screen.queryByText("Prepared synthetic review checkpoint")).not.toBeInTheDocument();
   });
 
-  it("shows replay and prepared checkpoint provenance as separate labels", () => {
+  it("shows local replay and prepared checkpoint as plain-language status variants", () => {
     expect(describeRunProvenance(replayRun(false))).toMatchObject({
-      modeLabel: "Deterministic replay",
-      providerLabel: "Bundled deterministic replay, not live AI",
+      analysisStatusLabel: "Local replay complete",
       checkpointLabel: null,
+    });
+    expect(describeRunProvenance(replayRun(true))).toMatchObject({
+      analysisStatusLabel: "Prepared synthetic checkpoint active",
+      checkpointLabel: "Prepared synthetic review checkpoint",
     });
 
     render(
@@ -272,8 +289,11 @@ describe("TASK-017 case shell", () => {
       </CaseShell>,
     );
 
-    expect(screen.getByText("Bundled deterministic replay, not live AI")).toBeInTheDocument();
+    expect(screen.getByText("Analysis status").nextElementSibling).toHaveTextContent(
+      "Prepared synthetic checkpoint active",
+    );
     expect(screen.getByText("Prepared synthetic review checkpoint")).toBeInTheDocument();
+    expect(screen.queryByText("frozen_replay_output")).not.toBeInTheDocument();
   });
 
   it("dispatches the central reset_case command once and returns to Purpose", async () => {
@@ -305,6 +325,7 @@ describe("TASK-017 case shell", () => {
     expect(onNavigate).toHaveBeenCalledWith("/case/demo/purpose");
     expect(routerPush).not.toHaveBeenCalled();
     expect(screen.getByRole("status")).toHaveTextContent("Case reset to the synthetic demo start.");
+    expect(screen.getByText("Analysis status").nextElementSibling).toHaveTextContent("Not started");
     expect(JSON.parse(window.sessionStorage.getItem("contextfirst-nexus.case-state.v1") ?? "{}")).toMatchObject({
       caseRevision: 0,
       activeAnalysisRunId: null,
@@ -324,7 +345,9 @@ describe("TASK-017 case shell", () => {
 
     expect(screen.getByTestId("route-command-result")).toHaveTextContent("applied");
     expect(screen.getByTestId("route-run-id")).toHaveTextContent("RUN-CHECKPOINT-1");
-    expect(screen.getByText("Bundled deterministic replay, not live AI")).toBeInTheDocument();
+    expect(screen.getByText("Analysis status").nextElementSibling).toHaveTextContent(
+      "Prepared synthetic checkpoint active",
+    );
     expect(screen.getByText("Prepared synthetic review checkpoint")).toBeInTheDocument();
     expect(JSON.parse(window.sessionStorage.getItem("contextfirst-nexus.case-state.v1") ?? "{}")).toMatchObject({
       activeAnalysisRunId: "RUN-CHECKPOINT-1",
@@ -344,6 +367,9 @@ describe("TASK-017 case shell", () => {
     );
 
     await waitFor(() => expect(screen.getByTestId("route-run-id")).toHaveTextContent("RUN-CHECKPOINT-1"));
+    expect(screen.getByText("Analysis status").nextElementSibling).toHaveTextContent(
+      "Prepared synthetic checkpoint active",
+    );
     expect(screen.getByText("Prepared synthetic review checkpoint")).toBeInTheDocument();
     const persistedBefore = window.sessionStorage.getItem("contextfirst-nexus.case-state.v1");
     await user.click(screen.getByRole("button", { name: "Dispatch stale command" }));

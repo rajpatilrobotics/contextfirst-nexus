@@ -2,9 +2,19 @@ import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import { CasePurposeBriefForm } from "../../../features/purpose";
-import { RequiredExcludedDecisions, type CasePurposeBrief } from "../../../lib/contracts";
+import {
+  CasePurposeBriefSchema,
+  RequiredExcludedDecisions,
+  type CasePurposeBrief,
+} from "../../../lib/contracts";
 import { trustedPurposeBrief } from "../../../lib/analysis/replay";
-import { selectableProviderOptions } from "../provider/fixtures";
+import { replayOnlyProviderOptions } from "../provider/fixtures";
+
+function replayOption() {
+  const option = replayOnlyProviderOptions().find((candidate) => candidate.providerId === "local_replay");
+  if (!option) throw new Error("Expected trusted replay option.");
+  return option;
+}
 
 async function completeForm(user: ReturnType<typeof userEvent.setup>) {
   await user.selectOptions(screen.getByLabelText("Practitioner role"), "demo_evaluator");
@@ -24,19 +34,19 @@ async function completeForm(user: ReturnType<typeof userEvent.setup>) {
   await user.click(screen.getByRole("checkbox", { name: /acknowledge the synthetic-only data boundary/i }));
   await user.click(screen.getByRole("checkbox", { name: /does not make the excluded consequential decisions/i }));
   await user.click(screen.getByRole("checkbox", { name: /cooperation with authorities is not a condition/i }));
-  await user.click(screen.getByRole("radio", { name: /Bundled deterministic replay/i }));
-  await user.click(screen.getByRole("checkbox", { name: /service tier, data flow, data-use terms/i }));
+  await user.click(screen.getByRole("checkbox", { name: /frozen local synthetic output/i }));
 }
 
-describe("TASK-018 CasePurposeBriefForm", () => {
-  it("focuses a linked error summary and keeps analysis unselected on untouched submit", async () => {
+describe("TASK-039 CasePurposeBriefForm", () => {
+  it("focuses a linked error summary without exposing provider selection validation", async () => {
     const user = userEvent.setup();
-    render(<CasePurposeBriefForm onSave={vi.fn()} options={selectableProviderOptions()} />);
+    render(<CasePurposeBriefForm analysisOption={replayOption()} onSave={vi.fn()} />);
     await user.click(screen.getByRole("button", { name: "Save Case Purpose Brief" }));
     const summary = screen.getByRole("alert", { name: "Review the Purpose Brief" });
     expect(summary).toHaveFocus();
-    expect(screen.getAllByText("Choose one available live release or bundled replay.")).toHaveLength(2);
-    expect(screen.getAllByRole("radio").every((radio) => !(radio as HTMLInputElement).checked)).toBe(true);
+    expect(summary).toHaveTextContent("Acknowledge how this local synthetic analysis works.");
+    expect(summary).not.toHaveTextContent(/choose one available live release|selected release/i);
+    expect(screen.queryByRole("radio")).not.toBeInTheDocument();
     await user.click(screen.getByRole("link", { name: "Choose the practitioner role." }));
     expect(screen.getByLabelText("Practitioner role")).toHaveFocus();
   });
@@ -48,7 +58,7 @@ describe("TASK-018 CasePurposeBriefForm", () => {
       savedBriefs.push(brief);
       return null;
     });
-    render(<CasePurposeBriefForm onSave={onSave} options={selectableProviderOptions()} />);
+    render(<CasePurposeBriefForm analysisOption={replayOption()} onSave={onSave} />);
     await completeForm(user);
     await user.click(screen.getByRole("button", { name: "Save Case Purpose Brief" }));
     expect(onSave).toHaveBeenCalledTimes(1);
@@ -77,8 +87,8 @@ describe("TASK-018 CasePurposeBriefForm", () => {
     render(
       <CasePurposeBriefForm
         initialBrief={initialBrief}
+        analysisOption={replayOption()}
         onSave={onSave}
-        options={selectableProviderOptions()}
       />,
     );
     await user.clear(screen.getByLabelText("Authorized purpose"));
@@ -94,17 +104,31 @@ describe("TASK-018 CasePurposeBriefForm", () => {
     expect(saved.revision).toBe(initialBrief.revision + 1);
   });
 
-  it("clears disclosure acknowledgement when the selected release changes", async () => {
-    const user = userEvent.setup();
+  it("does not reuse a legacy live-provider acknowledgement for the local replay", () => {
+    const replay = trustedPurposeBrief();
+    const liveBrief = CasePurposeBriefSchema.parse({
+      ...replay,
+      providerSelection: {
+        providerId: "openai",
+        releaseConfigurationId: "openai-quality-v1",
+        serviceTier: "paid",
+        disclosureAcknowledgement: {
+          ...replay.providerSelection.disclosureAcknowledgement,
+          id: "ACK-LEGACY-LIVE",
+          providerId: "openai",
+          releaseConfigurationId: "openai-quality-v1",
+          serviceTier: "paid",
+        },
+      },
+    });
     render(
       <CasePurposeBriefForm
-        initialBrief={trustedPurposeBrief()}
+        analysisOption={replayOption()}
+        initialBrief={liveBrief}
         onSave={vi.fn()}
-        options={selectableProviderOptions()}
       />,
     );
-    expect(screen.getByRole("checkbox", { name: /service tier, data flow, data-use terms/i })).toBeChecked();
-    await user.click(screen.getByRole("radio", { name: /OpenAI/i }));
-    expect(screen.getByRole("checkbox", { name: /service tier, data flow, data-use terms/i })).not.toBeChecked();
+    expect(screen.getByRole("checkbox", { name: /frozen local synthetic output/i })).not.toBeChecked();
+    expect(screen.queryByText(/OpenAI|gpt-5\.6-sol|openai-quality-v1/i)).not.toBeInTheDocument();
   });
 });

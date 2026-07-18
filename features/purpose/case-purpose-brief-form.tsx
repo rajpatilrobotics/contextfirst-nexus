@@ -18,12 +18,12 @@ import {
   Select,
   Textarea,
 } from "../../components/ui";
-import { ProviderSelectionPanel } from "../analysis/provider-selection";
+import { AnalysisDisclosurePanel } from "../analysis/provider-selection";
 
 type FormErrors = Record<string, string>;
 
 export type CasePurposeBriefFormProps = {
-  options: ProviderOptionProjection[];
+  analysisOption: ProviderOptionProjection | null;
   initialBrief?: CasePurposeBrief | null;
   disabled?: boolean;
   onSave: (brief: CasePurposeBrief) => Promise<string | null> | string | null;
@@ -44,7 +44,7 @@ function initialExcluded(brief?: CasePurposeBrief | null) {
 }
 
 export function CasePurposeBriefForm({
-  options,
+  analysisOption,
   initialBrief = null,
   disabled = false,
   onSave,
@@ -76,12 +76,15 @@ export function CasePurposeBriefForm({
   const [cooperationAcknowledged, setCooperationAcknowledged] = useState(
     initialBrief?.cooperationNeutralityAcknowledged ?? false,
   );
-  const [selectedReleaseId, setSelectedReleaseId] = useState(
-    initialBrief?.providerSelection.releaseConfigurationId ?? null,
-  );
-  const [providerAcknowledged, setProviderAcknowledged] = useState(
-    Boolean(initialBrief?.providerSelection.disclosureAcknowledgement),
-  );
+  const [analysisAcknowledged, setAnalysisAcknowledged] = useState(() => {
+    const selection = initialBrief?.providerSelection;
+    if (!selection || !analysisOption) return false;
+    return selection.providerId === analysisOption.providerId
+      && selection.releaseConfigurationId === analysisOption.releaseConfigurationId
+      && selection.serviceTier === analysisOption.serviceTier
+      && selection.disclosureAcknowledgement.disclosureVersion
+        === analysisOption.disclosure.disclosureVersion;
+  });
   const [errors, setErrors] = useState<FormErrors>({});
   const [saveMessage, setSaveMessage] = useState<string | null>(null);
   const errorSummaryRef = useRef<HTMLDivElement>(null);
@@ -89,14 +92,6 @@ export function CasePurposeBriefForm({
   useEffect(() => {
     if (Object.keys(errors).length > 0) errorSummaryRef.current?.focus();
   }, [errors]);
-
-  useEffect(() => {
-    if (!selectedReleaseId || options.some((option) => option.releaseConfigurationId === selectedReleaseId)) {
-      return;
-    }
-    setSelectedReleaseId(null);
-    setProviderAcknowledged(false);
-  }, [options, selectedReleaseId]);
 
   function toggleExcluded(decision: ExcludedDecision, checked: boolean) {
     setExcludedDecisions((current) => {
@@ -126,9 +121,9 @@ export function CasePurposeBriefForm({
     if (!syntheticAcknowledged) next.syntheticAcknowledged = "Acknowledge the synthetic-data boundary.";
     if (!prohibitedAcknowledged) next.prohibitedAcknowledged = "Acknowledge the prohibited-decision boundary.";
     if (!cooperationAcknowledged) next.cooperationAcknowledged = "Confirm cooperation neutrality.";
-    if (!selectedReleaseId) next.providerSelection = "Choose one available live release or bundled replay.";
-    if (selectedReleaseId && !providerAcknowledged) {
-      next.providerAcknowledgement = "Acknowledge the selected release disclosure.";
+    if (!analysisOption) next.analysisService = "Analysis service unavailable";
+    if (analysisOption && !analysisAcknowledged) {
+      next.analysisAcknowledgement = "Acknowledge how this local synthetic analysis works.";
     }
     return next;
   }
@@ -142,9 +137,9 @@ export function CasePurposeBriefForm({
       return;
     }
 
-    const selected = options.find((option) => option.releaseConfigurationId === selectedReleaseId);
-    if (!selected) {
-      setErrors({ providerSelection: "The selected release is no longer available." });
+    const selected = analysisOption;
+    if (!selected || !analysisAcknowledged) {
+      setErrors({ form: "Analysis service unavailable" });
       return;
     }
 
@@ -233,8 +228,8 @@ export function CasePurposeBriefForm({
     syntheticAcknowledged: "synthetic-acknowledged",
     prohibitedAcknowledged: "prohibited-acknowledged",
     cooperationAcknowledged: "cooperation-acknowledged",
-    providerSelection: "analysis-service-options",
-    providerAcknowledgement: "provider-disclosure-acknowledgement",
+    analysisService: "purpose-form",
+    analysisAcknowledgement: "analysis-disclosure-acknowledgement",
     form: "purpose-form",
   };
 
@@ -332,17 +327,14 @@ export function CasePurposeBriefForm({
         {errors.cooperationAcknowledged ? <FieldError id="cooperation-acknowledged-error">{errors.cooperationAcknowledged}</FieldError> : null}
       </fieldset>
 
-      <div id="analysis-service-options" tabIndex={-1}>
-        <ProviderSelectionPanel
+      {analysisOption ? (
+        <AnalysisDisclosurePanel
+          acknowledged={analysisAcknowledged}
           disabled={disabled}
-          disclosureAcknowledged={providerAcknowledged}
-          error={errors.providerSelection ?? errors.providerAcknowledgement}
-          onDisclosureAcknowledgementChange={setProviderAcknowledged}
-          onSelectionChange={(option) => { setSelectedReleaseId(option.releaseConfigurationId); setProviderAcknowledged(false); }}
-          options={options}
-          selectedReleaseConfigurationId={selectedReleaseId}
+          error={errors.analysisAcknowledgement}
+          onAcknowledgementChange={setAnalysisAcknowledged}
         />
-      </div>
+      ) : null}
 
       <div className="flex flex-wrap gap-3">
         <Button disabled={disabled} type="submit" variant="primary">Save Case Purpose Brief</Button>

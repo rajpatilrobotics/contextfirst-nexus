@@ -24,13 +24,6 @@ export const STEP_NAVIGATION = [
 
 type StepId = (typeof STEP_NAVIGATION)[number]["id"];
 
-const providerLabels: Record<string, string> = {
-  openai: "OpenAI",
-  google_gemini: "Gemini",
-  mistral: "Mistral",
-  local_replay: "Bundled deterministic replay, not live AI",
-};
-
 function nowIso() {
   return new Date().toISOString();
 }
@@ -63,18 +56,16 @@ export function deriveStepProgress(stepId: StepId, currentStep: StepId, caseStat
 export function describeRunProvenance(run: AnalysisRun | null) {
   if (!run) {
     return {
-      modeLabel: "No analysis run selected",
-      providerLabel: "No provider selected",
-      modelLabel: "Model not selected",
+      analysisStatusLabel: "Not started",
       checkpointLabel: null,
     };
   }
 
   if (run.mode === "deterministic_replay") {
     return {
-      modeLabel: "Deterministic replay",
-      providerLabel: "Bundled deterministic replay, not live AI",
-      modelLabel: run.provider.requestedModel,
+      analysisStatusLabel: run.checkpointProvenance
+        ? "Prepared synthetic checkpoint active"
+        : "Local replay complete",
       checkpointLabel: run.checkpointProvenance
         ? "Prepared synthetic review checkpoint"
         : null,
@@ -82,9 +73,7 @@ export function describeRunProvenance(run: AnalysisRun | null) {
   }
 
   return {
-    modeLabel: "Live provider run",
-    providerLabel: providerLabels[run.provider.providerId] ?? run.provider.providerId,
-    modelLabel: run.provider.returnedModel ?? run.provider.requestedModel,
+    analysisStatusLabel: "Analysis complete",
     checkpointLabel: null,
   };
 }
@@ -154,8 +143,8 @@ function CaseShellContent({
       >
         {SYNTHETIC_BANNER_TEXT}
       </div>
-      <div className="mx-auto grid w-full max-w-7xl gap-5 px-4 py-5 lg:grid-cols-[280px_minmax(0,1fr)] lg:px-6">
-        <header className="lg:col-span-2">
+      <div className="mx-auto grid w-full max-w-7xl gap-5 px-4 py-5 lg:px-6">
+        <header>
           <div className="grid gap-4 rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface)] p-4 lg:grid-cols-[minmax(0,1fr)_auto]">
             <div className="grid gap-3">
               <div>
@@ -182,21 +171,13 @@ function CaseShellContent({
                   </dd>
                 </div>
               </dl>
-              <dl className="grid gap-3 text-sm sm:grid-cols-3">
+              <dl className="grid gap-3 text-sm sm:grid-cols-2">
                 <div>
-                  <dt className="cfn-type-label">Mode</dt>
-                  <dd>{provenance.modeLabel}</dd>
-                </div>
-                <div>
-                  <dt className="cfn-type-label">Provider</dt>
-                  <dd>{provenance.providerLabel}</dd>
-                </div>
-                <div>
-                  <dt className="cfn-type-label">Model</dt>
-                  <dd>{provenance.modelLabel}</dd>
+                  <dt className="cfn-type-label">Analysis status</dt>
+                  <dd>{provenance.analysisStatusLabel}</dd>
                 </div>
                 {provenance.checkpointLabel ? (
-                  <div className="sm:col-span-3">
+                  <div>
                     <dt className="cfn-type-label">Checkpoint provenance</dt>
                     <dd>{provenance.checkpointLabel}</dd>
                   </div>
@@ -220,31 +201,29 @@ function CaseShellContent({
           </div>
         </header>
 
-        <aside aria-label="Case step panel">
-          <nav
-            aria-label="Case steps"
-            className="rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface)] p-3"
-          >
-            <ol className="grid gap-2">
-              {STEP_NAVIGATION.map((step) => {
-                const progress = deriveStepProgress(step.id, currentStep, caseStatus);
-                return (
-                  <li key={step.id}>
-                    <a
-                      aria-current={step.id === currentStep ? "step" : undefined}
-                      className="grid gap-1 rounded-[var(--radius-control)] px-3 py-2 text-sm no-underline hover:bg-[var(--color-surface-subtle)]"
-                      href={step.href}
-                    >
-                      <span className="font-semibold text-[var(--color-ink)]">{step.label}</span>
-                      {" "}
-                      <NavigationProgressStatus value={progress} />
-                    </a>
-                  </li>
-                );
-              })}
-            </ol>
-          </nav>
-        </aside>
+        <nav
+          aria-label="Case steps"
+          className="rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface)] p-3"
+        >
+          <ol className="grid grid-cols-2 gap-2 min-[520px]:grid-cols-4">
+            {STEP_NAVIGATION.map((step) => {
+              const progress = deriveStepProgress(step.id, currentStep, caseStatus);
+              return (
+                <li className="min-w-0" key={step.id}>
+                  <a
+                    aria-current={step.id === currentStep ? "step" : undefined}
+                    className="grid h-full min-h-20 min-w-0 content-start gap-2 rounded-[var(--radius-control)] px-2 py-3 text-sm no-underline hover:bg-[var(--color-surface-subtle)] sm:px-3"
+                    href={step.href}
+                  >
+                    <span className="font-semibold text-[var(--color-ink)]">{step.label}</span>
+                    {" "}
+                    <NavigationProgressStatus value={progress} />
+                  </a>
+                </li>
+              );
+            })}
+          </ol>
+        </nav>
 
         <main
           aria-labelledby="case-workspace-heading"

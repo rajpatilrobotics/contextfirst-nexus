@@ -1,6 +1,8 @@
 export {
-  ProviderSelectionPanel,
+  AnalysisDisclosurePanel,
   REPLAY_VISIBLE_LABEL,
-  providerAvailabilityLabel,
-  type ProviderSelectionPanelProps,
+  resolveReplayAnalysisAvailability,
+  type AnalysisDisclosurePanelProps,
+  type ReplayAnalysisAvailability,
+  type ReplayAvailabilityFailureReason,
 } from "./provider-selection-panel";
