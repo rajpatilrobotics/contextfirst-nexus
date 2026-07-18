@@ -13,7 +13,7 @@ function joinClassNames(...values: Array<string | false | null | undefined>) {
 }
 
 const controlClass =
-  "cfn-control-target rounded-[var(--radius-control)] border border-[var(--color-control-border)] bg-[var(--color-surface)] px-3 py-2 text-[var(--color-ink)] disabled:cursor-not-allowed disabled:opacity-60";
+  "cfn-control-target rounded-[var(--radius-control)] border border-[var(--color-control-border)] bg-[var(--color-surface)] px-3 py-2 text-[var(--color-ink)] shadow-sm transition-colors disabled:cursor-not-allowed disabled:opacity-60";
 
 export function Button({
   variant = "secondary",
@@ -25,9 +25,9 @@ export function Button({
   return (
     <button
       className={joinClassNames(
-        "cfn-control-target inline-flex items-center justify-center gap-2 rounded-[var(--radius-control)] border px-4 py-2 text-sm font-semibold transition-colors duration-150 disabled:cursor-not-allowed disabled:opacity-60",
+        "cfn-control-target inline-flex items-center justify-center gap-2 rounded-[var(--radius-control)] border px-4 py-2 text-sm font-semibold shadow-sm transition-all duration-150 disabled:cursor-not-allowed disabled:opacity-60",
         variant === "primary" &&
-          "border-[var(--color-brand)] bg-[var(--color-brand)] text-white hover:bg-[var(--color-brand-hover)]",
+          "border-[var(--color-brand)] bg-[var(--color-brand)] text-white hover:-translate-y-px hover:bg-[var(--color-brand-hover)] hover:shadow-md",
         variant === "secondary" &&
           "border-[var(--color-control-border)] bg-[var(--color-surface)] text-[var(--color-ink)] hover:bg-[var(--color-surface-subtle)]",
         variant === "danger" &&
@@ -123,7 +123,7 @@ export function Alert({
     <section
       aria-label={title}
       className={joinClassNames(
-        "rounded-[var(--radius-card)] border p-4",
+        "rounded-[var(--radius-card)] border px-4 py-3",
         tone === "neutral" && "border-[var(--color-border)] bg-[var(--color-neutral-subtle)]",
         tone === "warning" && "border-[var(--color-warning)] bg-[var(--color-warning-subtle)]",
         tone === "danger" && "border-[var(--color-danger)] bg-[var(--color-danger-subtle)]",
@@ -136,7 +136,7 @@ export function Alert({
 }
 
 export function Card({ children, className }: { children: ReactNode; className?: string }) {
-  return <section className={joinClassNames("cfn-surface p-4", className)}>{children}</section>;
+  return <section className={joinClassNames("cfn-surface p-4 shadow-[0_1px_2px_rgb(22_37_29_/_5%)]", className)}>{children}</section>;
 }
 
 export function Dialog({

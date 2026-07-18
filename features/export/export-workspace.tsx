@@ -182,30 +182,28 @@ export function ExportWorkspace() {
   return (
     <div className="grid min-w-0 gap-6">
       <header className="grid gap-2">
-        <p className="cfn-type-label text-[var(--color-ink-muted)]">Purpose-bound local export</p>
-        <h2 className="cfn-type-heading-2">Export reviewed handoff</h2>
+        <p className="cfn-type-label text-[var(--color-ink-muted)]">Final step</p>
+        <h2 className="cfn-type-heading-2">Create your handoff</h2>
         <p className="max-w-[780px]">
-          Review every blocker, create one canonical manifest, then preview or download it locally as JSON and PDF. This route does not email, upload, file, refer, share, or otherwise transmit an export.
+          Check that the case is ready, create the reviewed handoff, then download it locally. Nothing is sent from this page.
         </p>
       </header>
 
-      <Card className="grid gap-4">
-        <div className="grid gap-3 sm:grid-cols-3">
-          <div><p className="cfn-type-label">Purpose-selected handoff</p><p>{handoffLabel(requestedKind)}</p></div>
-          <div><p className="cfn-type-label">Intended recipient</p><p>{state.purposeBrief?.intendedRecipient ?? "Complete the Case Purpose Brief"}</p></div>
-          <div><p className="cfn-type-label">Current gate</p><p>{gateStatus}</p></div>
+      <details className="rounded-[var(--radius-control)] border border-[var(--color-border)] bg-[var(--color-surface)] p-4">
+        <summary className="cursor-pointer font-semibold">Handoff settings</summary>
+        <div className="mt-4 grid gap-3 sm:grid-cols-3">
+          <div><p className="cfn-type-label">Handoff type</p><p>{handoffLabel(requestedKind)}</p></div>
+          <div><p className="cfn-type-label">Recipient</p><p>{state.purposeBrief?.intendedRecipient ?? "Complete the Case Purpose Brief"}</p></div>
+          <div><p className="cfn-type-label">Readiness</p><p>{gateStatus}</p></div>
         </div>
-        <p className="cfn-type-body-small">
-          Handoff kind can only be changed in Purpose; saving that change creates a new purpose revision and invalidates export readiness.
-        </p>
-        <a className="cfn-control-target w-fit rounded-[var(--radius-control)] border border-[var(--color-control-border)] px-3 py-2 text-sm font-semibold" href="/case/demo/purpose#requested-export">
+        <a className="mt-4 inline-flex min-h-10 w-fit items-center rounded-[var(--radius-control)] border border-[var(--color-control-border)] px-3 py-2 text-sm font-semibold" href="/case/demo/purpose#requested-export">
           Change handoff kind in Purpose
         </a>
-      </Card>
+      </details>
 
       {requestedKind === "minimum_necessary_safe_share" ? (
         <Card className="grid gap-4" >
-          <header className="grid gap-1" id="minimum-necessary-selection">
+          <header className="grid gap-1" id="minimum-necessary-selection" tabIndex={-1}>
             <p className="cfn-type-label text-[var(--color-ink-muted)]">Minimum necessity</p>
             <h3 className="cfn-type-heading-3">Review included and excluded candidate IDs</h3>
             <p>Recipient category: {state.purposeBrief?.intendedRecipientCategory}</p>
@@ -246,20 +244,42 @@ export function ExportWorkspace() {
 
       {message ? <Alert title="Export action needs attention" tone="danger"><p>{message}</p></Alert> : null}
 
-      <div className="flex flex-wrap gap-3">
-        <Button onClick={evaluateGate} variant="primary">Review export gate</Button>
-        {readyGate ? <Button onClick={createHandoff}>Create canonical handoff</Button> : null}
-      </div>
+      <section className={`grid gap-4 rounded-[var(--radius-card)] border p-5 ${readyGate ? "border-[var(--color-supported)] bg-[var(--color-supported-subtle)]" : "border-[var(--color-brand)] bg-[var(--color-brand-subtle)]"}`}>
+        <div>
+          <p className="cfn-type-label">{readyGate ? "Ready for handoff" : "Check readiness"}</p>
+          <h3 className="cfn-type-heading-3">
+            {readyGate ? "All required checks passed" : "Make sure every required review is complete"}
+          </h3>
+          <p className="mt-1 text-sm text-[var(--color-ink-muted)]">
+            {readyGate
+              ? "Create the reviewed handoff from the current case state."
+              : "The readiness check will show one clear list of anything that still needs attention."}
+          </p>
+        </div>
+        <div className="flex flex-wrap gap-3">
+          {!readyGate ? <Button onClick={evaluateGate} variant="primary">Check readiness</Button> : null}
+          {readyGate && !manifest ? <Button onClick={createHandoff} variant="primary">Create reviewed handoff</Button> : null}
+          {readyGate ? <Button onClick={evaluateGate} variant="secondary">Check again</Button> : null}
+        </div>
+      </section>
 
       {showGatePanel ? <ExportGatePanel gate={gateMatchesSelection ? state.exportGate : null} headingRef={gateHeadingRef} /> : null}
 
       {manifest && canonicalJson ? (
         <Card className="grid min-w-0 gap-5">
           <header className="grid gap-1">
-            <p className="cfn-type-label text-[var(--color-ink-muted)]">One reviewed snapshot · two local formats</p>
-            <h3 className="cfn-type-heading-3">Canonical handoff {manifest.id}</h3>
-            <p>Manifest hash: <span className="break-all">{manifest.reviewedStateHash}</span></p>
+            <p className="cfn-type-label text-[var(--color-supported)]">Handoff created</p>
+            <h3 className="cfn-type-heading-3">Preview and download</h3>
+            <p className="text-sm text-[var(--color-ink-muted)]">Both downloads use this same reviewed case snapshot.</p>
           </header>
+
+          <details className="rounded-[var(--radius-control)] border border-[var(--color-border)] bg-[var(--color-surface-subtle)] p-3 text-sm">
+            <summary className="cursor-pointer font-semibold">Technical manifest details</summary>
+            <dl className="mt-3 grid gap-2">
+              <div><dt className="cfn-type-label">Manifest ID</dt><dd className="break-all">{manifest.id}</dd></div>
+              <div><dt className="cfn-type-label">Reviewed-state hash</dt><dd className="break-all">{manifest.reviewedStateHash}</dd></div>
+            </dl>
+          </details>
 
           <div aria-label="Handoff previews" className="flex flex-wrap gap-2" role="tablist">
             {(["semantic", "json"] as const).map((tab) => (
@@ -275,7 +295,7 @@ export function ExportWorkspace() {
                 tabIndex={activeTab === tab ? 0 : -1}
                 type="button"
               >
-                {tab === "semantic" ? "Semantic preview" : "Structured JSON"}
+                {tab === "semantic" ? "Readable preview" : "Structured JSON"}
               </button>
             ))}
           </div>
@@ -289,29 +309,22 @@ export function ExportWorkspace() {
             )}
           </div>
 
-          <Alert title="Local download only">
-            <p>
-              Downloads are created in this browser. Once you share a downloaded copy outside this app, deleting the local export cannot delete that downstream copy. The PDF is accompanied by machine-readable JSON; no tagged-PDF or PDF/UA claim is made.
-            </p>
-          </Alert>
-
           <div className="flex flex-wrap gap-3">
-            <Button onClick={() => downloadLocalBlob(renderExportJsonBlob(manifest), exportFilename("json", manifest.id))}>Download JSON locally</Button>
             <Button disabled={pdfState === "generating"} onClick={() => void generatePdf()} variant="primary">
               {pdfState === "generating" ? "Generating PDF locally…" : "Generate PDF locally"}
             </Button>
             {pdfBlob ? (
               <Button onClick={() => downloadLocalBlob(pdfBlob, exportFilename("pdf", manifest.id))}>Download PDF locally</Button>
             ) : null}
+            <Button onClick={() => downloadLocalBlob(renderExportJsonBlob(manifest), exportFilename("json", manifest.id))}>Download JSON locally</Button>
           </div>
+          <p className="text-sm text-[var(--color-ink-muted)]">
+            Downloads are created only in this browser. Sharing a downloaded copy happens outside this app.
+          </p>
           {pdfState === "ready" ? <p role="status">PDF is ready for local download from the same canonical manifest.</p> : null}
           {pdfState === "error" ? <Alert title="PDF generation failed" tone="danger"><p>The local PDF could not be generated. The semantic preview and canonical JSON remain available.</p></Alert> : null}
         </Card>
-      ) : (
-        <Alert title="No canonical handoff yet" tone="warning">
-          <p>A current ready gate and an explicit create action are required before any preview, renderer, or download is available.</p>
-        </Alert>
-      )}
+      ) : null}
     </div>
   );
 }

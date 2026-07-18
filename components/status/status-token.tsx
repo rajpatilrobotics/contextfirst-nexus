@@ -57,7 +57,7 @@ export function StatusToken({
       data-tone={presentation.tone}
       title={presentation.description}
     >
-      <Icon aria-hidden="true" focusable="false" size={16} strokeWidth={2.2} />
+      <Icon aria-hidden="true" focusable="false" size={13} strokeWidth={2.2} />
       <span>{presentation.label}</span>
     </span>
   );

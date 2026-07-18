@@ -21,7 +21,8 @@ function candidate(state: CaseState, id: string) {
 }
 
 describe("TASK-021 CandidateReviewCard", () => {
-  it("renders wording, separate status dimensions, dependencies, unknowns, and exact source access", () => {
+  it("renders wording, separate status dimensions, dependencies, unknowns, and exact source access on demand", async () => {
+    const user = userEvent.setup();
     const state = checkpointState();
     render(
       <CandidateReviewCard
@@ -33,6 +34,7 @@ describe("TASK-021 CandidateReviewCard", () => {
       />,
     );
 
+    await user.click(screen.getByText("View evidence and reasoning"));
     expect(screen.getByText("Original suggestion")).toBeInTheDocument();
     expect(screen.getByText("Current reviewed wording")).toBeInTheDocument();
     expect(screen.getByLabelText(/Item origin: AI suggestion/i)).toBeInTheDocument();
@@ -158,7 +160,8 @@ describe("TASK-021 CandidateReviewCard", () => {
 });
 
 describe("TASK-021 Review workspace composition", () => {
-  it("shows checkpoint and replay provenance, fixture-reviewer attribution, all hero regions, and Trust navigation", () => {
+  it("shows checkpoint and replay provenance, fixture-reviewer attribution, all hero regions, and Trust navigation", async () => {
+    const user = userEvent.setup();
     const state = checkpointState();
     render(
       <CaseStateProvider initialState={state}>
@@ -169,11 +172,12 @@ describe("TASK-021 Review workspace composition", () => {
     expect(screen.getByText("Prepared demo review checkpoint")).toBeInTheDocument();
     expect(screen.getByText("Bundled deterministic replay, not live AI")).toBeInTheDocument();
     expect(screen.getByText(/Seeded decisions are attributed to Fixture reviewer/i)).toBeInTheDocument();
+    await user.click(screen.getByText("Explore timeline and supporting analysis"));
     expect(screen.getByRole("heading", { name: "Source-linked timeline" })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Charge-Coercion Nexus" })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Three review lanes" })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Review queue" })).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: "Candidate review" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Review required items" })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Context gaps" })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Dependency change" })).toBeInTheDocument();
     expect(screen.getAllByRole("link", { name: /Trust and Safety|Open Trust and Safety/i }).length).toBeGreaterThan(0);
@@ -210,5 +214,54 @@ describe("TASK-021 Review workspace composition", () => {
     );
     expect(screen.getByText("No accepted analysis output")).toBeInTheDocument();
     expect(screen.getByText(/failed run created no review candidates/i)).toBeInTheDocument();
+  });
+
+  it("offers one clear route to Export after every active individual review is complete", () => {
+    const checkpoint = checkpointState();
+    const reviewedState: CaseState = {
+      ...checkpoint,
+      candidates: checkpoint.candidates.map((item) => item.inclusionStatus === "active" && item.reviewRequirement === "individual"
+        ? { ...item, reviewStatus: "human_accepted" as const }
+        : item),
+    };
+
+    render(
+      <CaseStateProvider initialState={reviewedState}>
+        <ReviewWorkspace />
+      </CaseStateProvider>,
+    );
+
+    expect(screen.getByRole("link", { name: "Continue to Export" })).toHaveAttribute("href", "/case/demo/export");
+  });
+
+  it("surfaces a pending individual Nexus decision in the primary one-at-a-time flow", () => {
+    const checkpoint = checkpointState();
+    const nexusPendingState: CaseState = {
+      ...checkpoint,
+      candidates: checkpoint.candidates.map((item) => {
+        if (item.inclusionStatus !== "active" || item.reviewRequirement !== "individual") {
+          return item;
+        }
+        return {
+          ...item,
+          reviewStatus:
+            item.id === "NEXUS-COMPELLED-TASKS"
+              ? ("pending" as const)
+              : ("human_accepted" as const),
+        };
+      }),
+    };
+
+    render(
+      <CaseStateProvider initialState={nexusPendingState}>
+        <ReviewWorkspace />
+      </CaseStateProvider>,
+    );
+
+    expect(screen.getByText("Next decision")).toBeInTheDocument();
+    const nexusCard = document.getElementById("candidate-NEXUS-COMPELLED-TASKS");
+    expect(nexusCard).not.toBeNull();
+    expect(within(nexusCard!).getByRole("button", { name: "Accept suggestion" })).toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "Continue to Export" })).not.toBeInTheDocument();
   });
 });

@@ -238,9 +238,9 @@ describe("TASK-017 case shell", () => {
     ).toBeTruthy();
     const links = within(nav).getAllByRole("link");
     expect(links.map((link) => link.textContent?.replace(/\s+/g, " ").trim())).toEqual([
-      "Purpose Complete",
-      "Documents Complete",
-      "Review In progress",
+      "Purpose In progress",
+      "Documents Not started",
+      "Review Not started",
       "Export Not started",
     ]);
     expect(links.map((link) => link.getAttribute("href"))).toEqual(
@@ -249,13 +249,47 @@ describe("TASK-017 case shell", () => {
     expect(within(nav).getByRole("link", { name: /Review/ })).toHaveAttribute("aria-current", "step");
   });
 
-  it("uses frozen navigation progress labels for active status variants", () => {
+  it("derives journey progress from canonical case state instead of the current URL", () => {
+    const initial = createInitialCaseState(NOW);
+    const purposeReady = {
+      ...initial,
+      purposeBrief: checkpointState().purposeBrief,
+    };
+    const checkpoint = checkpointState();
+
     expect(deriveCurrentStep("/case/demo/intake")).toBe("documents");
-    expect(deriveStepProgress("purpose", "purpose", "draft")).toBe("active");
-    expect(deriveStepProgress("purpose", "purpose", "review_required")).toBe("warning");
-    expect(deriveStepProgress("purpose", "purpose", "blocked")).toBe("failed");
-    expect(deriveStepProgress("purpose", "documents", "draft")).toBe("completed");
-    expect(deriveStepProgress("export", "documents", "draft")).toBe("pending");
+    expect(deriveStepProgress("purpose", initial)).toBe("active");
+    expect(deriveStepProgress("documents", initial)).toBe("pending");
+    expect(deriveStepProgress("purpose", purposeReady)).toBe("completed");
+    expect(deriveStepProgress("documents", purposeReady)).toBe("active");
+    expect(deriveStepProgress("purpose", checkpoint)).toBe("completed");
+    expect(deriveStepProgress("documents", checkpoint)).toBe("completed");
+    expect(deriveStepProgress("review", checkpoint)).toBe("warning");
+    expect(deriveStepProgress("export", checkpoint)).toBe("pending");
+  });
+
+  it("distinguishes running, failed, succeeded, and replay analysis states", () => {
+    expect(describeRunProvenance(null, true).analysisStatusLabel).toBe("Analysis running");
+    expect(
+      describeRunProvenance({
+        ...liveRun(),
+        status: "failed",
+        candidateCount: 0,
+        citationCount: 0,
+        quarantinedCount: 0,
+        failure: {
+          classification: "internal_safe_failure",
+          safeErrorCode: "INTERNAL_SAFE_FAILURE",
+          retryableSameProvider: false,
+          alternateProviderRecoveryAllowed: false,
+          replayRecoveryAllowed: false,
+        },
+      } as AnalysisRun).analysisStatusLabel,
+    ).toBe("Analysis failed");
+    expect(describeRunProvenance(liveRun()).analysisStatusLabel).toBe("Analysis complete");
+    expect(describeRunProvenance(replayRun(false)).analysisStatusLabel).toBe(
+      "Local replay complete",
+    );
   });
 
   it("summarizes a safely restored legacy live run without persistent provider or model fields", () => {

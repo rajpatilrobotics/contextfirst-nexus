@@ -3,6 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { CaseStateProvider } from "../../../components/shell";
 import { PurposeWorkspace } from "../../../features/purpose";
+import { trustedPurposeBrief } from "../../../lib/analysis/replay";
 import { createInitialCaseState } from "../../../lib/state";
 import {
   multipleSelectableProviderOptions,
@@ -87,5 +88,28 @@ describe("TASK-018 PurposeWorkspace", () => {
     expect(screen.getByRole("button", { name: "Save Case Purpose Brief" })).toBeDisabled();
     expect(screen.getByRole("button", { name: "Load prepared checkpoint" })).toBeDisabled();
     expect(screen.queryByRole("radio")).not.toBeInTheDocument();
+  });
+
+  it("hands a saved Purpose directly to the Documents step", async () => {
+    vi.stubGlobal("fetch", vi.fn(async () => new Response(JSON.stringify({
+      schemaVersion: "1.0.0",
+      liveAnalysisEnabled: false,
+      replayEnabled: true,
+      options: replayOnlyProviderOptions(),
+    }), { status: 200, headers: { "Content-Type": "application/json" } })));
+    const initial = createInitialCaseState(NOW);
+
+    render(
+      <CaseStateProvider initialState={{ ...initial, purposeBrief: trustedPurposeBrief() }}>
+        <PurposeWorkspace />
+      </CaseStateProvider>,
+    );
+
+    const saved = await screen.findByRole("region", { name: "Saved purpose is complete" });
+    expect(saved).toHaveTextContent("Analysis remains a separate action");
+    expect(screen.getByRole("link", { name: "Continue to Documents" })).toHaveAttribute(
+      "href",
+      "/case/demo/intake",
+    );
   });
 });

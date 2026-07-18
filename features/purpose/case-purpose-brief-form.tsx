@@ -234,7 +234,7 @@ export function CasePurposeBriefForm({
   };
 
   return (
-    <form className="grid gap-6" id="purpose-form" noValidate onSubmit={handleSubmit} tabIndex={-1}>
+    <form className="grid gap-5" id="purpose-form" noValidate onSubmit={handleSubmit} tabIndex={-1}>
       {Object.keys(errors).length > 0 ? (
         <div
           aria-labelledby="purpose-error-summary-heading"
@@ -263,56 +263,66 @@ export function CasePurposeBriefForm({
         </p>
       </Alert>
 
-      <fieldset className="grid gap-4">
-        <legend className="cfn-type-heading-3">Practitioner and workflow</legend>
-        <div>
-          <Label htmlFor="practitioner-role">Practitioner role</Label>
-          <Select id="practitioner-role" value={practitionerRole} onChange={(event) => setPractitionerRole(event.currentTarget.value as CasePurposeBrief["practitionerRole"] | "")}>
-            <option value="">Choose role</option>
-            <option value="legal_aid">Legal aid</option><option value="defence">Defence</option>
-            <option value="public_defender">Public defender</option><option value="court_navigation">Court navigation</option>
-            <option value="ngo_legal">NGO legal</option><option value="demo_evaluator">Demo evaluator</option>
-          </Select>
-          {errors.practitionerRole ? <FieldError id="practitioner-role-error">{errors.practitionerRole}</FieldError> : null}
+      <fieldset className="grid gap-4 rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface)] p-4">
+        <legend className="cfn-type-heading-3 px-1">1. Practitioner and purpose</legend>
+        <p className="cfn-type-body-small text-[var(--color-ink-muted)]">
+          Identify the practitioner context and the single authorized purpose for this handoff.
+        </p>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <div>
+            <Label htmlFor="practitioner-role">Practitioner role</Label>
+            <Select id="practitioner-role" value={practitionerRole} onChange={(event) => setPractitionerRole(event.currentTarget.value as CasePurposeBrief["practitionerRole"] | "")}>
+              <option value="">Choose role</option>
+              <option value="legal_aid">Legal aid</option><option value="defence">Defence</option>
+              <option value="public_defender">Public defender</option><option value="court_navigation">Court navigation</option>
+              <option value="ngo_legal">NGO legal</option><option value="demo_evaluator">Demo evaluator</option>
+            </Select>
+            {errors.practitionerRole ? <FieldError id="practitioner-role-error">{errors.practitionerRole}</FieldError> : null}
+          </div>
+          <div>
+            <Label htmlFor="organization-type">Organization type</Label>
+            <Select id="organization-type" value={organizationType} onChange={(event) => setOrganizationType(event.currentTarget.value as CasePurposeBrief["organizationType"] | "")}>
+              <option value="">Choose organization</option>
+              <option value="legal_aid">Legal aid</option><option value="public_defender">Public defender</option>
+              <option value="court_service">Court service</option><option value="ngo">NGO</option>
+              <option value="law_office">Law office</option><option value="research_or_evaluation">Research or evaluation</option>
+              <option value="other_authorized">Other authorized</option>
+            </Select>
+            {errors.organizationType ? <FieldError id="organization-type-error">{errors.organizationType}</FieldError> : null}
+          </div>
+          <div className="sm:col-span-2">
+            <Label htmlFor="stated-purpose">Authorized purpose</Label>
+            <Textarea id="stated-purpose" maxLength={500} value={statedPurpose} onChange={(event) => setStatedPurpose(event.currentTarget.value)} />
+            {errors.statedPurpose ? <FieldError id="stated-purpose-error">{errors.statedPurpose}</FieldError> : null}
+          </div>
         </div>
-        <div>
-          <Label htmlFor="organization-type">Organization type</Label>
-          <Select id="organization-type" value={organizationType} onChange={(event) => setOrganizationType(event.currentTarget.value as CasePurposeBrief["organizationType"] | "")}>
-            <option value="">Choose organization</option>
-            <option value="legal_aid">Legal aid</option><option value="public_defender">Public defender</option>
-            <option value="court_service">Court service</option><option value="ngo">NGO</option>
-            <option value="law_office">Law office</option><option value="research_or_evaluation">Research or evaluation</option>
-            <option value="other_authorized">Other authorized</option>
-          </Select>
-          {errors.organizationType ? <FieldError id="organization-type-error">{errors.organizationType}</FieldError> : null}
-        </div>
-        <div>
-          <Label htmlFor="stated-purpose">Authorized purpose</Label>
-          <Textarea id="stated-purpose" maxLength={500} value={statedPurpose} onChange={(event) => setStatedPurpose(event.currentTarget.value)} />
-          {errors.statedPurpose ? <FieldError id="stated-purpose-error">{errors.statedPurpose}</FieldError> : null}
-        </div>
-        <p><strong>Supported workflow:</strong> Case preparation handoff.</p>
+        <p className="cfn-type-body-small"><strong>Workflow:</strong> Case preparation handoff</p>
       </fieldset>
 
-      <fieldset className="grid gap-4">
-        <legend className="cfn-type-heading-3">Handoff context</legend>
-        <div><Label htmlFor="intended-recipient">Intended recipient or handoff</Label><Input id="intended-recipient" maxLength={500} value={intendedRecipient} onChange={(event) => setIntendedRecipient(event.currentTarget.value)} />{errors.intendedRecipient ? <FieldError id="intended-recipient-error">{errors.intendedRecipient}</FieldError> : null}</div>
-        <div><Label htmlFor="intended-recipient-category">Recipient category</Label><Select id="intended-recipient-category" value={intendedRecipientCategory} onChange={(event) => setIntendedRecipientCategory(event.currentTarget.value as CasePurposeBrief["intendedRecipientCategory"] | "")}><option value="">Choose category</option><option value="legal_aid_team">Legal aid team</option><option value="public_defender">Public defender</option><option value="court_navigation">Court navigation</option><option value="ngo_caseworker">NGO caseworker</option><option value="policy_or_research_summary">Policy or research summary</option></Select>{errors.intendedRecipientCategory ? <FieldError id="intended-recipient-category-error">{errors.intendedRecipientCategory}</FieldError> : null}</div>
-        <div><Label htmlFor="jurisdiction-code">Fictional jurisdiction</Label><Select id="jurisdiction-code" value={jurisdictionCode} onChange={(event) => setJurisdictionCode(event.currentTarget.value as CasePurposeBrief["jurisdictionCode"] | "")}><option value="">Choose jurisdiction</option><option value="J-01">J-01</option><option value="J-02">J-02</option><option value="unspecified">Unspecified</option></Select>{errors.jurisdictionCode ? <FieldError id="jurisdiction-code-error">{errors.jurisdictionCode}</FieldError> : null}</div>
-        <div><Label htmlFor="translation-status">Translation status</Label><Select id="translation-status" value={translationStatus} onChange={(event) => setTranslationStatus(event.currentTarget.value as CasePurposeBrief["translationStatus"] | "")}><option value="">Choose status</option><option value="original_language">Original language</option><option value="translated_unverified">Translated, unverified</option><option value="unknown">Unknown</option></Select>{errors.translationStatus ? <FieldError id="translation-status-error">{errors.translationStatus}</FieldError> : null}</div>
-        <p><strong>Source language:</strong> English.</p>
-        <div><Label htmlFor="requested-export">Requested handoff</Label><Select id="requested-export" value={requestedExport} onChange={(event) => setRequestedExport(event.currentTarget.value as CasePurposeBrief["requestedExport"] | "")}><option value="">Choose one handoff</option><option value="full_practitioner_handoff">Full practitioner handoff</option><option value="minimum_necessary_safe_share">Minimum-necessary safe share</option></Select>{errors.requestedExport ? <FieldError id="requested-export-error">{errors.requestedExport}</FieldError> : null}</div>
+      <fieldset className="grid gap-4 rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface)] p-4">
+        <legend className="cfn-type-heading-3 px-1">2. Handoff details</legend>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <div><Label htmlFor="intended-recipient">Intended recipient or handoff</Label><Input id="intended-recipient" maxLength={500} value={intendedRecipient} onChange={(event) => setIntendedRecipient(event.currentTarget.value)} />{errors.intendedRecipient ? <FieldError id="intended-recipient-error">{errors.intendedRecipient}</FieldError> : null}</div>
+          <div><Label htmlFor="intended-recipient-category">Recipient category</Label><Select id="intended-recipient-category" value={intendedRecipientCategory} onChange={(event) => setIntendedRecipientCategory(event.currentTarget.value as CasePurposeBrief["intendedRecipientCategory"] | "")}><option value="">Choose category</option><option value="legal_aid_team">Legal aid team</option><option value="public_defender">Public defender</option><option value="court_navigation">Court navigation</option><option value="ngo_caseworker">NGO caseworker</option><option value="policy_or_research_summary">Policy or research summary</option></Select>{errors.intendedRecipientCategory ? <FieldError id="intended-recipient-category-error">{errors.intendedRecipientCategory}</FieldError> : null}</div>
+          <div><Label htmlFor="jurisdiction-code">Fictional jurisdiction</Label><Select id="jurisdiction-code" value={jurisdictionCode} onChange={(event) => setJurisdictionCode(event.currentTarget.value as CasePurposeBrief["jurisdictionCode"] | "")}><option value="">Choose jurisdiction</option><option value="J-01">J-01</option><option value="J-02">J-02</option><option value="unspecified">Unspecified</option></Select>{errors.jurisdictionCode ? <FieldError id="jurisdiction-code-error">{errors.jurisdictionCode}</FieldError> : null}</div>
+          <div><Label htmlFor="translation-status">Translation status</Label><Select id="translation-status" value={translationStatus} onChange={(event) => setTranslationStatus(event.currentTarget.value as CasePurposeBrief["translationStatus"] | "")}><option value="">Choose status</option><option value="original_language">Original language</option><option value="translated_unverified">Translated, unverified</option><option value="unknown">Unknown</option></Select>{errors.translationStatus ? <FieldError id="translation-status-error">{errors.translationStatus}</FieldError> : null}</div>
+          <div className="sm:col-span-2"><Label htmlFor="requested-export">Requested handoff</Label><Select id="requested-export" value={requestedExport} onChange={(event) => setRequestedExport(event.currentTarget.value as CasePurposeBrief["requestedExport"] | "")}><option value="">Choose one handoff</option><option value="full_practitioner_handoff">Full practitioner handoff</option><option value="minimum_necessary_safe_share">Minimum-necessary safe share</option></Select>{errors.requestedExport ? <FieldError id="requested-export-error">{errors.requestedExport}</FieldError> : null}</div>
+        </div>
+        <p className="cfn-type-body-small"><strong>Source language:</strong> English</p>
       </fieldset>
 
-      <fieldset className="grid gap-2" id="excluded-decisions" tabIndex={-1}>
-        <legend className="cfn-type-heading-3">Decisions explicitly excluded from system support</legend>
+      <fieldset className="grid gap-x-5 gap-y-2 rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface)] p-4 sm:grid-cols-2" id="excluded-decisions" tabIndex={-1}>
+        <legend className="cfn-type-heading-3 px-1">3. Decisions kept outside this system</legend>
+        <p className="cfn-type-body-small text-[var(--color-ink-muted)] sm:col-span-2">
+          Confirm that these consequential decisions remain with qualified people and local processes.
+        </p>
         {RequiredExcludedDecisions.map((decision) => <Checkbox checked={excludedDecisions.has(decision)} id={`excluded-${decision}`} key={decision} label={excludedDecisionLabels[decision]} onChange={(event) => toggleExcluded(decision, event.currentTarget.checked)} />)}
-        {errors.excludedDecisions ? <FieldError id="excluded-decisions-error">{errors.excludedDecisions}</FieldError> : null}
+        {errors.excludedDecisions ? <div className="sm:col-span-2"><FieldError id="excluded-decisions-error">{errors.excludedDecisions}</FieldError></div> : null}
       </fieldset>
 
-      <fieldset className="grid gap-2">
-        <legend className="cfn-type-heading-3">Authority and safety acknowledgements</legend>
-        <p>Authority basis and consent status: Not applicable to this fictional demo packet.</p>
+      <fieldset className="grid gap-x-5 gap-y-2 rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface)] p-4 sm:grid-cols-2">
+        <legend className="cfn-type-heading-3 px-1">4. Demo safety confirmations</legend>
+        <p className="cfn-type-body-small text-[var(--color-ink-muted)] sm:col-span-2">Authority and consent verification are not applicable to this fictional demo packet.</p>
         <Checkbox checked={authorityAttested} id="authority-attested" label="I attest that I am using this fictional demo packet for the stated authorized workflow." onChange={(event) => setAuthorityAttested(event.currentTarget.checked)} />
         {errors.authorityAttested ? <FieldError id="authority-attested-error">{errors.authorityAttested}</FieldError> : null}
         <Checkbox checked={authorityNotVerified} id="authority-not-verified" label="I understand that the system cannot verify my authority." onChange={(event) => setAuthorityNotVerified(event.currentTarget.checked)} />
@@ -336,8 +346,11 @@ export function CasePurposeBriefForm({
         />
       ) : null}
 
-      <div className="flex flex-wrap gap-3">
-        <Button disabled={disabled} type="submit" variant="primary">Save Case Purpose Brief</Button>
+      <div className="sticky bottom-3 z-10 flex flex-col items-start justify-between gap-3 rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface)] p-3 shadow-[var(--shadow-elevated)] sm:flex-row sm:items-center">
+        <p className="cfn-type-body-small text-[var(--color-ink-muted)]">
+          Save this step first. You will then continue to Documents to select the demo PDFs.
+        </p>
+        <Button className="shrink-0" disabled={disabled} type="submit" variant="primary">Save Case Purpose Brief</Button>
       </div>
       {saveMessage ? <p role="status" className="text-[var(--color-supported)]">{saveMessage}</p> : null}
     </form>

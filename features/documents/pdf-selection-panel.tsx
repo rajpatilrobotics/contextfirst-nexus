@@ -295,26 +295,35 @@ export function PdfSelectionPanel({
   const readyCount = documents.filter(
     (document) => document.stage === "ready",
   ).length;
+  const batchStage = documents.find((document) => document.stage !== "error")
+    ?.stage;
 
   return (
-    <section aria-labelledby="pdf-intake-heading" className="grid gap-4">
-      <Card className="grid gap-5 p-5 sm:p-6">
-        <div className="grid gap-2">
-          <div className="flex items-center gap-2 text-[var(--color-brand)]">
-            <FileCheck2 aria-hidden="true" size={20} />
-            <p className="cfn-type-label">Hackathon demo · demo-only data</p>
+    <section aria-labelledby="pdf-intake-heading" className="grid scroll-mt-28 gap-4" id="documents" tabIndex={-1}>
+      <Card className="grid gap-4 p-4 sm:p-5">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div className="grid gap-1">
+            <div className="flex items-center gap-2 text-[var(--color-brand)]">
+              <FileCheck2 aria-hidden="true" size={18} />
+              <p className="cfn-type-label">Step 1</p>
+            </div>
+            <h2 className="cfn-type-heading-2" id="pdf-intake-heading">
+              Choose and verify PDFs
+            </h2>
+            <p className="max-w-2xl text-sm text-[var(--color-ink-muted)]">
+              Choose all seven demo PDFs together. They stay in this browser.
+            </p>
           </div>
-          <h2 className="cfn-type-heading-2" id="pdf-intake-heading">
-            Add case documents
-          </h2>
-          <p className="max-w-2xl text-[var(--color-ink-muted)]">
-            Start with an empty workspace. Choose the seven demo PDFs to see
-            each file move through intake. Do not upload real or sensitive data.
-          </p>
+          {documents.length > 0 ? (
+            <Button onClick={clearDocuments} variant="danger">
+              <Trash2 aria-hidden="true" size={16} />
+              Start over
+            </Button>
+          ) : null}
         </div>
 
         <div
-          className={`grid min-h-48 place-items-center rounded-[var(--radius-card)] border-2 border-dashed p-6 text-center transition-colors ${
+          className={`grid min-h-32 place-items-center rounded-[var(--radius-card)] border-2 border-dashed p-4 text-center transition-colors ${
             isDragging
               ? "border-[var(--color-brand)] bg-[var(--color-brand-subtle)]"
               : "border-[var(--color-control-border)] bg-[var(--color-surface-subtle)]"
@@ -327,16 +336,11 @@ export function PdfSelectionPanel({
           onDragOver={(event) => event.preventDefault()}
           onDrop={handleDrop}
         >
-          <div className="grid justify-items-center gap-3">
-            <span className="grid h-12 w-12 place-items-center rounded-full bg-[var(--color-surface)] text-[var(--color-brand)] shadow-sm">
-              <Upload aria-hidden="true" size={22} />
+          <div className="flex flex-wrap items-center justify-center gap-3">
+            <span className="grid h-10 w-10 place-items-center rounded-full bg-[var(--color-surface)] text-[var(--color-brand)] shadow-sm">
+              <Upload aria-hidden="true" size={19} />
             </span>
-            <div>
-              <p className="font-semibold">Drop PDFs here</p>
-              <p className="cfn-type-body-small text-[var(--color-ink-muted)]">
-                or choose multiple files from your Mac
-              </p>
-            </div>
+            <p className="text-sm font-semibold">Drop all seven PDFs here</p>
             <Button
               onClick={() => inputRef.current?.click()}
               variant="primary"
@@ -365,73 +369,70 @@ export function PdfSelectionPanel({
           </Alert>
         ) : null}
 
-        {documents.length === 0 ? (
-          <Alert title="No documents selected yet">
-            <p>
-              The document list is empty. Nothing has been pre-filled or marked
-              as processed.
-            </p>
-          </Alert>
-        ) : (
+        {documents.length > 0 ? (
           <div className="grid gap-4">
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              <div>
-                <h3 className="cfn-type-heading-3">Selected documents</h3>
-                <p className="cfn-type-body-small text-[var(--color-ink-muted)]">
-                  {readyCount} of {documents.length} ready
+            <div className="grid gap-3 rounded-[var(--radius-control)] border border-[var(--color-border)] bg-[var(--color-surface-subtle)] p-3">
+              {batchStage && batchStage !== "error" ? (
+                <StageTrail current={batchStage} />
+              ) : null}
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <p className="text-sm font-semibold">
+                  {readyCount === documents.length
+                    ? `${readyCount} PDFs ready`
+                    : `${documents.length} PDFs selected`}
                 </p>
-              </div>
-              <div className="flex flex-wrap gap-2">
                 {replaceAllowed ? (
                   <Button onClick={() => inputRef.current?.click()}>
                     <Replace aria-hidden="true" size={16} />
-                    Replace files
+                    Replace selection
                   </Button>
                 ) : null}
-                <Button onClick={clearDocuments} variant="danger">
-                  <Trash2 aria-hidden="true" size={16} />
-                  Reset document intake
-                </Button>
               </div>
             </div>
 
-            <ul aria-label="Selected PDF files" className="grid gap-3">
-              {documents.map((document) => (
-                <li
-                  className="grid gap-4 rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface)] p-4"
-                  key={document.id}
-                >
-                  <div className="flex min-w-0 items-start gap-3">
-                    <FileText
-                      aria-hidden="true"
-                      className="mt-0.5 shrink-0 text-[var(--color-brand)]"
-                      size={20}
-                    />
-                    <div className="min-w-0">
-                      <p className="truncate font-semibold">
+            <details>
+              <summary className="cursor-pointer text-sm font-semibold text-[var(--color-brand)]">
+                View selected files ({documents.length})
+              </summary>
+              <ul
+                aria-label="Selected PDF files"
+                className="mt-2 divide-y divide-[var(--color-border)] overflow-hidden rounded-[var(--radius-control)] border border-[var(--color-border)]"
+              >
+                {documents.map((document) => (
+                  <li
+                    className="flex min-w-0 flex-wrap items-center justify-between gap-2 bg-[var(--color-surface)] px-3 py-2"
+                    key={document.id}
+                  >
+                    <div className="flex min-w-0 items-center gap-2">
+                      <FileText
+                        aria-hidden="true"
+                        className="shrink-0 text-[var(--color-brand)]"
+                        size={16}
+                      />
+                      <span className="truncate text-sm font-medium">
                         {displayFileName(document.file.name)}
-                      </p>
-                      <p className="cfn-type-body-small text-[var(--color-ink-muted)]">
-                        PDF · {readableSize(document.file.size)}
-                      </p>
+                      </span>
+                      <span className="shrink-0 text-xs text-[var(--color-ink-muted)]">
+                        {readableSize(document.file.size)}
+                      </span>
                     </div>
-                  </div>
-
-                  {document.stage === "error" ? (
-                    <Alert
-                      title={`${displayFileName(document.file.name)} needs attention`}
-                      tone="danger"
+                    <span
+                      className={`text-xs font-semibold ${
+                        document.stage === "error"
+                          ? "text-[var(--color-danger)]"
+                          : "text-[var(--color-brand)]"
+                      }`}
                     >
-                      <p>{document.error}</p>
-                    </Alert>
-                  ) : (
-                    <StageTrail current={document.stage} />
-                  )}
-                </li>
-              ))}
-            </ul>
+                      {document.stage === "error"
+                        ? document.error
+                        : STAGE_LABELS[document.stage]}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </details>
           </div>
-        )}
+        ) : null}
       </Card>
     </section>
   );

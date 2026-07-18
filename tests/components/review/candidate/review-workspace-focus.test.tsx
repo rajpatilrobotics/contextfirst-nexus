@@ -101,6 +101,8 @@ describe("TASK-032 Review workspace remediation focus bridge", () => {
       "id",
       "review-workspace-heading",
     );
+    expect(document.getElementById("citations")).toHaveAttribute("tabindex", "-1");
+    expect(document.getElementById("dependencies")).toHaveAttribute("tabindex", "-1");
   });
 
   it("focuses the newly rendered target after the canonical checkpoint transition", () => {
@@ -256,8 +258,8 @@ describe("TASK-032 Review workspace remediation focus bridge", () => {
 
     expect(screen.getByText("Prepared demo review checkpoint")).toBeInTheDocument();
     expect(screen.getByText("Bundled deterministic replay, not live AI")).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: "Review queue" })).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: "Candidate review" })).toBeInTheDocument();
+    expect(screen.getByText("Explore timeline and supporting analysis")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Review required items" })).toBeInTheDocument();
 
     const taskCard = document.getElementById("candidate-CAND-TASK-0402");
     expect(taskCard).not.toBeNull();

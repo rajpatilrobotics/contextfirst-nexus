@@ -184,7 +184,7 @@ function DesktopNexus({
         {rows.map((row) => (
           <tr
             className="scroll-mt-6 border-b border-[var(--color-border)]"
-            id={`candidate-${row.id}`}
+            id={`nexus-row-${row.id}`}
             key={row.id}
             tabIndex={-1}
           >
@@ -228,7 +228,7 @@ function MobileNexus({
         <li key={row.id}>
           <article
             className="grid scroll-mt-6 gap-4 rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface)] p-4"
-            id={`candidate-${row.id}`}
+            id={`nexus-row-${row.id}`}
             tabIndex={-1}
           >
             <NexusRowIdentity row={row} />

@@ -392,7 +392,7 @@ export function CandidateReviewCard({
   return (
     <article
       aria-labelledby={`candidate-${candidate.id}-heading`}
-      className="grid scroll-mt-6 gap-5 rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface)] p-4 shadow-[0_10px_30px_rgb(20_33_43_/_0.05)] sm:p-5"
+      className="grid scroll-mt-6 gap-4 rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface)] p-4"
       id={`candidate-${candidate.id}`}
       tabIndex={-1}
     >
@@ -428,113 +428,8 @@ export function CandidateReviewCard({
         </Alert>
       ) : null}
 
-      <div className="grid gap-3 lg:grid-cols-2">
-        <section aria-label="Candidate wording" className="grid gap-2 rounded-[var(--radius-control)] bg-[var(--color-surface-subtle)] p-3">
-          <div>
-            <p className="cfn-type-label">Original suggestion</p>
-            <p>{candidate.proposedText}</p>
-          </div>
-          <div>
-            <p className="cfn-type-label">Current reviewed wording</p>
-            <p>{candidate.currentText}</p>
-          </div>
-        </section>
-        <section aria-label="Candidate status dimensions" className="grid content-start gap-3">
-          <div className="flex flex-wrap gap-2">
-            <ItemOriginStatus value={candidate.itemOrigin} />
-            <SupportStatusBadge value={candidate.supportStatus} />
-            <ReviewStatusBadge value={candidate.reviewStatus} />
-          </div>
-          <p className="text-sm text-[var(--color-ink-muted)]">
-            Assertion mode: {readable(candidate.assertionMode)} · Inclusion: {readable(candidate.inclusionStatus)}
-          </p>
-          {latestDecision ? (
-            <p className="text-sm">
-              Last review: {readable(latestDecision.action)} by {latestDecision.actor === "fixture_reviewer" ? "Fixture reviewer" : "Current practitioner"}.
-            </p>
-          ) : (
-            <p className="text-sm text-[var(--color-ink-muted)]">No individual review has been recorded.</p>
-          )}
-        </section>
-      </div>
-
-      <section aria-label="Dependency summary" className="grid gap-3">
-        <div className="flex items-center gap-2">
-          <ArrowRight aria-hidden="true" size={17} />
-          <h4 className="cfn-type-label">Dependencies and limits</h4>
-        </div>
-        <dl className="grid gap-3 sm:grid-cols-3">
-          <div>
-            <dt className="cfn-type-label">Supporting</dt>
-            <dd className="text-sm">{supporting.length ? supporting.map(dependencyTarget).join(", ") : "None recorded"}</dd>
-          </div>
-          <div>
-            <dt className="cfn-type-label">Limiting</dt>
-            <dd className="text-sm">{limiting.length ? limiting.map(dependencyTarget).join(", ") : "None recorded"}</dd>
-          </div>
-          <div>
-            <dt className="cfn-type-label">Contrary</dt>
-            <dd className="text-sm">{contrary.length ? contrary.map(dependencyTarget).join(", ") : "None recorded"}</dd>
-          </div>
-        </dl>
-        {candidate.dependencies.some((dependency) => !dependency.active) ? (
-          <p className="text-sm text-[var(--color-warning)]">
-            Inactive after recalculation: {candidate.dependencies.filter((dependency) => !dependency.active).map(dependencyTarget).join(", ")}.
-          </p>
-        ) : null}
-      </section>
-
-      {candidate.unknowns.length ? (
-        <section aria-label="Unknowns" className="grid gap-2">
-          <div className="flex items-center gap-2">
-            <ShieldAlert aria-hidden="true" size={17} />
-            <h4 className="cfn-type-label">Unknowns and limitations</h4>
-          </div>
-          <ul className="list-disc pl-5 text-sm">
-            {candidate.unknowns.map((unknown) => <li key={unknown}>{unknown}</li>)}
-          </ul>
-        </section>
-      ) : null}
-
-      {candidate.relatedCoverageIssueIds.length ? (
-        <Alert title="Coverage warning" tone="warning">
-          Related coverage issues: {candidate.relatedCoverageIssueIds.join(", ")}. Missing content is not filled or inferred.
-        </Alert>
-      ) : null}
-
-      <section aria-label="Exact source access" className="grid gap-3">
-        <div className="flex items-center gap-2">
-          <FileSearch aria-hidden="true" size={17} />
-          <h4 className="cfn-type-label">Exact masked sources</h4>
-        </div>
-        {sourceDependencies.length ? (
-          <ul className="grid gap-2">
-            {sourceDependencies.map((dependency) => (
-              <li className="grid gap-2 rounded-[var(--radius-control)] border border-[var(--color-border)] p-3" key={dependency.id}>
-                <div className="flex flex-wrap items-center gap-2">
-                  <EvidenceNatureStatus value={dependency.evidenceNature} />
-                  <span className="text-sm">
-                    {readable(dependency.relationship)} · {dependency.active ? "active" : "inactive after recalculation"}
-                  </span>
-                </div>
-                <CitationLink
-                  candidateId={candidate.id}
-                  citationId={dependency.citationId}
-                  onOpen={onOpenSource}
-                  state={state}
-                />
-              </li>
-            ))}
-          </ul>
-        ) : (
-          <p className="text-sm text-[var(--color-ink-muted)]">
-            No source citation is attached. Any reviewed wording remains reviewer-authored context.
-          </p>
-        )}
-      </section>
-
       <section aria-label="Individual human review" className="grid gap-3 border-t border-[var(--color-border)] pt-4">
-        <h4 className="cfn-type-label">Individual human review</h4>
+        <h4 className="cfn-type-label">Choose a review decision</h4>
         <CandidateReviewActions
           allowWithdrawal={candidate.id === heroCandidateId}
           candidate={candidate}
@@ -543,6 +438,116 @@ export function CandidateReviewCard({
           state={state}
         />
       </section>
+
+      <details className="rounded-[var(--radius-control)] border border-[var(--color-border)] bg-[var(--color-surface-subtle)] p-3">
+        <summary className="cursor-pointer font-semibold">View evidence and reasoning</summary>
+        <div className="mt-4 grid gap-5">
+          <div className="grid gap-3 lg:grid-cols-2">
+            <section aria-label="Candidate wording" className="grid gap-2 rounded-[var(--radius-control)] bg-[var(--color-surface)] p-3">
+              <div>
+                <p className="cfn-type-label">Original suggestion</p>
+                <p>{candidate.proposedText}</p>
+              </div>
+              <div>
+                <p className="cfn-type-label">Current reviewed wording</p>
+                <p>{candidate.currentText}</p>
+              </div>
+            </section>
+            <section aria-label="Candidate status dimensions" className="grid content-start gap-3">
+              <div className="flex flex-wrap gap-2">
+                <ItemOriginStatus value={candidate.itemOrigin} />
+                <SupportStatusBadge value={candidate.supportStatus} />
+                <ReviewStatusBadge value={candidate.reviewStatus} />
+              </div>
+              <p className="text-sm text-[var(--color-ink-muted)]">
+                Assertion mode: {readable(candidate.assertionMode)} · Inclusion: {readable(candidate.inclusionStatus)}
+              </p>
+              {latestDecision ? (
+                <p className="text-sm">
+                  Last review: {readable(latestDecision.action)} by {latestDecision.actor === "fixture_reviewer" ? "Fixture reviewer" : "Current practitioner"}.
+                </p>
+              ) : (
+                <p className="text-sm text-[var(--color-ink-muted)]">No individual review has been recorded.</p>
+              )}
+            </section>
+          </div>
+
+          <section aria-label="Dependency summary" className="grid gap-3">
+            <div className="flex items-center gap-2">
+              <ArrowRight aria-hidden="true" size={17} />
+              <h4 className="cfn-type-label">Dependencies and limits</h4>
+            </div>
+            <dl className="grid gap-3 sm:grid-cols-3">
+              <div>
+                <dt className="cfn-type-label">Supporting</dt>
+                <dd className="text-sm">{supporting.length ? supporting.map(dependencyTarget).join(", ") : "None recorded"}</dd>
+              </div>
+              <div>
+                <dt className="cfn-type-label">Limiting</dt>
+                <dd className="text-sm">{limiting.length ? limiting.map(dependencyTarget).join(", ") : "None recorded"}</dd>
+              </div>
+              <div>
+                <dt className="cfn-type-label">Contrary</dt>
+                <dd className="text-sm">{contrary.length ? contrary.map(dependencyTarget).join(", ") : "None recorded"}</dd>
+              </div>
+            </dl>
+            {candidate.dependencies.some((dependency) => !dependency.active) ? (
+              <p className="text-sm text-[var(--color-warning)]">
+                Inactive after recalculation: {candidate.dependencies.filter((dependency) => !dependency.active).map(dependencyTarget).join(", ")}.
+              </p>
+            ) : null}
+          </section>
+
+          {candidate.unknowns.length ? (
+            <section aria-label="Unknowns" className="grid gap-2">
+              <div className="flex items-center gap-2">
+                <ShieldAlert aria-hidden="true" size={17} />
+                <h4 className="cfn-type-label">Unknowns and limitations</h4>
+              </div>
+              <ul className="list-disc pl-5 text-sm">
+                {candidate.unknowns.map((unknown) => <li key={unknown}>{unknown}</li>)}
+              </ul>
+            </section>
+          ) : null}
+
+          {candidate.relatedCoverageIssueIds.length ? (
+            <Alert title="Coverage warning" tone="warning">
+              Related coverage issues: {candidate.relatedCoverageIssueIds.join(", ")}. Missing content is not filled or inferred.
+            </Alert>
+          ) : null}
+
+          <section aria-label="Exact source access" className="grid gap-3">
+            <div className="flex items-center gap-2">
+              <FileSearch aria-hidden="true" size={17} />
+              <h4 className="cfn-type-label">Exact masked sources</h4>
+            </div>
+            {sourceDependencies.length ? (
+              <ul className="grid gap-2">
+                {sourceDependencies.map((dependency) => (
+                  <li className="grid gap-2 rounded-[var(--radius-control)] border border-[var(--color-border)] bg-[var(--color-surface)] p-3" key={dependency.id}>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <EvidenceNatureStatus value={dependency.evidenceNature} />
+                      <span className="text-sm">
+                        {readable(dependency.relationship)} · {dependency.active ? "active" : "inactive after recalculation"}
+                      </span>
+                    </div>
+                    <CitationLink
+                      candidateId={candidate.id}
+                      citationId={dependency.citationId}
+                      onOpen={onOpenSource}
+                      state={state}
+                    />
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="text-sm text-[var(--color-ink-muted)]">
+                No source citation is attached. Any reviewed wording remains reviewer-authored context.
+              </p>
+            )}
+          </section>
+        </div>
+      </details>
     </article>
   );
 }

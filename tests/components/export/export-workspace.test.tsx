@@ -26,6 +26,25 @@ const REQUIRED_LABELS = [
   "Local legal verification required.",
 ];
 
+const EXPECTED_REMEDIATION_DESTINATIONS = {
+  PURPOSE_INCOMPLETE: "/case/demo/purpose?exportBlocker=PURPOSE_INCOMPLETE#purpose-form",
+  AUTHORITY_INVALID: "/case/demo/purpose?exportBlocker=AUTHORITY_INVALID#authority-attested",
+  DATA_ORIGIN_PROHIBITED: "/case/demo/intake?exportBlocker=DATA_ORIGIN_PROHIBITED#documents",
+  REVIEW_INCOMPLETE: "/case/demo/review?exportBlocker=REVIEW_INCOMPLETE#review-workspace",
+  CITATION_UNRESOLVED: "/case/demo/review?exportBlocker=CITATION_UNRESOLVED#citations",
+  COVERAGE_CONSEQUENTIAL: "/case/demo/intake?exportBlocker=COVERAGE_CONSEQUENTIAL#coverage",
+  JURISDICTION_UNVERIFIED: "/case/demo/purpose?exportBlocker=JURISDICTION_UNVERIFIED#jurisdiction-code",
+  DEPENDENCY_UNRESOLVED: "/case/demo/review?exportBlocker=DEPENDENCY_UNRESOLVED#dependencies",
+  MASK_REVIEW_INCOMPLETE: "/case/demo/intake?exportBlocker=MASK_REVIEW_INCOMPLETE#masking",
+  PII_CHECK_FAILED: "/case/demo/intake?exportBlocker=PII_CHECK_FAILED#masking",
+  PROCESSING_FAILED: "/case/demo/intake?exportBlocker=PROCESSING_FAILED#processing",
+  SAFETY_VALIDATION_FAILED: "/case/demo/intake?exportBlocker=SAFETY_VALIDATION_FAILED#analysis",
+  ANALYSIS_RUN_STALE: "/case/demo/intake?exportBlocker=ANALYSIS_RUN_STALE#analysis",
+  GATE_EVALUATION_STALE: "/case/demo/export?exportBlocker=GATE_EVALUATION_STALE#export-gate",
+  MINIMUM_NECESSITY_UNCONFIRMED: "/case/demo/export?exportBlocker=MINIMUM_NECESSITY_UNCONFIRMED#minimum-necessary-selection",
+  OUTSIDE_STATED_PURPOSE: "/case/demo/purpose?exportBlocker=OUTSIDE_STATED_PURPOSE#requested-export",
+} as const;
+
 function renderWorkspace(initialState = createGoldenEarlyState()) {
   return render(
     <CaseStateProvider initialState={initialState}>
@@ -46,24 +65,24 @@ describe("TASK-022 export gate and workspace", () => {
     const user = userEvent.setup();
     renderWorkspace();
 
-    expect(screen.queryByRole("button", { name: "Create canonical handoff" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Create reviewed handoff" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /Generate PDF/ })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /Download/ })).not.toBeInTheDocument();
 
-    await user.click(screen.getByRole("button", { name: "Review export gate" }));
+    await user.click(screen.getByRole("button", { name: "Check readiness" }));
 
-    const gateHeading = await screen.findByRole("heading", { name: "Export gate result" });
+    const gateHeading = await screen.findByRole("heading", { name: "Readiness result" });
     await waitFor(() => expect(gateHeading).toHaveFocus());
-    expect(screen.getByRole("heading", { name: "REVIEW_INCOMPLETE" })).toBeInTheDocument();
-    const blocker = screen.getByRole("heading", { name: "REVIEW_INCOMPLETE" }).closest("section");
+    expect(screen.getByRole("heading", { name: "Complete the remaining review decisions" })).toBeInTheDocument();
+    const blocker = screen.getByRole("heading", { name: "Complete the remaining review decisions" }).closest("section");
     expect(blocker).not.toBeNull();
     expect(within(blocker!).getByText("CAND-SENDER-0402, CAND-URG-INTERPRETER")).toBeInTheDocument();
-    expect(within(blocker!).getByRole("link", { name: "Go to remediation target" })).toHaveAttribute(
+    expect(within(blocker!).getByRole("link", { name: "Return to Review" })).toHaveAttribute(
       "href",
       "/case/demo/review?exportBlocker=REVIEW_INCOMPLETE#review-workspace",
     );
-    expect(screen.queryByText(/override/i)).toHaveTextContent("There is no override or direct renderer path.");
-    expect(screen.queryByRole("button", { name: "Create canonical handoff" })).not.toBeInTheDocument();
+    expect(screen.getByText(/There is no bypass/i)).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Create reviewed handoff" })).not.toBeInTheDocument();
   });
 
   it("presents every canonical blocker with severity, affected IDs, remediation, and a stable link", () => {
@@ -103,14 +122,17 @@ describe("TASK-022 export gate and workspace", () => {
 
     render(<ExportGatePanel gate={gate} headingRef={createRef<HTMLHeadingElement>()} />);
     for (const code of codes) {
-      const heading = screen.getByRole("heading", { name: code });
-      const section = heading.closest("section");
+      const codeValue = screen.getByText(code, { selector: "dd" });
+      const section = codeValue.closest("section");
       expect(section).not.toBeNull();
-      expect(within(section!).getByText("Blocking")).toBeInTheDocument();
-      expect(within(section!).getByText(`ENTITY-${code}`)).toBeInTheDocument();
+      expect(within(section!).getByText(`ENTITY-${code}`, { selector: "dd" })).toBeInTheDocument();
       expect(within(section!).getByText(`Remediation for ${code}`)).toBeInTheDocument();
-      expect(within(section!).getByRole("link")).toHaveAttribute("href", expect.stringContaining(`exportBlocker=${code}`));
+      expect(within(section!).getByRole("link")).toHaveAttribute(
+        "href",
+        EXPECTED_REMEDIATION_DESTINATIONS[code],
+      );
     }
+    expect(document.body.innerHTML).not.toContain("/case/demo/documents");
   });
 
   it("creates one ready manifest, previews semantic and canonical JSON before PDF, and downloads locally", async () => {
@@ -118,9 +140,9 @@ describe("TASK-022 export gate and workspace", () => {
     const fetchSpy = vi.spyOn(globalThis, "fetch");
     renderWorkspace(createReviewedState());
 
-    await user.click(screen.getByRole("button", { name: "Review export gate" }));
-    expect(await screen.findByText("Ready to create the canonical handoff")).toBeInTheDocument();
-    await user.click(screen.getByRole("button", { name: "Create canonical handoff" }));
+    await user.click(screen.getByRole("button", { name: "Check readiness" }));
+    expect(await screen.findByText("Ready to create the handoff")).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Create reviewed handoff" }));
 
     expect(await screen.findByRole("heading", { name: "Semantic handoff preview" })).toBeInTheDocument();
     for (const label of REQUIRED_LABELS) expect(screen.getByText(label)).toBeInTheDocument();
@@ -153,25 +175,25 @@ describe("TASK-022 export gate and workspace", () => {
 
     expect(screen.getByText("Minimum-necessary safe share")).toBeInTheDocument();
     expect(screen.getByText("None selected")).toBeInTheDocument();
-    await user.click(screen.getByRole("button", { name: "Review export gate" }));
-    expect(await screen.findByRole("heading", { name: "MINIMUM_NECESSITY_UNCONFIRMED" })).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "Create canonical handoff" })).not.toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Check readiness" }));
+    expect(await screen.findByRole("heading", { name: "Confirm the minimum-necessary selection" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Create reviewed handoff" })).not.toBeInTheDocument();
 
     await user.click(screen.getByRole("checkbox", { name: /CAND-TL-ARRIVAL/ }));
     await user.click(screen.getByRole("checkbox", { name: /I confirm this is the minimum necessary/ }));
     expect(screen.getByText("CAND-TL-ARRIVAL", { selector: "dd" })).toBeInTheDocument();
-    await user.click(screen.getByRole("button", { name: "Review export gate" }));
+    await user.click(screen.getByRole("button", { name: "Check readiness" }));
 
-    expect(await screen.findByText("Ready to create the canonical handoff")).toBeInTheDocument();
-    await user.click(screen.getByRole("button", { name: "Create canonical handoff" }));
+    expect(await screen.findByText("Ready to create the handoff")).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Create reviewed handoff" }));
     expect(await screen.findByText("Included candidate IDs: CAND-TL-ARRIVAL.")).toBeInTheDocument();
     expect(screen.getByText(/Excluded candidate IDs:/)).toBeInTheDocument();
   });
 
   it("offers handoff-kind changes only through Purpose and never as an export-side switch", () => {
     renderWorkspace(createReadyState({ createManifest: false }));
-    expect(screen.getByRole("heading", { name: "Export gate result" })).toBeInTheDocument();
-    expect(screen.getByText("Ready to create the canonical handoff")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Readiness result" })).toBeInTheDocument();
+    expect(screen.getByText("Ready to create the handoff")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Change handoff kind in Purpose" })).toHaveAttribute(
       "href",
       "/case/demo/purpose#requested-export",
@@ -182,7 +204,7 @@ describe("TASK-022 export gate and workspace", () => {
 
   it("supports arrow-key movement between semantic and JSON preview tabs", async () => {
     renderWorkspace(createReadyState());
-    const semanticTab = screen.getByRole("tab", { name: "Semantic preview" });
+    const semanticTab = screen.getByRole("tab", { name: "Readable preview" });
     semanticTab.focus();
     fireEvent.keyDown(semanticTab, { key: "ArrowRight" });
     await waitFor(() => expect(screen.getByRole("tab", { name: "Structured JSON" })).toHaveFocus());

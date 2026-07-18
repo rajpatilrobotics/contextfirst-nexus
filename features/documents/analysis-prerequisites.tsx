@@ -103,11 +103,7 @@ export function deriveAnalysisPrerequisites(state: CaseState): {
 
 function TerminalResult({ result }: { result: AnalysisPresentation }) {
   if (result.status === "idle") {
-    return (
-      <Alert title="Analysis not started">
-        <p>No analysis result has been requested from this intake workspace.</p>
-      </Alert>
-    );
+    return null;
   }
   if (result.status === "pending") {
     return (
@@ -175,27 +171,30 @@ export function AnalysisPrerequisites({
   return (
     <Card className="grid gap-4">
       <div>
-        <h2 className="cfn-type-heading-2">Analysis prerequisites</h2>
-        <p className="cfn-type-body-small text-[var(--color-ink-muted)]">
-          Start analysis appears only when every canonical prerequisite passes. This route delegates exactly once to the shared run controller.
+        <h3 className="cfn-type-heading-3">
+          {prerequisites.ready ? "Everything is ready" : "Finish the checks above"}
+        </h3>
+        <p className="text-sm text-[var(--color-ink-muted)]">
+          {prerequisites.ready
+            ? "Start the prepared analysis, then continue directly to Review."
+            : "Analysis stays unavailable until every required safety check passes."}
         </p>
       </div>
 
-      {state.purposeBrief?.providerSelection ? (
-        <Alert title="Analysis disclosure acknowledged">
-          <p>The local analysis disclosure recorded in the Purpose step is ready.</p>
-        </Alert>
-      ) : (
-        <Alert title="Analysis disclosure required" tone="warning">
-          <p>Acknowledge the local analysis disclosure through the Purpose step.</p>
-        </Alert>
-      )}
-
-      <ul aria-label="Analysis prerequisite checklist" className="grid gap-2">
+      <ul aria-label="Analysis prerequisite checklist" className="grid gap-2 sm:grid-cols-2">
         {prerequisites.items.map((item) => (
-          <li className="rounded-[var(--radius-control)] border border-[var(--color-border)] p-3" key={item.id}>
-            <p className="font-semibold">{item.satisfied ? "Complete" : "Blocked"}: {item.label}</p>
-            <p className="cfn-type-body-small">{item.detail}</p>
+          <li
+            className={`rounded-[var(--radius-control)] border p-2.5 text-sm ${
+              item.satisfied
+                ? "border-[var(--color-border)] bg-[var(--color-surface-subtle)]"
+                : "border-[var(--color-warning)] bg-[var(--color-warning-subtle)]"
+            }`}
+            key={item.id}
+          >
+            <p className="font-semibold">{item.satisfied ? "✓" : "○"} {item.label}</p>
+            {!item.satisfied ? (
+              <p className="mt-1 text-xs text-[var(--color-ink-muted)]">{item.detail}</p>
+            ) : null}
           </li>
         ))}
       </ul>
@@ -222,28 +221,29 @@ export function AnalysisPrerequisites({
 
       {state.candidates.length > 0 ? (
         <section aria-labelledby="canonical-candidates-heading" className="grid gap-3">
-          <div>
+          <div className="flex flex-wrap items-center justify-between gap-2">
             <h3 className="cfn-type-heading-3" id="canonical-candidates-heading">Canonical analysis candidates</h3>
-            <p className="cfn-type-body-small text-[var(--color-ink-muted)]">
-              Read directly from the shared case state; no parallel timeline, Nexus, gap, lane, or blocker copy is created here.
-            </p>
+            <span className="rounded-full bg-[var(--color-brand-subtle)] px-3 py-1 text-sm font-semibold text-[var(--color-brand)]">
+              {state.candidates.length} ready for review
+            </span>
           </div>
-          <ul className="grid gap-2">
-            {state.candidates.map((candidate) => (
-              <li className="rounded-[var(--radius-control)] border border-[var(--color-border)] p-3" key={candidate.id}>
-                <p className="font-semibold">{candidate.title}</p>
-                <p className="cfn-type-body-small">
-                  <span className="cfn-type-code">{candidate.id}</span> · {candidate.kind.replaceAll("_", " ")} · {candidate.supportStatus.replaceAll("_", " ")}
-                </p>
-              </li>
-            ))}
-          </ul>
+          <details>
+            <summary className="cursor-pointer text-sm font-semibold text-[var(--color-brand)]">
+              View candidate list
+            </summary>
+            <ul className="mt-2 grid gap-2">
+              {state.candidates.map((candidate) => (
+                <li className="rounded-[var(--radius-control)] border border-[var(--color-border)] p-2.5" key={candidate.id}>
+                  <p className="font-semibold">{candidate.title}</p>
+                  <p className="text-xs text-[var(--color-ink-muted)]">
+                    <span className="cfn-type-code">{candidate.id}</span> · {candidate.supportStatus.replaceAll("_", " ")}
+                  </p>
+                </li>
+              ))}
+            </ul>
+          </details>
         </section>
-      ) : (
-        <Alert title="No canonical candidates">
-          <p>No candidate records are present. This is not treated as a successful empty analysis.</p>
-        </Alert>
-      )}
+      ) : null}
     </Card>
   );
 }

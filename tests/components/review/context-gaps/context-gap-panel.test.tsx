@@ -21,14 +21,14 @@ function gap(state: CaseState, id: string) {
   return value;
 }
 
-function CanonicalGapHarness() {
+function CanonicalGapHarness({ id = "CAND-URG-INTERPRETER" }: { id?: string }) {
   const [state, setState] = useState(checkpointState);
   function dispatch(command: CaseCommand) {
     const result = applyCaseCommand(state, command);
     if (result.ok) setState(result.state);
     return result;
   }
-  return <ContextGapPanel gap={gap(state, "CAND-URG-INTERPRETER")} onCommand={dispatch} state={state} />;
+  return <ContextGapPanel gap={gap(state, id)} onCommand={dispatch} state={state} />;
 }
 
 describe("TASK-021 context gaps", () => {
@@ -90,6 +90,47 @@ describe("TASK-021 context gaps", () => {
     expect(await screen.findByText("Preserved as unknown")).toBeInTheDocument();
     expect(screen.getByText(/response recorded without changing source evidence/i)).toBeInTheDocument();
     expect(screen.getByText(/not adverse evidence/i)).toBeInTheDocument();
+  });
+
+  it("completes an unknown context gap through the canonical individual review command", async () => {
+    const user = userEvent.setup();
+    render(<CanonicalGapHarness />);
+
+    await user.click(screen.getByRole("button", { name: "Preserve as unknown" }));
+    await user.click(screen.getByRole("button", { name: "Confirm unknown and complete review" }));
+
+    expect(await screen.findByText("Required review complete")).toBeInTheDocument();
+    expect(screen.getByText(/required review is complete/i)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Answer" })).toBeDisabled();
+  });
+
+  it("offers a terminal rejection for an unsupported positive context-gap suggestion", async () => {
+    const user = userEvent.setup();
+    const state = checkpointState();
+    const onCommand = vi.fn<CaseCommandDispatcher>(() => ({ ok: true }));
+    render(
+      <ContextGapPanel
+        gap={gap(state, "CAND-SENDER-0402")}
+        onCommand={onCommand}
+        state={state}
+      />,
+    );
+
+    await user.click(
+      screen.getByRole("button", {
+        name: "Reject suggestion and complete review",
+      }),
+    );
+
+    expect(onCommand).toHaveBeenCalledTimes(1);
+    expect(onCommand.mock.calls[0]?.[0]).toMatchObject({
+      type: "review_candidate",
+      intent: {
+        candidateId: "CAND-SENDER-0402",
+        action: "reject",
+        reason: "The available sources do not establish this proposition.",
+      },
+    });
   });
 
   it("renders both canonical gaps and an explicit empty state", () => {

@@ -48,6 +48,9 @@ export function ContextGapPanel({
   const [responseText, setResponseText] = useState("");
   const [fieldError, setFieldError] = useState<string | null>(null);
   const [commandMessage, setCommandMessage] = useState<string | null>(null);
+  const reviewComplete = ["human_accepted", "human_edited", "rejected"].includes(
+    gap.reviewStatus,
+  );
 
   async function dispatchIntent(intent: GapIntent) {
     setCommandMessage(null);
@@ -105,11 +108,40 @@ export function ContextGapPanel({
     }
   }
 
+  async function completeGapReview() {
+    setCommandMessage(null);
+    const intent =
+      gap.assertionMode === "unknown_state" &&
+      gap.supportStatus !== "insufficient_evidence"
+        ? {
+            candidateId: gap.id,
+            action: "confirm_unknown" as const,
+            reason: null,
+          }
+        : {
+            candidateId: gap.id,
+            action: "reject" as const,
+            reason: "The available sources do not establish this proposition.",
+          };
+    const result = await onCommand({
+      type: "review_candidate",
+      meta: commandMeta(state, `review-gap-${gap.id.toLowerCase()}`),
+      intent,
+    });
+    if (result && !result.ok) {
+      setCommandMessage(
+        `Required review was not accepted: ${result.reason ?? "unknown reason"}.`,
+      );
+      return;
+    }
+    setCommandMessage(`${gap.id} required review is complete.`);
+  }
+
   return (
     <article
       aria-labelledby={`gap-${gap.id}-heading`}
       className="grid gap-4 rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface)] p-4"
-      id={`gap-${gap.id}`}
+      id={`candidate-${gap.id}`}
       tabIndex={-1}
     >
       <header className="grid gap-2">
@@ -149,16 +181,16 @@ export function ContextGapPanel({
       ) : null}
 
       <div aria-label={`Context gap actions for ${gap.id}`} className="flex flex-wrap gap-2">
-        <Button onClick={() => setActiveAction("answered")} variant="secondary">
+        <Button disabled={reviewComplete} onClick={() => setActiveAction("answered")} variant="secondary">
           Answer
         </Button>
-        <Button onClick={() => setActiveAction("deferred")} variant="secondary">
+        <Button disabled={reviewComplete} onClick={() => setActiveAction("deferred")} variant="secondary">
           Defer
         </Button>
-        <Button onClick={preserveUnknown} variant="secondary">
+        <Button disabled={reviewComplete} onClick={preserveUnknown} variant="secondary">
           Preserve as unknown
         </Button>
-        <Button onClick={() => setActiveAction("outside_scope")} variant="secondary">
+        <Button disabled={reviewComplete} onClick={() => setActiveAction("outside_scope")} variant="secondary">
           Outside current scope
         </Button>
       </div>
@@ -203,9 +235,26 @@ export function ContextGapPanel({
         </section>
       ) : null}
 
-      <a className="font-semibold" href={`#candidate-${gap.id}`}>
-        Open full candidate review
-      </a>
+      {reviewComplete ? (
+        <Alert title="Required review complete" tone="neutral">
+          This context gap now has a terminal practitioner decision and no longer blocks review completion.
+        </Alert>
+      ) : (
+        <section className="grid gap-3 rounded-[var(--radius-control)] border border-[var(--color-brand)] bg-[var(--color-brand-subtle)] p-3">
+          <div>
+            <p className="cfn-type-label text-[var(--color-brand)]">Required decision</p>
+            <p className="text-sm">
+              Recording a context response preserves useful context, but a practitioner decision is still required to complete review.
+            </p>
+          </div>
+          <Button onClick={completeGapReview} variant="primary">
+            {gap.assertionMode === "unknown_state" &&
+            gap.supportStatus !== "insufficient_evidence"
+              ? "Confirm unknown and complete review"
+              : "Reject suggestion and complete review"}
+          </Button>
+        </section>
+      )}
       {commandMessage ? (
         <p
           className={commandMessage.includes("not accepted") ? "text-sm text-[var(--color-danger)]" : "text-sm text-[var(--color-supported)]"}

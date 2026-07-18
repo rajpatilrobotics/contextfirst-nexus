@@ -116,7 +116,7 @@ export function DependencyChangePanel({
     : null;
 
   return (
-    <section aria-labelledby="dependency-change-heading" className="grid gap-4">
+    <section aria-labelledby="dependency-change-heading" className="grid scroll-mt-28 gap-4" id="dependencies" tabIndex={-1}>
       <div className="flex items-start gap-3">
         <div className="rounded-full bg-[var(--color-brand-subtle)] p-2 text-[var(--color-brand)]">
           <GitBranch aria-hidden="true" size={20} />

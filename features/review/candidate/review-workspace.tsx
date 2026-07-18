@@ -1,9 +1,9 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { ArrowDown, BadgeCheck, ExternalLink, ShieldCheck } from "lucide-react";
+import { ArrowRight, BadgeCheck, ExternalLink, ShieldCheck } from "lucide-react";
 import { useCaseState } from "../../../components/shell";
-import { Alert, Card, Skeleton } from "../../../components/ui";
+import { Alert, Skeleton } from "../../../components/ui";
 import type { CaseCandidate } from "../../../lib/contracts";
 import { cfnDemoFixture } from "../../../lib/fixtures";
 import { Timeline } from "../timeline";
@@ -48,13 +48,13 @@ function WorkspaceNavigation() {
     ["dependency-change-heading", "Dependency change"],
   ] as const;
   return (
-    <nav aria-label="Review workspace sections" className="rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface-subtle)] p-3">
-      <ul className="flex flex-wrap gap-2">
+    <nav aria-label="Supporting review views" className="border-t border-[var(--color-border)] pt-3">
+      <ul className="flex flex-wrap gap-x-5 gap-y-2 text-sm">
         {destinations.map(([id, label]) => (
           <li key={id}>
-            <a className="inline-flex min-h-11 items-center gap-2 rounded-[var(--radius-control)] px-3 py-2 font-semibold" href={`#${id}`}>
+            <a className="inline-flex min-h-9 items-center gap-1 font-semibold" href={`#${id}`}>
               {label}
-              <ArrowDown aria-hidden="true" size={15} />
+              <ArrowRight aria-hidden="true" size={14} />
             </a>
           </li>
         ))}
@@ -69,23 +69,22 @@ function CheckpointProvenance({
   fixtureReviewerDecisionCount: number;
 }) {
   return (
-    <Card className="grid gap-4 border-[var(--color-brand)] bg-[var(--color-brand-subtle)] sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center">
+    <div className="grid gap-3 rounded-[var(--radius-control)] border border-[var(--color-brand)] bg-[var(--color-brand-subtle)] px-4 py-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center">
       <div className="grid gap-1">
-        <p className="cfn-type-label text-[var(--color-brand)]">Prepared demonstration state</p>
-        <h2 className="cfn-type-heading-3">Prepared demo review checkpoint</h2>
-        <p className="font-semibold">Bundled deterministic replay, not live AI</p>
-        <p className="text-sm">
+        <p className="font-semibold text-[var(--color-brand)]">Prepared demo review checkpoint</p>
+        <p className="text-sm text-[var(--color-ink-muted)]">Bundled deterministic replay, not live AI</p>
+        <p className="text-sm text-[var(--color-ink-muted)]">
           No provider transmission. Seeded decisions are attributed to Fixture reviewer, not the current practitioner.
         </p>
       </div>
-      <div className="grid gap-2 text-sm">
+      <div className="grid gap-1 text-sm">
         <span className="inline-flex items-center gap-2 font-semibold">
           <BadgeCheck aria-hidden="true" size={18} />
           DEMO-CHECKPOINT-REVIEW · 1.0.0
         </span>
         <span>{fixtureReviewerDecisionCount} Fixture reviewer decisions loaded</span>
       </div>
-    </Card>
+    </div>
   );
 }
 
@@ -96,10 +95,10 @@ function ReviewSummary({ state }: { state: ReturnType<typeof useCaseState>["stat
   const pending = individuallyRequired.filter(
     (candidate) =>
       candidate.inclusionStatus === "active" &&
-      (candidate.reviewStatus === "pending" || candidate.reviewStatus === "invalidated"),
+      !["human_accepted", "human_edited", "rejected"].includes(candidate.reviewStatus),
   ).length;
   const reviewed = individuallyRequired.filter((candidate) =>
-    ["human_accepted", "human_edited", "rejected", "uncertain"].includes(candidate.reviewStatus),
+    ["human_accepted", "human_edited", "rejected"].includes(candidate.reviewStatus),
   ).length;
   const invalidated = state.candidates.filter(
     (candidate) => candidate.reviewStatus === "invalidated",
@@ -108,25 +107,22 @@ function ReviewSummary({ state }: { state: ReturnType<typeof useCaseState>["stat
     (candidate) => candidate.supportStatus === "citation_unresolved",
   ).length;
 
+  const total = individuallyRequired.length;
   return (
-    <dl className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-      <div className="rounded-[var(--radius-control)] border border-[var(--color-border)] bg-[var(--color-surface)] p-3">
-        <dt className="cfn-type-label">Individual review remaining</dt>
-        <dd className="mt-1 text-2xl font-bold">{pending}</dd>
+    <div className="grid gap-3 rounded-[var(--radius-control)] border border-[var(--color-border)] bg-[var(--color-surface)] p-4 lg:grid-cols-[minmax(260px,1fr)_auto] lg:items-center">
+      <div className="grid gap-2">
+        <div className="flex items-baseline justify-between gap-3">
+          <p className="font-semibold">Review progress</p>
+          <p className="text-sm text-[var(--color-ink-muted)]">{reviewed} of {total} complete</p>
+        </div>
+        <progress aria-label={`${reviewed} of ${total} review items complete`} className="h-2 w-full" max={Math.max(total, 1)} value={reviewed} />
       </div>
-      <div className="rounded-[var(--radius-control)] border border-[var(--color-border)] bg-[var(--color-surface)] p-3">
-        <dt className="cfn-type-label">Individually reviewed</dt>
-        <dd className="mt-1 text-2xl font-bold">{reviewed}</dd>
-      </div>
-      <div className="rounded-[var(--radius-control)] border border-[var(--color-border)] bg-[var(--color-surface)] p-3">
-        <dt className="cfn-type-label">Invalidated</dt>
-        <dd className="mt-1 text-2xl font-bold">{invalidated}</dd>
-      </div>
-      <div className="rounded-[var(--radius-control)] border border-[var(--color-border)] bg-[var(--color-surface)] p-3">
-        <dt className="cfn-type-label">Citation problems</dt>
-        <dd className="mt-1 text-2xl font-bold">{citationProblems}</dd>
-      </div>
-    </dl>
+      <dl className="flex flex-wrap gap-x-5 gap-y-2 text-sm">
+        <div className="flex gap-2"><dt>Remaining</dt><dd className="font-bold">{pending}</dd></div>
+        <div className="flex gap-2"><dt>Invalidated</dt><dd className="font-bold">{invalidated}</dd></div>
+        <div className="flex gap-2"><dt>Citation issues</dt><dd className="font-bold">{citationProblems}</dd></div>
+      </dl>
+    </div>
   );
 }
 
@@ -149,7 +145,7 @@ export function ReviewWorkspace() {
     () =>
       state.candidates.filter(
         (candidate) =>
-          candidate.kind !== "nexus_relationship" &&
+          candidate.kind !== "context_gap" &&
           candidate.reviewRequirement === "individual",
       ),
     [state.candidates],
@@ -165,6 +161,28 @@ export function ReviewWorkspace() {
   const hasCoverageWarning = state.coverage.issues.some(
     (issue) => issue.resolutionStatus !== "resolved",
   );
+  const pendingReviewCandidates = reviewCandidates.filter(
+    (candidate) =>
+      candidate.inclusionStatus === "active" &&
+      !["human_accepted", "human_edited", "rejected"].includes(candidate.reviewStatus),
+  );
+  const reviewedCandidates = reviewCandidates.filter(
+    (candidate) => !pendingReviewCandidates.some((pending) => pending.id === candidate.id),
+  );
+  const pendingGapCount = state.candidates.filter(
+    (candidate) =>
+      candidate.kind === "context_gap" &&
+      candidate.inclusionStatus === "active" &&
+      !["human_accepted", "human_edited", "rejected"].includes(candidate.reviewStatus),
+  ).length;
+  const citationProblemCount = state.candidates.filter(
+    (candidate) => candidate.supportStatus === "citation_unresolved",
+  ).length;
+  const reviewReadyForExport =
+    pendingReviewCandidates.length === 0 &&
+    pendingGapCount === 0 &&
+    citationProblemCount === 0 &&
+    !state.coverage.hasConsequentialOpenIssue;
 
   useEffect(() => {
     const workspace = workspaceRef.current;
@@ -240,7 +258,7 @@ export function ReviewWorkspace() {
         className="min-w-0 flex-1"
         ref={workspaceRef}
       >
-        <div className="grid gap-10 pb-6">
+        <div className="grid gap-8 pb-6">
           <section
             aria-labelledby="review-workspace-heading"
             className="grid gap-5"
@@ -282,39 +300,54 @@ export function ReviewWorkspace() {
                 Canonical candidates, citations, and review provenance are available for this active run.
               </Alert>
             )}
-            <WorkspaceNavigation />
+            {pendingReviewCandidates[0] ? (
+              <div className="flex flex-col gap-3 rounded-[var(--radius-control)] border border-[var(--color-brand)] bg-[var(--color-brand-subtle)] p-4 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <p className="cfn-type-label text-[var(--color-brand)]">Next decision</p>
+                  <p className="font-semibold">{pendingReviewCandidates[0].title}</p>
+                  <p className="text-sm text-[var(--color-ink-muted)]">{pendingReviewCandidates[0].reviewQuestion}</p>
+                </div>
+                <a className="inline-flex min-h-11 shrink-0 items-center justify-center gap-2 rounded-[var(--radius-control)] bg-[var(--color-brand)] px-4 py-2 font-semibold !text-white" href={`#candidate-${pendingReviewCandidates[0].id}`}>
+                  Review this item
+                  <ArrowRight aria-hidden="true" size={17} />
+                </a>
+              </div>
+            ) : pendingGapCount ? (
+              <div className="flex flex-col gap-3 rounded-[var(--radius-control)] border border-[var(--color-warning)] bg-[var(--color-warning-subtle)] p-4 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <p className="cfn-type-label">Next step</p>
+                  <p className="font-semibold">Resolve the remaining context {pendingGapCount === 1 ? "gap" : "gaps"}</p>
+                </div>
+                <a className="inline-flex min-h-11 shrink-0 items-center justify-center gap-2 rounded-[var(--radius-control)] bg-[var(--color-brand)] px-4 py-2 font-semibold !text-white" href="#context-gaps-heading">
+                  Review context gaps
+                  <ArrowRight aria-hidden="true" size={17} />
+                </a>
+              </div>
+            ) : reviewReadyForExport ? (
+              <div className="flex flex-col gap-3 rounded-[var(--radius-control)] border border-[var(--color-supported)] bg-[var(--color-supported-subtle)] p-4 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <p className="cfn-type-label text-[var(--color-supported)]">Review complete</p>
+                  <p className="font-semibold">All required review decisions are recorded.</p>
+                </div>
+                <a className="inline-flex min-h-11 shrink-0 items-center justify-center gap-2 rounded-[var(--radius-control)] bg-[var(--color-brand)] px-4 py-2 font-semibold !text-white" href="/case/demo/export">
+                  Continue to Export
+                  <ArrowRight aria-hidden="true" size={17} />
+                </a>
+              </div>
+            ) : null}
           </section>
 
-          <section aria-label="Source-linked chronology" id="timeline">
-            <Timeline
-              dataState={hasCoverageWarning ? { kind: "partial", message: "D04 page 3 is unavailable and remains visible as a coverage limitation." } : { kind: "ready" }}
-              onOpenSource={setSourceSelection}
-              state={state}
-            />
-          </section>
-
-          <NexusMatrix
-            dataState={state.coverage.hasConsequentialOpenIssue ? { kind: "blocked", message: "Consequential coverage must be reviewed before affected Nexus relationships can be relied on." } : hasCoverageWarning ? { kind: "partial", message: "The packet includes an unavailable page and provenance limitations. No missing content is inferred." } : { kind: "ready" }}
-            onCommand={dispatchCaseCommand}
-            onOpenSource={setSourceSelection}
-            state={state}
-          />
-
-          <ReviewLanes state={state} />
-
-          <ReviewQueue earlyBlockerIds={earlyBlockerIds} state={state} />
-
-          <section aria-labelledby="candidate-review-heading" className="grid gap-5" id="candidate-review">
+          <section aria-labelledby="candidate-review-heading" className="grid scroll-mt-28 gap-5" id="citations" tabIndex={-1}>
             <div>
               <p className="cfn-type-label text-[var(--color-ink-muted)]">One decision at a time</p>
-              <h2 className="cfn-type-heading-2" id="candidate-review-heading">Candidate review</h2>
+              <h2 className="cfn-type-heading-2" id="candidate-review-heading">Review required items</h2>
               <p className="max-w-3xl text-sm text-[var(--color-ink-muted)]">
-                Every card shows proposed wording, provenance, support, review status, dependencies, unknowns, coverage, and exact source access together. There is no bulk approval.
+                Start with the first item below. Open its evidence only when you need it, then record one decision.
               </p>
             </div>
-            {reviewCandidates.length ? (
+            {pendingReviewCandidates.length ? (
               <div className="grid gap-5">
-                {reviewCandidates.map((candidate) => (
+                {pendingReviewCandidates.map((candidate) => (
                   <CandidateReviewCard
                     candidate={candidate}
                     heroCandidateId={heroCandidateId}
@@ -327,10 +360,28 @@ export function ReviewWorkspace() {
                 ))}
               </div>
             ) : (
-              <Alert title="No individually reviewable candidates" tone="neutral">
-                The canonical run contains no non-Nexus candidate cards. This is an explicit empty state.
+              <Alert title="No candidate decisions remaining" tone="neutral">
+                All active individual candidate decisions have been recorded.
               </Alert>
             )}
+            {reviewedCandidates.length ? (
+              <details className="rounded-[var(--radius-control)] border border-[var(--color-border)] bg-[var(--color-surface)] p-4">
+                <summary className="cursor-pointer font-semibold">Previously reviewed items ({reviewedCandidates.length})</summary>
+                <div className="mt-5 grid gap-5">
+                  {reviewedCandidates.map((candidate) => (
+                    <CandidateReviewCard
+                      candidate={candidate}
+                      heroCandidateId={heroCandidateId}
+                      key={candidate.id}
+                      onCommand={dispatchCaseCommand}
+                      onOpenSource={setSourceSelection}
+                      onWithdrawRequest={(selected: CaseCandidate) => setWithdrawalCandidateId(selected.id)}
+                      state={state}
+                    />
+                  ))}
+                </div>
+              </details>
+            ) : null}
           </section>
 
           <ContextGapList onCommand={dispatchCaseCommand} state={state} />
@@ -341,6 +392,33 @@ export function ReviewWorkspace() {
             onCommand={dispatchCaseCommand}
             state={state}
           />
+
+          <details className="rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface-subtle)] p-4">
+            <summary className="cursor-pointer text-lg font-semibold">Explore timeline and supporting analysis</summary>
+            <p className="mt-2 text-sm text-[var(--color-ink-muted)]">
+              Use these views when you need chronology, relationships, lanes, or the full filtered worklist.
+            </p>
+            <div className="mt-4 grid gap-8">
+              <WorkspaceNavigation />
+              <section aria-label="Source-linked chronology" id="timeline">
+                <Timeline
+                  dataState={hasCoverageWarning ? { kind: "partial", message: "D04 page 3 is unavailable and remains visible as a coverage limitation." } : { kind: "ready" }}
+                  onOpenSource={setSourceSelection}
+                  state={state}
+                />
+              </section>
+
+              <NexusMatrix
+                dataState={state.coverage.hasConsequentialOpenIssue ? { kind: "blocked", message: "Consequential coverage must be reviewed before affected Nexus relationships can be relied on." } : hasCoverageWarning ? { kind: "partial", message: "The packet includes an unavailable page and provenance limitations. No missing content is inferred." } : { kind: "ready" }}
+                onCommand={dispatchCaseCommand}
+                onOpenSource={setSourceSelection}
+                state={state}
+              />
+
+              <ReviewLanes state={state} />
+              <ReviewQueue earlyBlockerIds={earlyBlockerIds} state={state} />
+            </div>
+          </details>
 
           <section aria-labelledby="review-trust-heading" className="grid gap-3 rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface-subtle)] p-4">
             <div className="flex items-start gap-3">

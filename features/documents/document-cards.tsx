@@ -1,10 +1,9 @@
-import { FileText } from "lucide-react";
+import { Check, TriangleAlert } from "lucide-react";
 import {
   DocumentRecordSchema,
   type DocumentRecord,
 } from "../../lib/contracts";
 import { cfnDemoFixture } from "../../lib/fixtures";
-import { Card } from "../../components/ui";
 
 const SOURCE_TYPE_LABELS: Record<DocumentRecord["sourceType"], string> = {
   recruitment_record: "Recruitment record",
@@ -43,87 +42,67 @@ export function initialSyntheticDocuments(): DocumentRecord[] {
 }
 export function DocumentCards({ documents }: { documents: DocumentRecord[] }) {
   if (documents.length === 0) {
-    return (
-      <Card>
-        <h3 className="cfn-type-heading-3">No documents available</h3>
-        <p>No selected document record is ready. Nothing was treated as processed.</p>
-      </Card>
-    );
+    return null;
   }
 
   return (
-    <section aria-labelledby="document-list-heading" className="grid gap-4">
-      <div>
-        <h2 className="cfn-type-heading-2" id="document-list-heading">
-          Verified document set
-        </h2>
-        <p className="cfn-type-body-small text-[var(--color-ink-muted)]">
-          Seven selected, verified PDFs processed in this browser.
-        </p>
+    <section aria-labelledby="document-list-heading" className="grid gap-3">
+      <div className="flex flex-wrap items-end justify-between gap-2">
+        <div>
+          <h3 className="cfn-type-heading-3" id="document-list-heading">
+            Documents ready
+          </h3>
+          <p className="cfn-type-body-small text-[var(--color-ink-muted)]">
+            {documents.length} PDFs processed in this browser.
+          </p>
+        </div>
+        <span className="inline-flex items-center gap-1 rounded-full bg-[var(--color-brand-subtle)] px-3 py-1 text-sm font-semibold text-[var(--color-brand)]">
+          <Check aria-hidden="true" size={15} /> {documents.length} ready
+        </span>
       </div>
-      <div className="grid gap-4 xl:grid-cols-2">
+      <ul className="divide-y divide-[var(--color-border)] overflow-hidden rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface)]">
         {documents.map((document) => (
-          <Card className="grid min-w-0 gap-4" key={document.id}>
-            <div className="flex items-start gap-3">
-              <FileText aria-hidden="true" className="mt-1 shrink-0" size={20} />
-              <div className="min-w-0">
-                <p className="cfn-type-label text-[var(--color-warning)]">
-                  Hackathon demo record
-                </p>
-                <h3 className="cfn-type-heading-3 break-words">
-                  <span className="cfn-type-code">{document.id}</span> · {document.displayName}
-                </h3>
-              </div>
+          <li
+            className="relative grid min-w-0 gap-2 px-3 py-2.5 sm:grid-cols-[4rem_minmax(0,1fr)_auto] sm:items-center"
+            data-document-id={document.id}
+            key={document.id}
+          >
+            <span className="cfn-type-code font-semibold text-[var(--color-brand)]">
+              {document.id}
+            </span>
+            <div className="min-w-0">
+              <p className="truncate font-semibold">{document.displayName}</p>
+              <p className="truncate text-xs text-[var(--color-ink-muted)]">
+                {SOURCE_TYPE_LABELS[document.sourceType]} · {document.expectedPageCount} pages
+              </p>
             </div>
-
-            <dl className="grid gap-3 text-sm sm:grid-cols-2">
-              <div>
-                <dt className="cfn-type-label">Source type</dt>
-                <dd>{SOURCE_TYPE_LABELS[document.sourceType]}</dd>
-              </div>
-              <div>
-                <dt className="cfn-type-label">Expected pages</dt>
-                <dd>{document.expectedPageCount}</dd>
-              </div>
-              <div>
-                <dt className="cfn-type-label">Language</dt>
-                <dd>English (en), original language</dd>
-              </div>
-              <div>
-                <dt className="cfn-type-label">Processing state</dt>
-                <dd className="capitalize">{document.processingStatus}</dd>
-              </div>
-              <div>
-                <dt className="cfn-type-label">Data origin</dt>
-                <dd>Demo-only file</dd>
-              </div>
-              <div>
-                <dt className="cfn-type-label">Source copy</dt>
-                <dd>Selected locally and read-only</dd>
-              </div>
-            </dl>
-
-            <div>
-              <h4 className="cfn-type-label">Page availability</h4>
-              <ul className="mt-2 grid gap-2" aria-label={`${document.id} page availability`}>
-                {document.pages.map((page) => (
-                  <li
-                    className="flex flex-wrap items-center justify-between gap-2 rounded-[var(--radius-control)] border border-[var(--color-border)] px-3 py-2 text-sm"
-                    key={page.id}
-                  >
-                    <span>
-                      Page {page.pageNumber} <span className="cfn-type-code">({page.id})</span>
-                    </span>
-                    <span className={page.availability === "available" ? "" : "font-semibold text-[var(--color-warning)]"}>
-                      {PAGE_AVAILABILITY_LABELS[page.availability]}
-                    </span>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          </Card>
+            {document.pages.some((page) => page.availability !== "available") ? (
+              <details className="sm:text-right">
+                <summary className="inline-flex cursor-pointer items-center gap-1 text-sm font-semibold text-[var(--color-warning)]">
+                  <TriangleAlert aria-hidden="true" size={15} /> Page issue
+                </summary>
+                <ul
+                  aria-label={`${document.id} page availability`}
+                  className="mt-2 grid gap-1 text-left text-sm sm:absolute sm:right-8 sm:z-10 sm:w-72 sm:rounded-[var(--radius-control)] sm:border sm:border-[var(--color-border)] sm:bg-[var(--color-surface)] sm:p-3 sm:shadow-[var(--shadow-elevated)]"
+                >
+                  {document.pages.map((page) => (
+                    <li className="flex justify-between gap-3" key={page.id}>
+                      <span>Page {page.pageNumber}</span>
+                      <span className={page.availability === "available" ? "" : "font-semibold text-[var(--color-warning)]"}>
+                        {PAGE_AVAILABILITY_LABELS[page.availability]}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              </details>
+            ) : (
+              <span className="inline-flex items-center gap-1 text-sm font-medium text-[var(--color-brand)]">
+                <Check aria-hidden="true" size={15} /> Ready
+              </span>
+            )}
+          </li>
         ))}
-      </div>
+      </ul>
     </section>
   );
 }

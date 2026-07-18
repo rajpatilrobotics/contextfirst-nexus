@@ -16,7 +16,7 @@ import {
 } from "../../lib/documents";
 import { cfnDemoFixture } from "../../lib/fixtures";
 import { useCaseState } from "../../components/shell";
-import { Alert, Button, Select } from "../../components/ui";
+import { Alert, Select } from "../../components/ui";
 import {
   runSelectedAnalysis,
   type RunControllerOptions,
@@ -192,6 +192,30 @@ export function DocumentsWorkspace({
   const analysisPending = analysisResult.status === "pending";
   const actionsDisabled = processing || analysisPending;
   const purposeComplete = state.purposeBrief?.status === "complete";
+  const prerequisites = deriveAnalysisPrerequisites(state);
+  const documentsProcessed = Boolean(
+    prerequisites.items.find((item) => item.id === "sources")?.satisfied,
+  );
+  const processingFailed =
+    state.processing.some((stage) => stage.status === "failed") ||
+    state.documents.some((document) => document.processingStatus === "failed");
+  const checksComplete =
+    documentsProcessed &&
+    state.masking.reviewStatus === "approved" &&
+    state.masking.leakScanStatus === "passed" &&
+    !state.coverage.hasConsequentialOpenIssue;
+  const activeStep = !intakeReady
+    ? 1
+    : !documentsProcessed
+      ? 2
+      : !checksComplete
+        ? 3
+        : 4;
+  const activeRun = state.analysisRuns.find(
+    (run) => run.id === state.activeAnalysisRunId,
+  );
+  const reviewReady =
+    activeRun?.status === "succeeded" && state.candidates.length > 0;
 
   function showCommandFailure(title: string) {
     setNotice({
@@ -448,15 +472,53 @@ export function DocumentsWorkspace({
   }
 
   return (
-    <div className="grid min-w-0 gap-6">
-      <header className="grid gap-2">
-        <p className="cfn-type-label text-[var(--color-brand)]">Hackathon demo</p>
-        <h1 className="cfn-type-heading-1">Documents</h1>
-        <p className="max-w-3xl text-[var(--color-ink-muted)]">
-          Start with an empty workspace, select the demo PDFs, and follow each
-          file from selection through browser-local processing.
+    <div className="grid min-w-0 gap-5">
+      <header className="grid gap-1">
+        <p className="cfn-type-label text-[var(--color-brand)]">Step 2 of 4</p>
+        <h1 className="cfn-type-heading-1">Prepare documents</h1>
+        <p className="max-w-3xl text-sm text-[var(--color-ink-muted)]">
+          Add the demo PDFs, complete the required privacy check, then start analysis.
         </p>
       </header>
+
+      <nav aria-label="Document preparation progress">
+        <ol className="grid grid-cols-2 gap-2 lg:grid-cols-4">
+          {([
+            [1, "Choose PDFs"],
+            [2, "Process locally"],
+            [3, "Required checks"],
+            [4, "Start analysis"],
+          ] as const).map(([step, label]) => {
+            const failed = step === 2 && processingFailed;
+            const complete = !failed && (step < activeStep || (step === 4 && prerequisites.ready));
+            const active = step === activeStep;
+            return (
+              <li
+                aria-current={active ? "step" : undefined}
+                className={`flex items-center gap-2 rounded-[var(--radius-control)] border px-3 py-2 text-sm ${
+                  failed
+                    ? "border-[var(--color-danger)] bg-[var(--color-danger-subtle)] font-semibold"
+                    : active
+                    ? "border-[var(--color-brand)] bg-[var(--color-brand-subtle)] font-semibold"
+                    : "border-[var(--color-border)] bg-[var(--color-surface)]"
+                }`}
+                key={step}
+              >
+                <span className={`grid h-6 w-6 shrink-0 place-items-center rounded-full text-xs font-bold ${
+                  failed
+                    ? "bg-[var(--color-danger)] text-white"
+                    : complete || active
+                    ? "bg-[var(--color-brand)] text-white"
+                    : "bg-[var(--color-surface-subtle)] text-[var(--color-ink-muted)]"
+                }`}>
+                  {failed ? "!" : complete ? "✓" : step}
+                </span>
+                <span>{label}</span>
+              </li>
+            );
+          })}
+        </ol>
+      </nav>
 
       {!purposeComplete ? (
         <Alert title="Purpose is required" tone="warning">
@@ -484,113 +546,164 @@ export function DocumentsWorkspace({
       />
 
       {intakeReady ? (
-        <>
-
-      {notice ? (
-        <Alert title={notice.title} tone={notice.tone}>
-          <p>{notice.message}</p>
-        </Alert>
-      ) : null}
-
-      <section aria-labelledby="local-processing-heading" className="grid gap-3">
-        <div>
-          <h2 className="cfn-type-heading-2" id="local-processing-heading">Browser-local PDF processing</h2>
-          <p className="cfn-type-body-small text-[var(--color-ink-muted)]">
-            Only the verified demo files are read. Raw PDF bytes are not
-            persisted or sent beyond this intake step, and image-only pages are
-            not OCR-processed.
-          </p>
-        </div>
-        <div>
-          <Button
-            disabled={!purposeComplete || actionsDisabled || readyFiles.length === 0}
-            onClick={() => void processFixture()}
-            variant="primary"
+        <div className="grid gap-4">
+          <section
+            aria-labelledby="local-processing-heading"
+            className="grid scroll-mt-28 gap-4 rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface)] p-4 sm:p-5"
+            id="processing"
+            tabIndex={-1}
           >
-            {processing
-              ? "Processing PDFs…"
-              : readyFiles.length > 0
-                ? "Reprocess selected PDFs locally"
-                : "Select the PDF set again to reprocess"}
-          </Button>
-        </div>
-      </section>
-
-      <DocumentCards documents={state.documents} />
-
-      <ProcessingStageList
-        disabled={actionsDisabled || readyFiles.length === 0}
-        onRetry={(stage) => void processFixture(stage)}
-        stages={state.processing}
-      />
-
-      <CoverageManifest
-        coverage={state.coverage}
-        disabled={actionsDisabled}
-        onReviewIssue={reviewCoverageIssue}
-      />
-
-      <MaskingReviewPanel
-        disabled={actionsDisabled}
-        onAdd={addMask}
-        onComplete={completeMaskReview}
-        onRemove={removeMask}
-        onReview={reviewMask}
-        review={state.masking}
-        segmentIds={state.segments.map((segment) => segment.id)}
-      />
-
-      <section aria-labelledby="source-review-heading" className="grid gap-4">
-        <div>
-          <h2 className="cfn-type-heading-2" id="source-review-heading">Redacted source review</h2>
-          <p className="cfn-type-body-small text-[var(--color-ink-muted)]">
-            Extracted case text is untrusted data and renders as escaped text. The masked derivative appears first.
-          </p>
-        </div>
-        {state.segments.length === 0 ? (
-          <Alert title="Source text not processed" tone="warning">
-            <p>No extracted segment is available. Nothing is treated as successfully empty.</p>
-          </Alert>
-        ) : (
-          <>
-            <div className="max-w-xl">
-              <label className="cfn-type-label block" htmlFor="source-segment-select">Source segment</label>
-              <Select
-                disabled={actionsDisabled}
-                id="source-segment-select"
-                onChange={(event) => setSelectedSegmentId(event.currentTarget.value)}
-                value={selectedSegmentId}
-              >
-                {state.segments.map((segment) => (
-                  <option key={segment.id} value={segment.id}>
-                    {segment.id}{segment.id === "D07-P2-S03" ? " — untrusted evidence only" : ""}
-                  </option>
-                ))}
-              </Select>
+            <div>
+              <p className="cfn-type-label text-[var(--color-brand)]">Step 2</p>
+              <h2 className="cfn-type-heading-2" id="local-processing-heading">
+                Processed locally
+              </h2>
+              <p className="text-sm text-[var(--color-ink-muted)]">
+                The selected PDFs were read in this browser. No upload was sent to a server.
+              </p>
             </div>
-            {selectedSegment ? (
-              <SensitiveReveal
-                disabled={actionsDisabled}
-                key={selectedSegment.id}
-                onReveal={revealSource}
-                segment={selectedSegment}
-              />
-            ) : (
-              <Alert title="Selected source unavailable" tone="warning">
-                <p>The selected segment is not represented in canonical state.</p>
-              </Alert>
-            )}
-          </>
-        )}
-      </section>
 
-      <AnalysisPrerequisites
-        disabled={actionsDisabled}
-        onStart={() => void startAnalysis()}
-        result={analysisResult}
-        state={state}
-      />
-        </>
+            {notice ? (
+              <Alert title={notice.title} tone={notice.tone}>
+                <p>{notice.message}</p>
+              </Alert>
+            ) : null}
+
+            <DocumentCards documents={state.documents} />
+
+            <details className="rounded-[var(--radius-control)] border border-[var(--color-border)] p-3">
+              <summary className="cursor-pointer font-semibold text-[var(--color-brand)]">
+                View technical processing details
+              </summary>
+              <div className="mt-3">
+                <ProcessingStageList
+                  disabled={actionsDisabled || readyFiles.length === 0}
+                  onRetry={(stage) => void processFixture(stage)}
+                  stages={state.processing}
+                />
+              </div>
+            </details>
+          </section>
+
+          {documentsProcessed ? (
+          <section
+            aria-labelledby="required-checks-heading"
+            className="grid gap-4 rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface)] p-4 sm:p-5"
+          >
+            <div>
+              <p className="cfn-type-label text-[var(--color-brand)]">Step 3</p>
+              <h2 className="cfn-type-heading-2" id="required-checks-heading">
+                Complete required checks
+              </h2>
+              <p className="text-sm text-[var(--color-ink-muted)]">
+                Confirm missing-page limitations and approve the suggested privacy masks.
+              </p>
+            </div>
+
+            <details className="scroll-mt-28 rounded-[var(--radius-control)] border border-[var(--color-border)] p-3" id="coverage" tabIndex={-1}>
+              <summary className="cursor-pointer font-semibold">
+                Coverage check · {state.coverage.hasConsequentialOpenIssue ? "needs review" : "ready"}
+              </summary>
+              <div className="mt-3">
+                <CoverageManifest
+                  coverage={state.coverage}
+                  disabled={actionsDisabled}
+                  onReviewIssue={reviewCoverageIssue}
+                />
+              </div>
+            </details>
+
+            <details
+              className="scroll-mt-28 rounded-[var(--radius-control)] border border-[var(--color-border)] p-3"
+              id="masking"
+              tabIndex={-1}
+            >
+              <summary className="cursor-pointer font-semibold">
+                Privacy masking · {state.masking.reviewStatus === "approved" ? "approved" : "action required"}
+              </summary>
+              <div className="mt-3">
+                <MaskingReviewPanel
+                  disabled={actionsDisabled}
+                  onAdd={addMask}
+                  onComplete={completeMaskReview}
+                  onRemove={removeMask}
+                  onReview={reviewMask}
+                  review={state.masking}
+                  segmentIds={state.segments.map((segment) => segment.id)}
+                />
+              </div>
+            </details>
+
+            <details className="rounded-[var(--radius-control)] border border-[var(--color-border)] p-3">
+              <summary className="cursor-pointer font-semibold">
+                Optional: inspect redacted source text
+              </summary>
+              <section aria-labelledby="source-review-heading" className="mt-3 grid gap-4">
+                <div>
+                  <h3 className="cfn-type-heading-3" id="source-review-heading">Source review</h3>
+                  <p className="cfn-type-body-small text-[var(--color-ink-muted)]">
+                    Redacted text is shown first. Original demo text is revealed only after confirmation.
+                  </p>
+                </div>
+                {state.segments.length === 0 ? (
+                  <Alert title="Source text not processed" tone="warning">
+                    <p>No extracted segment is available.</p>
+                  </Alert>
+                ) : (
+                  <>
+                    <div className="max-w-xl">
+                      <label className="cfn-type-label block" htmlFor="source-segment-select">Source segment</label>
+                      <Select
+                        disabled={actionsDisabled}
+                        id="source-segment-select"
+                        onChange={(event) => setSelectedSegmentId(event.currentTarget.value)}
+                        value={selectedSegmentId}
+                      >
+                        {state.segments.map((segment) => (
+                          <option key={segment.id} value={segment.id}>
+                            {segment.id}{segment.id === "D07-P2-S03" ? " — untrusted evidence only" : ""}
+                          </option>
+                        ))}
+                      </Select>
+                    </div>
+                    {selectedSegment ? (
+                      <SensitiveReveal
+                        disabled={actionsDisabled}
+                        key={selectedSegment.id}
+                        onReveal={revealSource}
+                        segment={selectedSegment}
+                      />
+                    ) : null}
+                  </>
+                )}
+              </section>
+            </details>
+          </section>
+          ) : null}
+
+          {documentsProcessed ? (
+          <section aria-labelledby="start-analysis-heading" className="grid scroll-mt-28 gap-3" id="analysis" tabIndex={-1}>
+            <div>
+              <p className="cfn-type-label text-[var(--color-brand)]">Step 4</p>
+              <h2 className="cfn-type-heading-2" id="start-analysis-heading">Start analysis</h2>
+            </div>
+            <AnalysisPrerequisites
+              disabled={actionsDisabled}
+              onStart={() => void startAnalysis()}
+              result={analysisResult}
+              state={state}
+            />
+            {reviewReady ? (
+              <Link
+                className="inline-flex min-h-11 items-center justify-center rounded-[var(--radius-control)] bg-[var(--color-brand)] px-4 py-2 font-semibold !text-white"
+                href="/case/demo/review"
+              >
+                Continue to Review
+              </Link>
+            ) : null}
+          </section>
+          ) : null}
+        </div>
       ) : null}
     </div>
   );

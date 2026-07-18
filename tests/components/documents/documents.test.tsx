@@ -28,6 +28,7 @@ import {
 import { cfnDemoFixture } from "../../../lib/fixtures";
 import { trustedPurposeBrief } from "../../../lib/analysis/replay";
 import {
+  applyCaseCommand,
   CASE_STATE_STORAGE_KEY,
   createInitialCaseState,
 } from "../../../lib/state";
@@ -117,6 +118,48 @@ function purposeReadyState(): CaseState {
   };
 }
 
+function preparedCheckpointState(): CaseState {
+  const initial = createInitialCaseState(NOW);
+  const result = applyCaseCommand(initial, {
+    type: "load_demo_checkpoint",
+    meta: {
+      commandId: "cmd-documents-checkpoint",
+      idempotencyKey: "idem-documents-checkpoint",
+      expectedCaseRevision: initial.caseRevision,
+      actor: "current_practitioner",
+      createdAt: NOW,
+    },
+    checkpointBundleId: "DEMO-CHECKPOINT-REVIEW",
+  });
+  if (!result.ok) throw new Error(result.reason);
+  return result.state;
+}
+
+function processedFailureState(): CaseState {
+  const base = purposeReadyState();
+  return {
+    ...base,
+    documents: processedFixture.documents,
+    selectedSegmentIds: processedFixture.selectedSegmentIds,
+    coverage: processedFixture.coverage,
+    processing: processedFixture.processing.map((stage) =>
+      stage.name === "text_extraction"
+        ? {
+            ...stage,
+            status: "failed" as const,
+            errorCode: "SOURCE_UNAVAILABLE" as const,
+            retryable: true,
+          }
+        : stage,
+    ),
+    masking: {
+      ...base.masking,
+      reviewStatus: "approved",
+      leakScanStatus: "passed",
+    },
+  };
+}
+
 function StateProbe() {
   const { state } = useCaseState();
   const lastAuditType = useMemo(
@@ -196,32 +239,57 @@ describe("TASK-019 intake, coverage, and containment", () => {
     renderWorkspace();
 
     const picker = screen.getByLabelText("Choose PDF files", { selector: "input" });
+    expect(document.getElementById("documents")).toHaveAttribute("tabindex", "-1");
     expect(picker).toHaveAttribute("multiple");
-    expect(
-      screen.getByRole("region", { name: "No documents selected yet" }),
-    ).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Choose and verify PDFs" })).toBeInTheDocument();
+    const progress = screen.getByRole("navigation", {
+      name: "Document preparation progress",
+    });
+    expect(within(progress).getAllByRole("listitem")).toHaveLength(4);
+    expect(within(progress).getByText("Choose PDFs").closest("li")).toHaveAttribute(
+      "aria-current",
+      "step",
+    );
     expect(screen.queryByRole("heading", { name: /^D01 ·/ })).not.toBeInTheDocument();
     expect(screen.queryByRole("heading", { name: "Coverage manifest" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Start analysis" })).not.toBeInTheDocument();
 
     await processLocalFixture(user);
 
-    expect(screen.getAllByText("Hackathon demo record")).toHaveLength(7);
+    for (const targetId of ["processing", "coverage", "masking", "analysis"]) {
+      expect(document.getElementById(targetId)).toHaveAttribute("tabindex", "-1");
+    }
+
+    expect(screen.getByRole("heading", { name: "Documents ready" })).toBeInTheDocument();
     expect(
-      screen.getByText(/Seven selected, verified PDFs/i),
+      screen.getByText(/7 PDFs processed in this browser/i),
     ).toBeInTheDocument();
     expect(screen.queryByRole("textbox", { name: /case|narrative|identifier/i })).not.toBeInTheDocument();
     expect(document.body).not.toHaveTextContent(/synthetic/i);
     expect(document.body).not.toHaveTextContent(/gpt-|gemini-|mistral-|\bmodel\b/i);
-
-    const d04Heading = screen.getByRole("heading", { name: /^D04 ·/ });
-    const d04Card = d04Heading.closest("section");
-    expect(d04Card).not.toBeNull();
-    expect(within(d04Card as HTMLElement).getByText("4")).toBeInTheDocument();
+    expect(within(progress).getByText("Required checks").closest("li")).toHaveAttribute(
+      "aria-current",
+      "step",
+    );
     expect(
-      within(d04Card as HTMLElement).getByText("Unavailable, missing page"),
+      screen.getByText("View technical processing details").closest("details"),
+    ).not.toHaveAttribute("open");
+    expect(screen.getByText(/^Coverage check/).closest("details")).not.toHaveAttribute(
+      "open",
+    );
+    expect(screen.getByText(/^Privacy masking/).closest("details")).not.toHaveAttribute(
+      "open",
+    );
+
+    const d04Row = document.querySelector('[data-document-id="D04"]');
+    expect(d04Row).not.toBeNull();
+    expect(within(d04Row as HTMLElement).getByText(/4 pages/)).toBeInTheDocument();
+    await user.click(within(d04Row as HTMLElement).getByText("Page issue"));
+    expect(
+      within(d04Row as HTMLElement).getByText("Unavailable, missing page"),
     ).toBeInTheDocument();
 
+    await user.click(screen.getByText("View technical processing details"));
     const stages = screen.getByRole("list", { name: "Eight processing stages" });
     expect(within(stages).getAllByRole("listitem")).toHaveLength(8);
     for (const name of [
@@ -236,6 +304,7 @@ describe("TASK-019 intake, coverage, and containment", () => {
     ]) {
       expect(within(stages).getByText(name)).toBeInTheDocument();
     }
+    await user.click(screen.getByText(/^Coverage check/));
     const coverageCard = screen
       .getByRole("heading", { name: "Coverage manifest" })
       .closest("section");
@@ -251,6 +320,8 @@ describe("TASK-019 intake, coverage, and containment", () => {
       /never as a completeness/i,
     );
 
+    await user.click(screen.getByText(/^Privacy masking/));
+    await user.click(screen.getByText("What personal-detail types are checked?"));
     const supportedClasses = screen.getByRole("list", {
       name: "Declared supported mask classes",
     });
@@ -312,10 +383,31 @@ describe("TASK-019 intake, coverage, and containment", () => {
     expect(onRetry).toHaveBeenCalledWith("text_extraction");
   });
 
+  it("keeps the journey on local processing when a canonical processing stage failed", async () => {
+    renderWorkspace({ initialState: processedFailureState() });
+
+    const progress = screen.getByRole("navigation", {
+      name: "Document preparation progress",
+    });
+    await waitFor(() =>
+      expect(within(progress).getByText("Process locally").closest("li")).toHaveAttribute(
+        "aria-current",
+        "step",
+      ),
+    );
+    expect(within(progress).getByText("Process locally").closest("li")).toHaveTextContent("!");
+    expect(within(progress).getByText("Start analysis").closest("li")).not.toHaveAttribute(
+      "aria-current",
+    );
+    expect(screen.queryByRole("heading", { name: "Start analysis" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "Continue to Review" })).not.toBeInTheDocument();
+  });
+
   it("renders source text redacted first, audits an intentional reveal, restores focus, and contains D07", async () => {
     const user = userEvent.setup();
     renderWorkspace();
     await processLocalFixture(user);
+    await user.click(screen.getByText("Optional: inspect redacted source text"));
 
     const maskedSegment = cfnDemoFixture.segments.find(
       (segment) => segment.id === "D01-P1-S01",
@@ -363,6 +455,17 @@ describe("TASK-019 intake, coverage, and containment", () => {
 });
 
 describe("TASK-019 masking and controller-backed analysis", () => {
+  it("does not offer Review when candidates exist without a succeeded active run", async () => {
+    const checkpoint = preparedCheckpointState();
+    renderWorkspace({
+      initialState: { ...checkpoint, activeAnalysisRunId: null },
+    });
+
+    await screen.findByRole("heading", { name: "Documents ready" });
+    expect(checkpoint.candidates.length).toBeGreaterThan(0);
+    expect(screen.queryByRole("link", { name: "Continue to Review" })).not.toBeInTheDocument();
+  });
+
   it("blocks on pending or rejected masks, passes the leak scan, and invokes TASK-018 exactly once", async () => {
     let continueRun: (() => void) | undefined;
     const gate = new Promise<void>((resolve) => {
@@ -375,19 +478,23 @@ describe("TASK-019 masking and controller-backed analysis", () => {
     const user = userEvent.setup();
     renderWorkspace({ runAnalysis });
     await processLocalFixture(user);
+    await user.click(screen.getByText(/^Privacy masking/));
 
     expect(screen.queryByRole("button", { name: "Start analysis" })).not.toBeInTheDocument();
     const suggestions = screen.getByRole("list", { name: "Mask suggestions" });
     const firstSuggestion = within(suggestions).getAllByRole("listitem")[0];
+    await user.click(
+      within(firstSuggestion).getByText("Edit or remove this suggestion"),
+    );
     const replacement = within(firstSuggestion).getByLabelText(
-      "Readable replacement preview",
+      "Replacement shown in the redacted text",
     );
     await user.clear(replacement);
     await user.click(replacement);
     await user.paste("[Reviewed person masked]");
     await user.click(
       within(firstSuggestion).getByRole("button", {
-        name: "Save edited replacement",
+        name: "Save edited mask",
       }),
     );
 
@@ -395,13 +502,16 @@ describe("TASK-019 masking and controller-backed analysis", () => {
       screen.getByRole("list", { name: "Mask suggestions" }),
     ).getAllByRole("listitem")[1];
     await user.click(
+      within(secondSuggestion).getByText("Edit or remove this suggestion"),
+    );
+    await user.click(
       within(secondSuggestion).getByRole("button", {
-        name: "Reject suggestion",
+        name: "Mark as needing correction",
       }),
     );
     expect(
       screen.getByRole("button", {
-        name: "Complete masking review and run leak scan",
+        name: "Approve privacy check and continue",
       }),
     ).toBeDisabled();
     expect(screen.getByTestId("leak-scan-state")).toHaveTextContent("not_run");
@@ -410,7 +520,7 @@ describe("TASK-019 masking and controller-backed analysis", () => {
     await approveEveryMask(user);
     await user.click(
       screen.getByRole("button", {
-        name: "Complete masking review and run leak scan",
+        name: "Approve privacy check and continue",
       }),
     );
     expect(screen.getByTestId("mask-review-state")).toHaveTextContent("approved");
@@ -430,6 +540,10 @@ describe("TASK-019 masking and controller-backed analysis", () => {
     ).toBeInTheDocument();
     expect(screen.getByRole("region", { name: "Canonical active run" })).toHaveTextContent(
       /RUN-REPLAY-1.*succeeded/i,
+    );
+    expect(screen.getByRole("link", { name: "Continue to Review" })).toHaveAttribute(
+      "href",
+      "/case/demo/review",
     );
   });
 });

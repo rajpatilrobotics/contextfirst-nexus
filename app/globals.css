@@ -2,22 +2,23 @@
 
 :root {
   --font-sans: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --font-display: ui-serif, Georgia, Cambria, "Times New Roman", serif;
   --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
 
-  --color-canvas: #F5F7F6;
+  --color-canvas: #F6F3EC;
   --color-surface: #FFFFFF;
-  --color-surface-subtle: #EEF2F1;
-  --color-ink: #14212B;
-  --color-ink-muted: #52615F;
-  --color-border: #CDD7D4;
-  --color-border-strong: #91A09C;
-  --color-control-border: #64748B;
-  --color-brand: #5948B8;
-  --color-brand-hover: #463894;
-  --color-brand-subtle: #F0EEFF;
-  --color-link: #315C93;
-  --color-supported: #0F766E;
-  --color-supported-subtle: #ECFDF8;
+  --color-surface-subtle: #F0F3EF;
+  --color-ink: #16251D;
+  --color-ink-muted: #5F6E65;
+  --color-border: #D8DED9;
+  --color-border-strong: #9AA99F;
+  --color-control-border: #89988F;
+  --color-brand: #21664F;
+  --color-brand-hover: #174C3B;
+  --color-brand-subtle: #E9F4EE;
+  --color-link: #1E624C;
+  --color-supported: #176B50;
+  --color-supported-subtle: #EAF7F1;
   --color-warning: #8A4B08;
   --color-warning-subtle: #FFF8E7;
   --color-conflict: #9A3412;
@@ -36,10 +37,10 @@
   --space-12: 48px;
   --space-16: 64px;
 
-  --radius-control: 6px;
-  --radius-card: 10px;
-  --radius-dialog: 12px;
-  --shadow-elevated: 0 18px 45px rgb(20 33 43 / 14%);
+  --radius-control: 8px;
+  --radius-card: 12px;
+  --radius-dialog: 14px;
+  --shadow-elevated: 0 18px 45px rgb(22 37 29 / 14%);
 
   background: var(--color-canvas);
   color: var(--color-ink);
@@ -59,10 +60,6 @@ body {
   font-size: 16px;
   line-height: 24px;
   text-rendering: optimizeLegibility;
-}
-
-main {
-  min-height: 100vh;
 }
 
 button,
@@ -89,6 +86,7 @@ a {
 }
 
 .cfn-type-display {
+  font-family: var(--font-display);
   font-size: 36px;
   line-height: 44px;
   font-weight: 700;
@@ -96,6 +94,7 @@ a {
 }
 
 .cfn-type-heading-1 {
+  font-family: var(--font-display);
   font-size: 32px;
   line-height: 40px;
   font-weight: 700;
@@ -103,12 +102,14 @@ a {
 }
 
 .cfn-type-heading-2 {
+  font-family: var(--font-display);
   font-size: 24px;
   line-height: 32px;
   font-weight: 700;
 }
 
 .cfn-type-heading-3 {
+  font-family: var(--font-display);
   font-size: 20px;
   line-height: 28px;
   font-weight: 700;
@@ -142,6 +143,44 @@ a {
   border-radius: var(--radius-card);
 }
 
+.cfn-workflow-section {
+  border-top: 1px solid var(--color-border);
+  padding-top: 20px;
+}
+
+.cfn-primary-action-bar {
+  align-items: center;
+  background: color-mix(in srgb, var(--color-brand-subtle) 64%, white);
+  border: 1px solid color-mix(in srgb, var(--color-brand) 24%, var(--color-border));
+  border-radius: var(--radius-card);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  justify-content: space-between;
+  padding: 14px 16px;
+}
+
+.cfn-details {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-card);
+  background: var(--color-surface);
+}
+
+.cfn-details > summary {
+  cursor: pointer;
+  font-weight: 700;
+  list-style-position: inside;
+  padding: 14px 16px;
+}
+
+.cfn-details[open] > summary {
+  border-bottom: 1px solid var(--color-border);
+}
+
+.cfn-details-content {
+  padding: 16px;
+}
+
 .cfn-reading-column {
   max-width: 760px;
 }
@@ -160,12 +199,12 @@ a {
   border: 1px solid currentColor;
   border-radius: 999px;
   display: inline-flex;
-  font-size: 14px;
+  font-size: 12px;
   font-weight: 600;
   gap: 6px;
   line-height: 20px;
-  min-height: 32px;
-  padding: 5px 10px;
+  min-height: 26px;
+  padding: 2px 8px;
 }
 
 .cfn-status-token[data-tone="neutral"] {

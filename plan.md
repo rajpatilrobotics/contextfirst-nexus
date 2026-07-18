@@ -60,6 +60,58 @@ The current Documents screen immediately shows D01-D07, so it looks prefilled an
 
 - None for this pass. Server upload, arbitrary real-case files, OCR, and cloud storage remain out of scope.
 
+## Fast-track workflow redesign, 2026-07-18
+
+### Goal
+
+Turn the working demo into a simple guided journey that a first-time hackathon judge can finish without guessing where to click next.
+
+### Problem
+
+The current UI exposes too many internal stages, large technical panels, and repeated status details. Purpose has no obvious forward action, Documents expands into a long engineering checklist, and Review/Export do not feel like one continuous workflow.
+
+### Proposed solution
+
+- Keep the four real stages, but present them as a compact persistent journey header with an obvious current step.
+- Add a primary `Continue` action after each successful stage.
+- Make Documents progressive: choose files, process them, resolve only required checks, then start analysis. Hide advanced details until requested.
+- Replace giant document and processing cards with compact rows and concise summaries.
+- Keep canonical state, safety gates, masking, coverage, citations, review decisions, export gating, and local-only processing unchanged.
+
+### Files to change
+
+- `components/shell/` and global UI styles.
+- `features/purpose/`, `features/documents/`, `features/review/`, and `features/export/` presentation files.
+- Focused component tests only where visible labels or navigation change.
+
+### Step by step tasks
+
+1. [x] Simplify the shared shell and compact the persistent progress journey.
+2. [x] Add a clear Purpose completion confirmation and Continue to Documents action.
+3. [x] Collapse Documents into four understandable phases and compact technical detail.
+4. [x] Simplify Review and Export hierarchy while retaining all working actions and blockers.
+5. [x] Verify focused flows, typecheck, lint, build, and inspect the local desktop journey.
+
+### Acceptance criteria
+
+- A first-time user always sees the current stage and the next primary action.
+- Purpose can advance directly to Documents after saving.
+- Documents does not show the entire internal pipeline at once.
+- Seven selected documents fit in a compact summary rather than seven giant panels.
+- Technical coverage, mask, and source details remain accessible but are secondary.
+- No canonical state, safety rule, or export gate is bypassed.
+
+### Testing plan
+
+- Focused Purpose, Documents, Review, Export, and shell component tests.
+- Typecheck and lint.
+- Production build.
+- One local desktop pass from Purpose through Export.
+
+### Open questions
+
+- None. The local desktop flow is ready for user review before any commit, push, or deployment.
+
 ## 1. Goal
 
 Create a complete, consistent documentation foundation that gives Codex enough product, technical, safety, design, testing, and execution context to build ContextFirst Nexus through a rolling pool of separate worktree tasks.

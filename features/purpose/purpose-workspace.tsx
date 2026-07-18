@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { ArrowRight, FastForward } from "lucide-react";
 import {
   AnalyzeAvailabilityResponseSchema,
   type CaseCommand,
@@ -95,23 +96,25 @@ export function PurposeWorkspace() {
     && state.purposeBrief.providerSelection.releaseConfigurationId === "prepared-replay-v1";
 
   return (
-    <div className="grid gap-6">
-      <header className="grid gap-2">
-        <p className="cfn-type-label text-[var(--color-ink-muted)]">Purpose and analysis</p>
+    <div className="mx-auto grid w-full max-w-5xl gap-5">
+      <header className="grid gap-1 border-b border-[var(--color-border)] pb-4">
+        <p className="cfn-type-label text-[var(--color-ink-muted)]">Step 1 of 4 · Purpose</p>
         <h2 className="cfn-type-heading-2">Case Purpose Brief</h2>
         <p className="max-w-[760px]">
-          State the authorized case-preparation purpose, preserve the prohibited-decision boundary, and
-          review how this fictional demonstration handles analysis. Saving this brief does not start analysis.
+          Tell us who is preparing the handoff and why. Save this brief, then continue directly to Documents.
         </p>
       </header>
 
-      <Card>
+      <section
+        aria-label="Demo case summary"
+        className="rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface-subtle)] px-4 py-3"
+      >
         <dl className="grid gap-3 text-sm sm:grid-cols-3">
           <div><dt className="cfn-type-label">Case</dt><dd>CFN-DEMO-001 · Fictional adult composite</dd></div>
-          <div><dt className="cfn-type-label">Demo packet</dt><dd>Version 1.0.0 · Fictional case data</dd></div>
-          <div><dt className="cfn-type-label">Enabled input</dt><dd>Seven approved demo PDFs selected in Documents</dd></div>
+          <div><dt className="cfn-type-label">Version</dt><dd>1.0.0 · Demo-only data</dd></div>
+          <div><dt className="cfn-type-label">Next</dt><dd>Select and verify the demo PDFs in Documents</dd></div>
         </dl>
-      </Card>
+      </section>
 
       {availabilityState === "loading" ? (
         <div className="grid gap-3" aria-label="Loading analysis availability">
@@ -139,34 +142,45 @@ export function PurposeWorkspace() {
 
       {state.purposeBrief?.status === "complete" ? (
         <Alert title="Saved purpose is complete">
-          <p>
-            Revision {state.purposeBrief.revision} is recorded. {purposeUsesCurrentReplay
-              ? "Analysis uses the prepared local demo replay with no external transmission."
-              : "Save the current local analysis disclosure before analysis can begin."} Analysis remains a separate
-            action after document, coverage, masking, and leak-scan prerequisites pass.
-          </p>
+          <div className="flex flex-col items-start justify-between gap-3 sm:flex-row sm:items-center">
+            <p className="max-w-2xl">
+              Revision {state.purposeBrief.revision} is recorded. {purposeUsesCurrentReplay
+                ? "Prepared local analysis is selected with no external transmission."
+                : "Save the current local analysis disclosure before analysis can begin."} Analysis remains a separate
+              action after the document checks pass.
+            </p>
+            <a
+              className="cfn-control-target inline-flex shrink-0 items-center justify-center gap-2 rounded-[var(--radius-control)] border border-[var(--color-brand)] bg-[var(--color-brand)] px-4 py-2 text-sm font-semibold !text-white no-underline hover:bg-[var(--color-brand-hover)]"
+              href="/case/demo/intake"
+            >
+              Continue to Documents
+              <ArrowRight aria-hidden="true" size={17} />
+            </a>
+          </div>
         </Alert>
       ) : null}
 
-      <Card className="grid gap-3">
-        <div>
-          <h3 className="cfn-type-heading-3">Prepared demonstration checkpoint</h3>
-          <p>
-            This is a separate trusted replay-based state, not another analysis mode, live provider result,
-            or prior user session.
+      <Card className="flex flex-col items-start justify-between gap-3 border-dashed sm:flex-row sm:items-center">
+        <div className="max-w-2xl">
+          <p className="cfn-type-label text-[var(--color-ink-muted)]">Optional judging shortcut</p>
+          <h3 className="cfn-type-heading-3">Jump to a prepared Review checkpoint</h3>
+          <p className="cfn-type-body-small text-[var(--color-ink-muted)]">
+            Skip the normal Purpose and Documents journey only when demonstrating the Review workspace.
+            This uses a trusted local replay and sends nothing externally.
           </p>
         </div>
-        <p className="font-semibold">Prepared demo review checkpoint · Deterministic local replay, not live AI</p>
-        <div>
+        <div className="shrink-0">
           <Button
             disabled={Boolean(state.pendingLiveAnalysis) || analysisAvailability?.status !== "ready"}
             onClick={loadCheckpoint}
+            variant="secondary"
           >
+            <FastForward aria-hidden="true" size={16} />
             Load prepared checkpoint
           </Button>
         </div>
-        {checkpointMessage ? <p role="status">{checkpointMessage}</p> : null}
-        {checkpointRun ? <p role="status">Checkpoint active with fixture-reviewer provenance and no provider transmission.</p> : null}
+        {checkpointMessage ? <p className="w-full" role="status">{checkpointMessage}</p> : null}
+        {checkpointRun ? <p className="w-full" role="status">Checkpoint active with fixture-reviewer provenance and no provider transmission.</p> : null}
       </Card>
     </div>
   );
