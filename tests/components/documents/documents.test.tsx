@@ -21,6 +21,7 @@ import type { CaseState, ProcessingStage } from "../../../lib/contracts";
 import {
   CfnDemoPdfSourceService,
   type CfnDemoDocumentServiceResult,
+  type CfnDemoPdfSelectionValidation,
   type PdfDocumentLike,
   type PdfJsRuntimeLike,
 } from "../../../lib/documents";
@@ -34,6 +35,36 @@ import {
 const NOW = "2026-07-16T10:00:00.000Z";
 let processedFixture: CfnDemoDocumentServiceResult;
 
+function selectedDemoFiles() {
+  return cfnDemoFixture.documents.map(
+    (document) =>
+      new File([`%PDF-1.7 ${document.id}`], document.fileName, {
+        type: "application/pdf",
+      }),
+  );
+}
+
+async function verifiedSelection(
+  files: readonly File[],
+): Promise<CfnDemoPdfSelectionValidation> {
+  return {
+    status: "verified",
+    packetStatus: "success",
+    files: files.map((file, index) => ({
+      documentId: `D0${index + 1}`,
+      fileName: file.name,
+      byteLength: file.size,
+      sha256: "verified-in-service-tests",
+      selectionStatus: "selected",
+      verificationStatus: "verified",
+      readinessStatus: "ready",
+      file,
+    })),
+    issues: [],
+    error: null,
+  } as CfnDemoPdfSelectionValidation;
+}
+
 function pageText(pageId: string) {
   return cfnDemoFixture.segments
     .filter((segment) => segment.pageId === pageId)
@@ -44,7 +75,9 @@ function pageText(pageId: string) {
 function fixtureRuntime(): PdfJsRuntimeLike {
   return {
     GlobalWorkerOptions: {},
-    getDocument({ url }) {
+    getDocument(input) {
+      if (!("url" in input)) throw new Error("expected fixture URL");
+      const { url } = input;
       const fixtureDocument = cfnDemoFixture.documents.find((document) =>
         url.endsWith(document.fileName),
       );
@@ -102,10 +135,14 @@ function StateProbe() {
 function renderWorkspace({
   initialState = purposeReadyState(),
   processSources = vi.fn(async () => processedFixture),
+  processSelectedSources = vi.fn(async () => processedFixture),
   runAnalysis,
 }: {
   initialState?: CaseState;
   processSources?: () => Promise<CfnDemoDocumentServiceResult>;
+  processSelectedSources?: (
+    files: readonly File[],
+  ) => Promise<CfnDemoDocumentServiceResult>;
   runAnalysis?: (
     options: RunControllerOptions,
   ) => ReturnType<typeof runSelectedAnalysis>;
@@ -114,7 +151,9 @@ function renderWorkspace({
     <CaseStateProvider initialState={initialState}>
       <DocumentsWorkspace
         processSources={processSources}
+        processSelectedSources={processSelectedSources}
         runAnalysis={runAnalysis}
+        validateSelection={verifiedSelection}
       />
       <StateProbe />
     </CaseStateProvider>,
@@ -122,8 +161,9 @@ function renderWorkspace({
 }
 
 async function processLocalFixture(user: ReturnType<typeof userEvent.setup>) {
-  await user.click(
-    screen.getByRole("button", { name: "Process bundled PDFs locally" }),
+  await user.upload(
+    screen.getByLabelText("Choose PDF files", { selector: "input" }),
+    selectedDemoFiles(),
   );
   await screen.findByRole("region", {
     name: "Browser-local processing complete",
@@ -151,16 +191,28 @@ beforeEach(() => {
 });
 
 describe("TASK-019 intake, coverage, and containment", () => {
-  it("shows seven synthetic records, explicit D04 missingness, eight stages, and no case input control", async () => {
+  it("starts empty, then shows the verified seven-file workflow and explicit D04 missingness", async () => {
     const user = userEvent.setup();
     renderWorkspace();
 
-    expect(screen.getAllByText("Synthetic training record")).toHaveLength(7);
+    const picker = screen.getByLabelText("Choose PDF files", { selector: "input" });
+    expect(picker).toHaveAttribute("multiple");
     expect(
-      screen.getByText(/Seven application-managed, read-only PDFs/i),
+      screen.getByRole("region", { name: "No documents selected yet" }),
     ).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: /upload/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: /^D01 ·/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "Coverage manifest" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Start analysis" })).not.toBeInTheDocument();
+
+    await processLocalFixture(user);
+
+    expect(screen.getAllByText("Hackathon demo record")).toHaveLength(7);
+    expect(
+      screen.getByText(/Seven selected, verified PDFs/i),
+    ).toBeInTheDocument();
     expect(screen.queryByRole("textbox", { name: /case|narrative|identifier/i })).not.toBeInTheDocument();
+    expect(document.body).not.toHaveTextContent(/synthetic/i);
+    expect(document.body).not.toHaveTextContent(/gpt-|gemini-|mistral-|\bmodel\b/i);
 
     const d04Heading = screen.getByRole("heading", { name: /^D04 ·/ });
     const d04Card = d04Heading.closest("section");
@@ -169,8 +221,6 @@ describe("TASK-019 intake, coverage, and containment", () => {
     expect(
       within(d04Card as HTMLElement).getByText("Unavailable, missing page"),
     ).toBeInTheDocument();
-
-    await processLocalFixture(user);
 
     const stages = screen.getByRole("list", { name: "Eight processing stages" });
     expect(within(stages).getAllByRole("listitem")).toHaveLength(8);
@@ -219,7 +269,7 @@ describe("TASK-019 intake, coverage, and containment", () => {
 
     await user.click(screen.getByText("Add a range-based mask"));
     expect(
-      screen.getByLabelText("Synthetic source segment", {
+      screen.getByLabelText("Source segment", {
         selector: "#manual-mask-segment",
       }),
     ).toHaveValue("D01-P1-S01");
@@ -275,7 +325,7 @@ describe("TASK-019 intake, coverage, and containment", () => {
     expect(screen.queryByText(maskedSegment.rawText)).not.toBeInTheDocument();
 
     const revealButton = screen.getByRole("button", {
-      name: "Reveal synthetic original",
+      name: "Reveal demo original",
     });
     await user.click(revealButton);
     expect(
@@ -283,7 +333,7 @@ describe("TASK-019 intake, coverage, and containment", () => {
     ).toBeInTheDocument();
     expect(screen.queryByText(maskedSegment.rawText)).not.toBeInTheDocument();
     await user.click(
-      screen.getByRole("button", { name: "Confirm synthetic-original reveal" }),
+      screen.getByRole("button", { name: "Confirm demo-original reveal" }),
     );
     expect(screen.getByText(maskedSegment.rawText)).toBeInTheDocument();
     expect(screen.getByTestId("last-audit-event")).toHaveTextContent(
@@ -294,7 +344,7 @@ describe("TASK-019 intake, coverage, and containment", () => {
     expect(revealButton).toHaveFocus();
 
     await user.selectOptions(
-      screen.getByLabelText("Synthetic source segment", {
+      screen.getByLabelText("Source segment", {
         selector: "#source-segment-select",
       }),
       "D07-P2-S03",
@@ -379,7 +429,7 @@ describe("TASK-019 masking and controller-backed analysis", () => {
       screen.getByRole("heading", { name: "Canonical analysis candidates" }),
     ).toBeInTheDocument();
     expect(screen.getByRole("region", { name: "Canonical active run" })).toHaveTextContent(
-      /RUN-REPLAY-1.*frozen_replay_output/i,
+      /RUN-REPLAY-1.*succeeded/i,
     );
   });
 });

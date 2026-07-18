@@ -222,9 +222,9 @@ export function SafetyLab({
     <section aria-labelledby="safety-lab-heading" className="grid min-w-0 gap-6" id="safety-lab">
       <div className="grid gap-2">
         <p className="cfn-type-label text-[var(--color-brand)]">Safety Lab · fixture version 1.0.0</p>
-        <h2 className="cfn-type-heading-1" id="safety-lab-heading">Synthetic evaluation evidence</h2>
+        <h2 className="cfn-type-heading-1" id="safety-lab-heading">Demo evaluation evidence</h2>
         <p className="cfn-reading-column text-[var(--color-ink-muted)]">
-          Every integrated evidence record is shown item by item. Critical checks are never averaged, and these synthetic records do not establish real-world effectiveness.
+          Every integrated evidence record is shown item by item. Critical checks are never averaged, and these demo records do not establish real-world effectiveness.
         </p>
       </div>
 

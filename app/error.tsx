@@ -26,7 +26,7 @@ export default function RouteError({
           Review the route again
         </h1>
         <p>
-          This screen hides technical diagnostics, source text, provider details, credentials, and stack traces. Your browser-held synthetic case state has not been exported from this error view.
+          This screen hides technical diagnostics, source text, service details, credentials, and stack traces. Your browser-held demo case state has not been exported from this error view.
         </p>
         <div className="flex flex-wrap gap-3">
           <button

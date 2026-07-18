@@ -61,11 +61,11 @@ const KNOWN_FAILURE_MODES = [
 ];
 
 const KNOWN_LIMITATIONS = [
-  "Working synthetic hackathon prototype; no real-case or production assurance.",
+  "Working fictional-data hackathon prototype; no real-case or production assurance.",
   "One English fictional adult fixture and bundled text PDFs only; no OCR or arbitrary upload.",
   "No domestic legal verification, multilingual assurance, chain of custody, production authentication, or durable case store.",
   "Provider terms and availability can change; no provider setting is described as guaranteed zero retention.",
-  "Synthetic evaluation evidence does not establish real-world effectiveness.",
+  "Demo evaluation evidence does not establish real-world effectiveness.",
 ];
 
 export function getTrustPageData(): TrustPageData {

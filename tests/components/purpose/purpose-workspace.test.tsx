@@ -57,14 +57,14 @@ describe("TASK-018 PurposeWorkspace", () => {
     );
 
     expect(await screen.findByRole("group", { name: "How analysis works" })).toBeInTheDocument();
-    expect(screen.getByRole("checkbox", { name: /frozen local synthetic output/i })).not.toBeChecked();
+    expect(screen.getByRole("checkbox", { name: /frozen local demo output/i })).not.toBeChecked();
     expect(screen.queryByRole("radio")).not.toBeInTheDocument();
     expect(screen.queryByText(/OpenAI|Gemini|Mistral|gpt-5\.6-sol|prepared-replay-v1/i)).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Start analysis" })).not.toBeInTheDocument();
 
     await user.click(screen.getByRole("button", { name: "Load prepared checkpoint" }));
     expect(await screen.findByText(/Checkpoint active with fixture-reviewer provenance/i)).toBeInTheDocument();
-    expect(screen.getByText(/No provider transmission occurred/i)).toBeInTheDocument();
+    expect(screen.getByText(/No external transmission occurred/i)).toBeInTheDocument();
     await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
     expect(fetchMock).toHaveBeenCalledWith("/api/analyze", { method: "GET", cache: "no-store" });
   });

@@ -108,7 +108,7 @@ export function UnsafeOutputReport({
             {entities.map((option) => <option key={option} value={option}>{option}</option>)}
           </Select>
           <p className="cfn-type-body-small text-[var(--color-ink-muted)]" id="unsafe-report-entity-help">
-            Only IDs already present in the canonical synthetic case are available.
+            Only IDs already present in the canonical demo case are available.
           </p>
         </div>
 

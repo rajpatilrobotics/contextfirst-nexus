@@ -8,16 +8,6 @@ const REQUIRED_FIXTURE_STAGES = [
   "identifier_masking",
 ] as const;
 
-const PROVIDER_PRESENTATION = {
-  openai: { label: "OpenAI", model: "gpt-5.6-sol" },
-  google_gemini: { label: "Google Gemini", model: "gemini-3.5-flash" },
-  mistral: { label: "Mistral", model: "mistral-small-2603" },
-  local_replay: {
-    label: "Bundled deterministic replay, not live AI",
-    model: "Frozen replay output",
-  },
-} as const;
-
 export type AnalysisPresentation =
   | { status: "idle" }
   | { status: "pending" }
@@ -68,11 +58,11 @@ export function deriveAnalysisPrerequisites(state: CaseState): {
     },
     {
       id: "sources",
-      label: "Bundled sources processed locally",
+      label: "Selected documents processed locally",
       satisfied: sourcesProcessed,
       detail: sourcesProcessed
-        ? "Seven documents and selected redacted segments are represented."
-        : "Process the seven application-managed PDFs and resolve any failed local stage.",
+        ? "Seven selected documents and their approved redacted segments are represented."
+        : "Select and process the seven demo PDFs, then resolve any failed local stage.",
     },
     {
       id: "coverage",
@@ -95,16 +85,16 @@ export function deriveAnalysisPrerequisites(state: CaseState): {
       label: "Deterministic leak scan passed",
       satisfied: leakScanPassed,
       detail: leakScanPassed
-        ? "The canonical redacted provider-boundary projection passed."
+        ? "The approved redacted document projection passed."
         : "Complete masking review to run the deterministic leak scan.",
     },
     {
       id: "analysis-mode",
-      label: "Analysis mode disclosure acknowledged",
+      label: "Analysis disclosure acknowledged",
       satisfied: analysisModeAcknowledged,
       detail: analysisModeAcknowledged
-        ? "The selected release disclosure is acknowledged in the purpose brief."
-        : "Choose and acknowledge a release through the Purpose step.",
+        ? "The local analysis disclosure is acknowledged in the Purpose brief."
+        : "Acknowledge the local analysis disclosure through the Purpose step.",
     },
   ];
 
@@ -122,7 +112,7 @@ function TerminalResult({ result }: { result: AnalysisPresentation }) {
   if (result.status === "pending") {
     return (
       <Alert title="Analysis pending">
-        <p>The selected TASK-018 controller flow is running. No provider switch or fallback occurs automatically.</p>
+        <p>The approved analysis flow is running. No alternate analysis is started automatically.</p>
       </Alert>
     );
   }
@@ -131,8 +121,8 @@ function TerminalResult({ result }: { result: AnalysisPresentation }) {
       <Alert title="Analysis completed">
         <p>
           {result.outcome === "replay_succeeded"
-            ? "The bundled deterministic replay completed; this was not live AI."
-            : "The selected live analysis completed."}
+            ? "The prepared local analysis completed without external transmission."
+            : "The approved analysis completed."}
         </p>
       </Alert>
     );
@@ -177,8 +167,6 @@ export function AnalysisPrerequisites({
   disabled?: boolean;
 }) {
   const prerequisites = deriveAnalysisPrerequisites(state);
-  const selection = state.purposeBrief?.providerSelection;
-  const provider = selection ? PROVIDER_PRESENTATION[selection.providerId] : null;
   const activeRun = state.analysisRuns.find(
     (run) => run.id === state.activeAnalysisRunId,
   );
@@ -193,16 +181,13 @@ export function AnalysisPrerequisites({
         </p>
       </div>
 
-      {selection && provider ? (
-        <dl className="grid gap-3 text-sm sm:grid-cols-3">
-          <div><dt className="cfn-type-label">Selected mode</dt><dd>{selection.providerId === "local_replay" ? "Deterministic replay" : "Live analysis"}</dd></div>
-          <div><dt className="cfn-type-label">Provider or replay</dt><dd>{provider.label}</dd></div>
-          <div><dt className="cfn-type-label">Model</dt><dd className="cfn-type-code">{provider.model}</dd></div>
-          <div className="sm:col-span-3"><dt className="cfn-type-label">Release</dt><dd className="cfn-type-code">{selection.releaseConfigurationId}</dd></div>
-        </dl>
+      {state.purposeBrief?.providerSelection ? (
+        <Alert title="Analysis disclosure acknowledged">
+          <p>The local analysis disclosure recorded in the Purpose step is ready.</p>
+        </Alert>
       ) : (
-        <Alert title="No acknowledged analysis mode" tone="warning">
-          <p>Choose a release and acknowledge its disclosure through the Purpose step.</p>
+        <Alert title="Analysis disclosure required" tone="warning">
+          <p>Acknowledge the local analysis disclosure through the Purpose step.</p>
         </Alert>
       )}
 
@@ -230,7 +215,7 @@ export function AnalysisPrerequisites({
       {activeRun ? (
         <Alert title="Canonical active run">
           <p>
-            <span className="cfn-type-code">{activeRun.id}</span> · {activeRun.status} · {activeRun.provider.requestedModel}
+            <span className="cfn-type-code">{activeRun.id}</span> · {activeRun.status}
           </p>
         </Alert>
       ) : null}

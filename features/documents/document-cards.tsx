@@ -45,8 +45,8 @@ export function DocumentCards({ documents }: { documents: DocumentRecord[] }) {
   if (documents.length === 0) {
     return (
       <Card>
-        <h3 className="cfn-type-heading-3">No synthetic documents available</h3>
-        <p>The bundled fixture manifest did not provide a document record. Nothing was treated as processed.</p>
+        <h3 className="cfn-type-heading-3">No documents available</h3>
+        <p>No selected document record is ready. Nothing was treated as processed.</p>
       </Card>
     );
   }
@@ -55,10 +55,10 @@ export function DocumentCards({ documents }: { documents: DocumentRecord[] }) {
     <section aria-labelledby="document-list-heading" className="grid gap-4">
       <div>
         <h2 className="cfn-type-heading-2" id="document-list-heading">
-          Bundled synthetic packet
+          Verified document set
         </h2>
         <p className="cfn-type-body-small text-[var(--color-ink-muted)]">
-          Seven application-managed, read-only PDFs. There is no upload or free-text case input.
+          Seven selected, verified PDFs processed in this browser.
         </p>
       </div>
       <div className="grid gap-4 xl:grid-cols-2">
@@ -68,7 +68,7 @@ export function DocumentCards({ documents }: { documents: DocumentRecord[] }) {
               <FileText aria-hidden="true" className="mt-1 shrink-0" size={20} />
               <div className="min-w-0">
                 <p className="cfn-type-label text-[var(--color-warning)]">
-                  Synthetic training record
+                  Hackathon demo record
                 </p>
                 <h3 className="cfn-type-heading-3 break-words">
                   <span className="cfn-type-code">{document.id}</span> · {document.displayName}
@@ -95,11 +95,11 @@ export function DocumentCards({ documents }: { documents: DocumentRecord[] }) {
               </div>
               <div>
                 <dt className="cfn-type-label">Data origin</dt>
-                <dd>Bundled synthetic fixture</dd>
+                <dd>Demo-only file</dd>
               </div>
               <div>
                 <dt className="cfn-type-label">Source copy</dt>
-                <dd>Application-managed and read-only</dd>
+                <dd>Selected locally and read-only</dd>
               </div>
             </dl>
 

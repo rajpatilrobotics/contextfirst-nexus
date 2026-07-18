@@ -166,7 +166,7 @@ describe("TASK-021 Review workspace composition", () => {
       </CaseStateProvider>,
     );
 
-    expect(screen.getByText("Prepared synthetic review checkpoint")).toBeInTheDocument();
+    expect(screen.getByText("Prepared demo review checkpoint")).toBeInTheDocument();
     expect(screen.getByText("Bundled deterministic replay, not live AI")).toBeInTheDocument();
     expect(screen.getByText(/Seeded decisions are attributed to Fixture reviewer/i)).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Source-linked timeline" })).toBeInTheDocument();

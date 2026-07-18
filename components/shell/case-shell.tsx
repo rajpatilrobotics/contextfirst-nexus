@@ -13,7 +13,7 @@ import {
 import { CaseStateProvider, useCaseState } from "./case-state-context";
 
 export const SYNTHETIC_BANNER_TEXT =
-  "Synthetic training case. Do not upload or enter real case data.";
+  "Fictional hackathon demo case. Do not upload or enter real case data.";
 
 export const STEP_NAVIGATION = [
   { id: "purpose", label: "Purpose", href: "/case/demo/purpose" },
@@ -64,10 +64,10 @@ export function describeRunProvenance(run: AnalysisRun | null) {
   if (run.mode === "deterministic_replay") {
     return {
       analysisStatusLabel: run.checkpointProvenance
-        ? "Prepared synthetic checkpoint active"
+        ? "Prepared demo checkpoint active"
         : "Local replay complete",
       checkpointLabel: run.checkpointProvenance
-        ? "Prepared synthetic review checkpoint"
+        ? "Prepared demo review checkpoint"
         : null,
     };
   }
@@ -126,7 +126,7 @@ function CaseShellContent({
     onReset?.(result.state, command);
     onNavigate?.("/case/demo/purpose");
     if (!onNavigate) router.push("/case/demo/purpose");
-    setResetMessage("Case reset to the synthetic demo start.");
+    setResetMessage("Case reset to the demo start.");
   }
 
   return (
@@ -148,7 +148,7 @@ function CaseShellContent({
           <div className="grid gap-4 rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface)] p-4 lg:grid-cols-[minmax(0,1fr)_auto]">
             <div className="grid gap-3">
               <div>
-                <p className="cfn-type-label text-[var(--color-ink-muted)]">Synthetic case workspace</p>
+                <p className="cfn-type-label text-[var(--color-ink-muted)]">Hackathon case workspace</p>
                 <h1 className="cfn-type-heading-1">ContextFirst Nexus demo case</h1>
               </div>
               <dl className="grid gap-3 text-sm sm:grid-cols-2 lg:grid-cols-4">
@@ -191,7 +191,7 @@ function CaseShellContent({
               </Button>
             </div>
             <p className="cfn-type-body-small text-[var(--color-ink-muted)] lg:col-span-2" id="reset-case-note">
-              Reset uses the central case command and returns the browser session to the bundled synthetic case.
+              Reset uses the central case command and returns the browser session to the bundled demo case.
             </p>
             {resetMessage ? (
               <p className="cfn-type-body-small text-[var(--color-supported)]" role="status">

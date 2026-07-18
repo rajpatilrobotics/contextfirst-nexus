@@ -72,7 +72,7 @@ function CheckpointProvenance({
     <Card className="grid gap-4 border-[var(--color-brand)] bg-[var(--color-brand-subtle)] sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center">
       <div className="grid gap-1">
         <p className="cfn-type-label text-[var(--color-brand)]">Prepared demonstration state</p>
-        <h2 className="cfn-type-heading-3">Prepared synthetic review checkpoint</h2>
+        <h2 className="cfn-type-heading-3">Prepared demo review checkpoint</h2>
         <p className="font-semibold">Bundled deterministic replay, not live AI</p>
         <p className="text-sm">
           No provider transmission. Seeded decisions are attributed to Fixture reviewer, not the current practitioner.
@@ -348,7 +348,7 @@ export function ReviewWorkspace() {
               <div>
                 <h2 className="cfn-type-heading-3" id="review-trust-heading">Trust navigation</h2>
                 <p className="text-sm">
-                  Provider disclosures, audit explanation, unsafe-output reporting, and measured synthetic evaluation remain on the separate Trust and Safety destination.
+                  Service disclosures, audit explanation, unsafe-output reporting, and measured demo evaluation remain on the separate Trust and Safety destination.
                 </p>
               </div>
             </div>
@@ -360,7 +360,7 @@ export function ReviewWorkspace() {
 
           <p className="flex items-start gap-2 text-sm text-[var(--color-ink-muted)]">
             <ShieldCheck aria-hidden="true" className="mt-0.5 shrink-0" size={17} />
-            Synthetic adult fixture only. AI suggests and organizes; a qualified practitioner makes every consequential review decision.
+            Fictional adult demo case only. The system suggests and organizes; a qualified practitioner makes every consequential review decision.
           </p>
         </div>
       </div>

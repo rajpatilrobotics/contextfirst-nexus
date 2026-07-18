@@ -160,11 +160,11 @@ function ManualMaskForm({
     <details className="rounded-[var(--radius-control)] border border-[var(--color-border)] p-4">
       <summary className="cursor-pointer font-semibold">Add a range-based mask</summary>
       <p className="mt-2 cfn-type-body-small text-[var(--color-ink-muted)]">
-        Select an existing synthetic segment and character range. Do not enter an identifier or case narrative.
+        Select an existing demo segment and character range. Do not enter an identifier or case narrative.
       </p>
       <div className="mt-4 grid gap-3 sm:grid-cols-2">
         <div>
-          <Label htmlFor="manual-mask-segment">Synthetic source segment</Label>
+          <Label htmlFor="manual-mask-segment">Source segment</Label>
           <Select
             disabled={disabled || segmentIds.length === 0}
             id="manual-mask-segment"

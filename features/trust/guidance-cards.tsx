@@ -31,7 +31,7 @@ export function GuidanceCards({ pack }: { pack: GuidancePack }) {
         <p className="cfn-type-label text-[var(--color-brand)]">Guidance pack · version {pack.identity.version}</p>
         <h2 className="cfn-type-heading-1" id="guidance-heading">Reviewed guidance, separate from case evidence</h2>
         <p className="cfn-reading-column text-[var(--color-ink-muted)]">
-          These published sources can frame qualified practitioner questions. They cannot corroborate the synthetic case, establish domestic law, determine eligibility, or support a candidate.
+          These published sources can frame qualified practitioner questions. They cannot corroborate the fictional demo case, establish domestic law, determine eligibility, or support a candidate.
         </p>
       </div>
 

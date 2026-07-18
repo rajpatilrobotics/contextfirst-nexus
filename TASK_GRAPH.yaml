@@ -839,7 +839,7 @@ tasks:
     title: Simplify replay-only analysis UX
     stage: product_ux
     wave: 14
-    status: ready
+    status: integrated
     risk: high
     dependencies: [TASK-018, TASK-025, TASK-038]
     packet: tasks/TASK-039.md
@@ -869,7 +869,7 @@ tasks:
     title: Managed server-side provider routing and safe fallback
     stage: contracts_and_provider_orchestration
     wave: 15
-    status: blocked
+    status: ready
     risk: critical
     dependencies: [TASK-006, TASK-011, TASK-015, TASK-016, TASK-026, TASK-038, TASK-039]
     packet: tasks/TASK-040.md

@@ -4,7 +4,7 @@ import "./globals.css";
 export const metadata: Metadata = {
   title: "ContextFirst Nexus",
   description:
-    "Synthetic source-grounded case preparation for qualified practitioners reviewing trafficking-related forced criminality.",
+    "Fictional, source-grounded case preparation demo for qualified practitioners reviewing trafficking-related forced criminality.",
 };
 
 export default function RootLayout({

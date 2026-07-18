@@ -45,7 +45,7 @@ function CoverageIssueReview({
         </Select>
       </div>
       <div>
-        <Label htmlFor={`${issueId}-limitation`}>Synthetic-fixture limitation</Label>
+        <Label htmlFor={`${issueId}-limitation`}>Demo-file limitation</Label>
         <Textarea
           disabled={disabled}
           id={`${issueId}-limitation`}

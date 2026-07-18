@@ -10,6 +10,7 @@ import {
   type SafeErrorCode,
 } from "../../lib/contracts";
 import {
+  CfnDemoPdfSourceService,
   processCfnDemoPdfSources,
   type CfnDemoDocumentServiceResult,
 } from "../../lib/documents";
@@ -27,12 +28,19 @@ import {
   type AnalysisPresentation,
 } from "./analysis-prerequisites";
 import { CoverageManifest } from "./coverage-manifest";
-import { DocumentCards, initialSyntheticDocuments } from "./document-cards";
+import { DocumentCards } from "./document-cards";
 import { MaskingReviewPanel } from "./masking-review-panel";
+import {
+  PdfSelectionPanel,
+  type PdfSelectionValidator,
+} from "./pdf-selection-panel";
 import { ProcessingStageList } from "./processing-stage-list";
 import { SensitiveReveal } from "./sensitive-reveal";
 
 type ProcessSources = () => Promise<CfnDemoDocumentServiceResult>;
+type ProcessSelectedSources = (
+  files: readonly File[],
+) => Promise<CfnDemoDocumentServiceResult>;
 type RunAnalysis = (options: RunControllerOptions) => Promise<RunControllerResult>;
 type MaskReviewStatus = Extract<
   CaseCommand,
@@ -131,12 +139,25 @@ function terminalPresentation(result: RunControllerResult): AnalysisPresentation
   return { status: "blocked", reason: result.reason };
 }
 
+async function processSelectedPdfSources(files: readonly File[]) {
+  const service = new CfnDemoPdfSourceService();
+  try {
+    return await service.processSelectedFiles(files);
+  } finally {
+    await service.cleanup();
+  }
+}
+
 export function DocumentsWorkspace({
   processSources = processCfnDemoPdfSources,
+  processSelectedSources = processSelectedPdfSources,
   runAnalysis = runSelectedAnalysis,
+  validateSelection,
 }: {
   processSources?: ProcessSources;
+  processSelectedSources?: ProcessSelectedSources;
   runAnalysis?: RunAnalysis;
+  validateSelection?: PdfSelectionValidator;
 }) {
   const { state, dispatchCaseCommand } = useCaseState();
   const [processing, setProcessing] = useState(false);
@@ -149,6 +170,8 @@ export function DocumentsWorkspace({
   const [analysisResult, setAnalysisResult] = useState<AnalysisPresentation>({
     status: "idle",
   });
+  const [intakeReady, setIntakeReady] = useState(false);
+  const [readyFiles, setReadyFiles] = useState<readonly File[]>([]);
 
   useEffect(() => {
     if (
@@ -158,6 +181,10 @@ export function DocumentsWorkspace({
       setSelectedSegmentId(state.segments[0]?.id ?? "");
     }
   }, [selectedSegmentId, state.segments]);
+
+  useEffect(() => {
+    if (state.documents.length === 7) setIntakeReady(true);
+  }, [state.documents.length]);
 
   const selectedSegment = state.segments.find(
     (segment) => segment.id === selectedSegmentId,
@@ -198,7 +225,10 @@ export function DocumentsWorkspace({
     }
 
     try {
-      const localResult = await processSources();
+      const localResult =
+        readyFiles.length > 0
+          ? await processSelectedSources(readyFiles)
+          : await processSources();
       const completion = dispatchCaseCommand({
         type: "complete_fixture_processing",
         meta: commandMeta(startResult.state.caseRevision, "COMPLETE"),
@@ -222,7 +252,7 @@ export function DocumentsWorkspace({
         tone: "neutral",
         title: "Browser-local processing complete",
         message:
-          "The seven bundled synthetic PDFs were processed locally. Review coverage and every retained mask before analysis.",
+          "The seven selected demo PDFs were processed locally. Review coverage and every retained mask before analysis.",
       });
     } catch (error) {
       const failure = safeProcessingFailure(error);
@@ -240,11 +270,82 @@ export function DocumentsWorkspace({
         title: "Browser-local processing failed",
         message: failureResult.ok
           ? `Safe code: ${failure.code}. Stage: ${failure.stage.replaceAll("_", " ")}.${location ? ` Affected record: ${location}.` : ""} Use the permitted targeted retry when available.`
-          : "The failure could not be recorded in canonical case state. Reset or reload the synthetic case before retrying.",
+          : "The failure could not be recorded in case state. Reset or reload the demo before retrying.",
       });
     } finally {
       setProcessing(false);
     }
+  }
+
+  async function processSelectedFiles(files: readonly File[]) {
+    if (!purposeComplete || actionsDisabled) {
+      throw new Error("document_intake_not_ready");
+    }
+    setNotice(null);
+    setProcessing(true);
+
+    const startResult = dispatchCaseCommand({
+      type: "begin_fixture_processing",
+      meta: commandMeta(state.caseRevision, "BEGIN-SELECTED"),
+    });
+    if (!startResult.ok) {
+      setProcessing(false);
+      throw new Error("document_processing_start_rejected");
+    }
+
+    try {
+      const localResult = await processSelectedSources(files);
+      const completion = dispatchCaseCommand({
+        type: "complete_fixture_processing",
+        meta: commandMeta(startResult.state.caseRevision, "COMPLETE-SELECTED"),
+        result: fixtureProcessingResult(localResult),
+      });
+      if (!completion.ok) {
+        throw new Error("document_processing_result_rejected");
+      }
+
+      const suggestionRefresh = dispatchCaseCommand({
+        type: "refresh_mask_suggestions",
+        meta: commandMeta(completion.state.caseRevision, "REFRESH-SELECTED-MASKS"),
+        sensitiveTerms: [cfnDemoFixture.seededIdentifiers[0]],
+      });
+      if (!suggestionRefresh.ok) {
+        throw new Error("mask_suggestion_refresh_rejected");
+      }
+
+      setNotice({
+        tone: "neutral",
+        title: "Browser-local processing complete",
+        message:
+          "The seven selected demo PDFs are ready. Review coverage and every retained mask before analysis.",
+      });
+    } catch (error) {
+      const failure = safeProcessingFailure(error);
+      dispatchCaseCommand({
+        type: "fail_fixture_processing",
+        meta: commandMeta(startResult.state.caseRevision, `FAIL-SELECTED-${failure.stage}`),
+        stageName: failure.stage,
+        safeErrorCode: failure.code,
+      });
+      throw error;
+    } finally {
+      setProcessing(false);
+    }
+  }
+
+  function resetDocumentIntake() {
+    const result = dispatchCaseCommand({
+      type: "reset_case",
+      meta: commandMeta(state.caseRevision, "RESET-DOCUMENT-INTAKE"),
+    });
+    if (!result.ok) {
+      showCommandFailure("Document intake could not be reset");
+      return;
+    }
+    setReadyFiles([]);
+    setIntakeReady(false);
+    setNotice(null);
+    setAnalysisResult({ status: "idle" });
   }
 
   function reviewMask(
@@ -323,7 +424,7 @@ export function DocumentsWorkspace({
       citationId: segmentId,
       reasonCode: "explicit_synthetic_source_review",
     });
-    if (!result.ok) showCommandFailure("Synthetic source reveal was not recorded");
+    if (!result.ok) showCommandFailure("Source reveal was not recorded");
     return result.ok;
   }
 
@@ -349,10 +450,11 @@ export function DocumentsWorkspace({
   return (
     <div className="grid min-w-0 gap-6">
       <header className="grid gap-2">
-        <p className="cfn-type-label text-[var(--color-warning)]">Synthetic-only Documents step</p>
-        <h1 className="cfn-type-heading-1">Intake, coverage, and masking</h1>
+        <p className="cfn-type-label text-[var(--color-brand)]">Hackathon demo</p>
+        <h1 className="cfn-type-heading-1">Documents</h1>
         <p className="max-w-3xl text-[var(--color-ink-muted)]">
-          Inspect the seven read-only fixture PDFs, process them in this browser, review explicit missingness, and approve identifier masking before analysis.
+          Start with an empty workspace, select the demo PDFs, and follow each
+          file from selection through browser-local processing.
         </p>
       </header>
 
@@ -366,6 +468,24 @@ export function DocumentsWorkspace({
         </Alert>
       ) : null}
 
+      <PdfSelectionPanel
+        onClear={resetDocumentIntake}
+        onReady={({ files }) => {
+          setReadyFiles(files);
+          setIntakeReady(true);
+        }}
+        onReset={() => {
+          setReadyFiles([]);
+          setIntakeReady(false);
+        }}
+        processFiles={processSelectedFiles}
+        replaceAllowed={!intakeReady}
+        validateSelection={validateSelection}
+      />
+
+      {intakeReady ? (
+        <>
+
       {notice ? (
         <Alert title={notice.title} tone={notice.tone}>
           <p>{notice.message}</p>
@@ -376,24 +496,30 @@ export function DocumentsWorkspace({
         <div>
           <h2 className="cfn-type-heading-2" id="local-processing-heading">Browser-local PDF processing</h2>
           <p className="cfn-type-body-small text-[var(--color-ink-muted)]">
-            Only the allowlisted bundled files are read. Raw PDF bytes are not persisted or sent to an analysis provider, and image-only pages are not OCR-processed.
+            Only the verified demo files are read. Raw PDF bytes are not
+            persisted or sent beyond this intake step, and image-only pages are
+            not OCR-processed.
           </p>
         </div>
         <div>
           <Button
-            disabled={!purposeComplete || actionsDisabled}
+            disabled={!purposeComplete || actionsDisabled || readyFiles.length === 0}
             onClick={() => void processFixture()}
             variant="primary"
           >
-            {processing ? "Processing bundled PDFs…" : state.documents.length > 0 ? "Reprocess bundled PDFs locally" : "Process bundled PDFs locally"}
+            {processing
+              ? "Processing PDFs…"
+              : readyFiles.length > 0
+                ? "Reprocess selected PDFs locally"
+                : "Select the PDF set again to reprocess"}
           </Button>
         </div>
       </section>
 
-      <DocumentCards documents={state.documents.length > 0 ? state.documents : initialSyntheticDocuments()} />
+      <DocumentCards documents={state.documents} />
 
       <ProcessingStageList
-        disabled={actionsDisabled}
+        disabled={actionsDisabled || readyFiles.length === 0}
         onRetry={(stage) => void processFixture(stage)}
         stages={state.processing}
       />
@@ -428,7 +554,7 @@ export function DocumentsWorkspace({
         ) : (
           <>
             <div className="max-w-xl">
-              <label className="cfn-type-label block" htmlFor="source-segment-select">Synthetic source segment</label>
+              <label className="cfn-type-label block" htmlFor="source-segment-select">Source segment</label>
               <Select
                 disabled={actionsDisabled}
                 id="source-segment-select"
@@ -464,6 +590,8 @@ export function DocumentsWorkspace({
         result={analysisResult}
         state={state}
       />
+        </>
+      ) : null}
     </div>
   );
 }

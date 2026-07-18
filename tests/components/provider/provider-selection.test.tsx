@@ -66,7 +66,7 @@ describe("TASK-039 replay-only analysis availability", () => {
 
     expect(screen.getByText(REPLAY_VISIBLE_LABEL, { exact: false })).toBeInTheDocument();
     expect(screen.getByText(/No case content is sent to an external service/i)).toBeInTheDocument();
-    expect(screen.getByRole("checkbox", { name: /frozen local synthetic output/i })).not.toBeChecked();
+    expect(screen.getByRole("checkbox", { name: /frozen local demo output/i })).not.toBeChecked();
     expect(screen.queryByRole("radio")).not.toBeInTheDocument();
     expect(screen.queryByRole("combobox")).not.toBeInTheDocument();
     expect(screen.queryByText(/OpenAI|Gemini|Mistral|service tier|requested model/i)).not.toBeInTheDocument();

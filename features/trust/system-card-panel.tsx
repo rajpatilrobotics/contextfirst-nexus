@@ -204,13 +204,13 @@ function ProviderCard({ card, option }: { card: SystemCard; option: ProviderOpti
           <p><span className="font-semibold">Retention limitation:</span> {option.disclosure.retentionLimitation}</p>
           <p><span className="font-semibold">Training-use disclosure:</span> {option.disclosure.trainingUseDisclosure}</p>
           <p><span className="font-semibold">Inference setting:</span> <InferenceSetting option={option} /></p>
-          <p><span className="font-semibold">Scope:</span> Bundled synthetic fixture only. Raw PDF sent: No. Tools enabled: No.</p>
+          <p><span className="font-semibold">Scope:</span> Bundled fictional demo packet only. Raw PDF sent: No. Tools enabled: No.</p>
         </div>
 
         {option.providerId === "mistral" ? (
           <Alert title="Mistral availability limitation" tone="warning">
             <p className="mt-2">
-              Exact model <span className="cfn-type-code">mistral-small-2603</span> is {option.selectable ? "selectable only for the approved synthetic scope" : "not selectable"}. Static admission is {humanize(option.evaluationStatus).toLowerCase()} and deployed-account availability is {humanize(option.deployedAccountReleaseAvailabilityStatus).toLowerCase()}.
+              Exact service configuration <span className="cfn-type-code">mistral-small-2603</span> is {option.selectable ? "selectable only for the approved demo scope" : "not selectable"}. Static admission is {humanize(option.evaluationStatus).toLowerCase()} and deployed-account availability is {humanize(option.deployedAccountReleaseAvailabilityStatus).toLowerCase()}.
             </p>
             <p className="mt-2">
               Free-tier training opt-out is not claimed. Inputs and outputs may be retained for up to 30 days for abuse monitoring; free zero data retention is not available or claimed.

@@ -3,7 +3,7 @@ export default function Home() {
     <main className="min-h-screen bg-[var(--color-canvas)] px-4 py-8 text-[var(--color-ink)] sm:px-6">
       <div className="mx-auto grid max-w-5xl gap-8">
         <section className="grid gap-5">
-          <p className="cfn-type-label text-[var(--color-ink-muted)]">Synthetic practitioner demo</p>
+          <p className="cfn-type-label text-[var(--color-ink-muted)]">Practitioner hackathon demo</p>
           <h1 className="cfn-type-display">ContextFirst Nexus</h1>
           <p className="cfn-type-body max-w-3xl">
             ContextFirst Nexus helps qualified practitioners prepare source-grounded case
@@ -41,9 +41,9 @@ export default function Home() {
               </p>
             </article>
             <article className="grid gap-2">
-              <h3 className="cfn-type-heading-3">Synthetic-only case</h3>
+              <h3 className="cfn-type-heading-3">Fictional demo case</h3>
               <p>
-                The only enabled case is fictional synthetic adult fixture CFN-DEMO-001. Do not
+                The only enabled case is fictional adult demo case CFN-DEMO-001. Do not
                 upload, paste, or enter real case data.
               </p>
             </article>

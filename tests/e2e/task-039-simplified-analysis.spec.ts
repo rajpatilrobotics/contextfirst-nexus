@@ -1,9 +1,22 @@
 import { expect, test, type Page } from "@playwright/test";
+import { resolve } from "node:path";
+
+const demoPdfPaths = [
+  "01_job_offer.pdf",
+  "02_recruiter_messages.pdf",
+  "03_travel_records.pdf",
+  "04_practitioner_intake_note.pdf",
+  "05_task_and_penalty_log.pdf",
+  "06_synthetic_case_notice.pdf",
+  "07_support_note.pdf",
+].map((fileName) =>
+  resolve("public", "fixtures", "cfn-demo-001", fileName),
+);
 
 async function completePurpose(page: Page) {
   await page.getByLabel("Practitioner role").selectOption("demo_evaluator");
   await page.getByLabel("Organization type").selectOption("research_or_evaluation");
-  await page.getByLabel("Authorized purpose").fill("Prepare a qualified synthetic review handoff.");
+  await page.getByLabel("Authorized purpose").fill("Prepare a qualified demo review handoff.");
   await page.getByLabel("Intended recipient or handoff").fill("Demo legal aid reviewer");
   await page.getByLabel("Recipient category").selectOption("legal_aid_team");
   await page.getByLabel("Fictional jurisdiction").selectOption("J-01");
@@ -18,13 +31,13 @@ async function completePurpose(page: Page) {
   }
 
   const acknowledgementNames = [
-    /attest that I am using this synthetic fixture/i,
+    /attest that I am using this fictional demo packet/i,
     /system cannot verify my authority/i,
-    /material is the bundled synthetic fixture/i,
-    /acknowledge the synthetic-only data boundary/i,
+    /material is the bundled fictional demo packet/i,
+    /acknowledge the demo-only data boundary/i,
     /does not make the excluded consequential decisions/i,
     /cooperation with authorities is not a condition/i,
-    /frozen local synthetic output/i,
+    /frozen local demo output/i,
   ];
   for (const name of acknowledgementNames) {
     await page.getByRole("checkbox", { name }).check();
@@ -38,7 +51,7 @@ async function completePurpose(page: Page) {
 
 async function prepareDocuments(page: Page) {
   await page.getByRole("link", { name: /Documents/ }).click();
-  await page.getByRole("button", { name: "Process bundled PDFs locally" }).click();
+  await page.getByLabel("Choose PDF files").setInputFiles(demoPdfPaths);
   await expect(page.getByRole("region", { name: "Browser-local processing complete" })).toBeVisible();
 
   const suggestions = page.getByRole("list", { name: "Mask suggestions" });
@@ -79,7 +92,7 @@ test.describe("TASK-039 simplified replay-only analysis", () => {
     await start.click();
 
     await expect(page.getByRole("region", { name: "Analysis completed" })).toContainText(
-      "bundled deterministic replay completed",
+      "prepared local analysis completed without external transmission",
     );
     await expect(page.getByText("Local replay complete")).toBeVisible();
     await expect(start).toBeEnabled();
@@ -93,15 +106,15 @@ test.describe("TASK-039 simplified replay-only analysis", () => {
     expect(requestedUrls.some((url) => url.includes("contextfirst-nexus.vercel.app"))).toBe(false);
   });
 
-  test("keeps the prepared synthetic checkpoint separate from Start analysis", async ({ page }) => {
+  test("keeps the prepared demo checkpoint separate from Start analysis", async ({ page }) => {
     await page.goto("/case/demo/purpose");
     await expect(page.getByRole("button", { name: "Load prepared checkpoint" })).toBeEnabled();
     await expect(page.getByRole("button", { name: "Start analysis" })).toHaveCount(0);
 
     await page.getByRole("button", { name: "Load prepared checkpoint" }).click();
     await expect(page.getByText(/Checkpoint active with fixture-reviewer provenance/i)).toBeVisible();
-    await expect(page.getByText("Prepared synthetic checkpoint active")).toBeVisible();
-    await expect(page.getByText("Prepared synthetic review checkpoint", { exact: true })).toBeVisible();
-    await expect(page.getByText(/No provider transmission occurred/i)).toBeVisible();
+    await expect(page.getByText("Prepared demo checkpoint active")).toBeVisible();
+    await expect(page.getByText("Prepared demo review checkpoint", { exact: true })).toBeVisible();
+    await expect(page.getByText(/No provider transmission/i)).toBeVisible();
   });
 });

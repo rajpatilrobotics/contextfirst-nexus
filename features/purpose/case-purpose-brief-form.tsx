@@ -115,15 +115,15 @@ export function CasePurposeBriefForm({
     if (RequiredExcludedDecisions.some((decision) => !excludedDecisions.has(decision))) {
       next.excludedDecisions = "Confirm every decision that remains outside system support.";
     }
-    if (!authorityAttested) next.authorityAttested = "Confirm the synthetic-fixture authority basis.";
+    if (!authorityAttested) next.authorityAttested = "Confirm the fictional demo-data authority basis.";
     if (!authorityNotVerified) next.authorityNotVerified = "Acknowledge that the system cannot verify authority.";
-    if (!syntheticAttested) next.syntheticAttested = "Attest that this is the bundled synthetic fixture.";
-    if (!syntheticAcknowledged) next.syntheticAcknowledged = "Acknowledge the synthetic-data boundary.";
+    if (!syntheticAttested) next.syntheticAttested = "Attest that this is the bundled fictional demo packet.";
+    if (!syntheticAcknowledged) next.syntheticAcknowledged = "Acknowledge the demo-only data boundary.";
     if (!prohibitedAcknowledged) next.prohibitedAcknowledged = "Acknowledge the prohibited-decision boundary.";
     if (!cooperationAcknowledged) next.cooperationAcknowledged = "Confirm cooperation neutrality.";
     if (!analysisOption) next.analysisService = "Analysis service unavailable";
     if (analysisOption && !analysisAcknowledged) {
-      next.analysisAcknowledgement = "Acknowledge how this local synthetic analysis works.";
+      next.analysisAcknowledgement = "Acknowledge how this prepared local analysis works.";
     }
     return next;
   }
@@ -312,14 +312,14 @@ export function CasePurposeBriefForm({
 
       <fieldset className="grid gap-2">
         <legend className="cfn-type-heading-3">Authority and safety acknowledgements</legend>
-        <p>Authority basis and consent status: Not applicable, synthetic fixture.</p>
-        <Checkbox checked={authorityAttested} id="authority-attested" label="I attest that I am using this synthetic fixture for the stated authorized workflow." onChange={(event) => setAuthorityAttested(event.currentTarget.checked)} />
+        <p>Authority basis and consent status: Not applicable to this fictional demo packet.</p>
+        <Checkbox checked={authorityAttested} id="authority-attested" label="I attest that I am using this fictional demo packet for the stated authorized workflow." onChange={(event) => setAuthorityAttested(event.currentTarget.checked)} />
         {errors.authorityAttested ? <FieldError id="authority-attested-error">{errors.authorityAttested}</FieldError> : null}
         <Checkbox checked={authorityNotVerified} id="authority-not-verified" label="I understand that the system cannot verify my authority." onChange={(event) => setAuthorityNotVerified(event.currentTarget.checked)} />
         {errors.authorityNotVerified ? <FieldError id="authority-not-verified-error">{errors.authorityNotVerified}</FieldError> : null}
-        <Checkbox checked={syntheticAttested} id="synthetic-attested" label="I attest that the material is the bundled synthetic fixture, not real or private case data." onChange={(event) => setSyntheticAttested(event.currentTarget.checked)} />
+        <Checkbox checked={syntheticAttested} id="synthetic-attested" label="I attest that the material is the bundled fictional demo packet, not real or private case data." onChange={(event) => setSyntheticAttested(event.currentTarget.checked)} />
         {errors.syntheticAttested ? <FieldError id="synthetic-attested-error">{errors.syntheticAttested}</FieldError> : null}
-        <Checkbox checked={syntheticAcknowledged} id="synthetic-acknowledged" label="I acknowledge the synthetic-only data boundary." onChange={(event) => setSyntheticAcknowledged(event.currentTarget.checked)} />
+        <Checkbox checked={syntheticAcknowledged} id="synthetic-acknowledged" label="I acknowledge the demo-only data boundary." onChange={(event) => setSyntheticAcknowledged(event.currentTarget.checked)} />
         {errors.syntheticAcknowledged ? <FieldError id="synthetic-acknowledged-error">{errors.syntheticAcknowledged}</FieldError> : null}
         <Checkbox checked={prohibitedAcknowledged} id="prohibited-acknowledged" label="I acknowledge that the system does not make the excluded consequential decisions." onChange={(event) => setProhibitedAcknowledged(event.currentTarget.checked)} />
         {errors.prohibitedAcknowledged ? <FieldError id="prohibited-acknowledged-error">{errors.prohibitedAcknowledged}</FieldError> : null}

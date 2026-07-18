@@ -79,7 +79,7 @@ export function PurposeWorkspace() {
     const result = dispatchCaseCommand(command);
     setCheckpointMessage(
       result.ok
-        ? "Prepared synthetic review checkpoint loaded from the trusted local registry. No provider transmission occurred."
+        ? "Prepared demo review checkpoint loaded from the trusted local registry. No external transmission occurred."
         : `The prepared checkpoint could not be loaded (${result.reason}).`,
     );
   }
@@ -101,15 +101,15 @@ export function PurposeWorkspace() {
         <h2 className="cfn-type-heading-2">Case Purpose Brief</h2>
         <p className="max-w-[760px]">
           State the authorized case-preparation purpose, preserve the prohibited-decision boundary, and
-          review how this synthetic demonstration handles analysis. Saving this brief does not start analysis.
+          review how this fictional demonstration handles analysis. Saving this brief does not start analysis.
         </p>
       </header>
 
       <Card>
         <dl className="grid gap-3 text-sm sm:grid-cols-3">
           <div><dt className="cfn-type-label">Case</dt><dd>CFN-DEMO-001 · Fictional adult composite</dd></div>
-          <div><dt className="cfn-type-label">Fixture</dt><dd>Version 1.0.0 · Bundled synthetic</dd></div>
-          <div><dt className="cfn-type-label">Enabled input</dt><dd>One bundled fixture; no upload</dd></div>
+          <div><dt className="cfn-type-label">Demo packet</dt><dd>Version 1.0.0 · Fictional case data</dd></div>
+          <div><dt className="cfn-type-label">Enabled input</dt><dd>Seven approved demo PDFs selected in Documents</dd></div>
         </dl>
       </Card>
 
@@ -141,7 +141,7 @@ export function PurposeWorkspace() {
         <Alert title="Saved purpose is complete">
           <p>
             Revision {state.purposeBrief.revision} is recorded. {purposeUsesCurrentReplay
-              ? "Analysis uses prepared synthetic replay locally with no provider transmission."
+              ? "Analysis uses the prepared local demo replay with no external transmission."
               : "Save the current local analysis disclosure before analysis can begin."} Analysis remains a separate
             action after document, coverage, masking, and leak-scan prerequisites pass.
           </p>
@@ -156,7 +156,7 @@ export function PurposeWorkspace() {
             or prior user session.
           </p>
         </div>
-        <p className="font-semibold">Prepared synthetic review checkpoint · Bundled deterministic replay, not live AI</p>
+        <p className="font-semibold">Prepared demo review checkpoint · Deterministic local replay, not live AI</p>
         <div>
           <Button
             disabled={Boolean(state.pendingLiveAnalysis) || analysisAvailability?.status !== "ready"}

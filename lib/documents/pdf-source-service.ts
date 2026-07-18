@@ -16,9 +16,96 @@ const WORKER_SRC = "/vendor/pdfjs/pdf.worker.min.mjs" as const;
 const FIXTURE_BASE_PATH = "/fixtures/cfn-demo-001/" as const;
 const FIXTURE_VERSION = "1.0.0" as const;
 
+export const CFN_DEMO_PDF_ALLOWLIST = [
+  {
+    documentId: "D01",
+    fileName: "01_job_offer.pdf",
+    byteLength: 3_197,
+    sha256: "9f156ef5e170e4af950bace38d2dcf4857d02b0f32a5e356c754cfdccbb54e4e",
+  },
+  {
+    documentId: "D02",
+    fileName: "02_recruiter_messages.pdf",
+    byteLength: 4_034,
+    sha256: "dfd8073474cfecca42671d6bf3ae2337a1873ac536cedc01ac31a521787f9ca8",
+  },
+  {
+    documentId: "D03",
+    fileName: "03_travel_records.pdf",
+    byteLength: 2_896,
+    sha256: "b0b356d3d7c1c7ab85a4fc5b620fb328d7ef9cf6c0b92a611330e44e07050a03",
+  },
+  {
+    documentId: "D04",
+    fileName: "04_practitioner_intake_note.pdf",
+    byteLength: 4_126,
+    sha256: "413ba10622df5ac1fd5416dfe957ba16e7442819f351b0063267ddfe3f23d511",
+  },
+  {
+    documentId: "D05",
+    fileName: "05_task_and_penalty_log.pdf",
+    byteLength: 3_002,
+    sha256: "c1293dc2fab12e5474e136ba99471ded061c4ac48cd5904c322ee9de7efb2f4a",
+  },
+  {
+    documentId: "D06",
+    fileName: "06_synthetic_case_notice.pdf",
+    byteLength: 3_018,
+    sha256: "ad755f5eae4ca831557f9dc6a756802127d8295047b64e857f100f25fe2fdc3b",
+  },
+  {
+    documentId: "D07",
+    fileName: "07_support_note.pdf",
+    byteLength: 3_028,
+    sha256: "541a68c6239c1797e0f88bb527dff2c7541d4c3531a1fc4bc64e5407192b7e69",
+  },
+] as const;
+
 type CoverageIssue = CoverageSummary["issues"][number];
 type PageRecord = DocumentRecord["pages"][number];
 type PageAvailability = PageRecord["availability"];
+type DemoPdfAllowlistEntry = (typeof CFN_DEMO_PDF_ALLOWLIST)[number];
+
+export type CfnDemoPdfSelectionIssueCode =
+  | "wrong_file_count"
+  | "duplicate_file_name"
+  | "unknown_file_name"
+  | "invalid_file_type"
+  | "invalid_pdf_header"
+  | "invalid_file_size"
+  | "digest_mismatch";
+
+export type CfnDemoPdfSelectionIssue = {
+  code: CfnDemoPdfSelectionIssueCode;
+  fileName?: string;
+};
+
+export type VerifiedCfnDemoPdfFile = {
+  documentId: DemoPdfAllowlistEntry["documentId"];
+  fileName: DemoPdfAllowlistEntry["fileName"];
+  byteLength: number;
+  sha256: string;
+  selectionStatus: "selected";
+  verificationStatus: "verified";
+  readinessStatus: "ready";
+  file: File;
+};
+
+export type CfnDemoPdfSelectionValidation =
+  | {
+      status: "verified";
+      packetStatus: "success";
+      files: VerifiedCfnDemoPdfFile[];
+      issues: [];
+      error: null;
+    }
+  | {
+      status: "rejected";
+      packetStatus: "error";
+      files: [];
+      issues: CfnDemoPdfSelectionIssue[];
+      error: { code: "packet_validation_failed" };
+    };
 
 export type DocumentSafeError = {
   code: SafeErrorCode;
@@ -51,9 +138,13 @@ export type PdfLoadingTaskLike = {
   destroy?: () => Promise<void> | void;
 };
 
+export type PdfDocumentSource =
+  | { url: string }
+  | { data: Uint8Array };
+
 export type PdfJsRuntimeLike = {
   GlobalWorkerOptions?: { workerSrc?: string };
-  getDocument: (input: { url: string }) => PdfLoadingTaskLike;
+  getDocument: (input: PdfDocumentSource) => PdfLoadingTaskLike;
 };
 
 export type ExtractedPage = {
@@ -121,6 +212,106 @@ function fixturePathFor(document: FixtureDocument) {
 
 function isAllowedFixturePath(url: string) {
   return cfnDemoFixture.documents.some((document) => fixturePathFor(document) === url);
+}
+
+function bytesToHex(bytes: ArrayBuffer) {
+  return Array.from(new Uint8Array(bytes), (byte) => byte.toString(16).padStart(2, "0")).join("");
+}
+
+async function sha256File(bytes: ArrayBuffer) {
+  return bytesToHex(await globalThis.crypto.subtle.digest("SHA-256", bytes));
+}
+
+function hasPdfHeader(bytes: ArrayBuffer) {
+  const header = new Uint8Array(bytes, 0, Math.min(bytes.byteLength, 5));
+  return header.length === 5 && String.fromCharCode(...header) === "%PDF-";
+}
+
+/**
+ * Verifies the selected browser files without uploading or persisting their bytes.
+ * Successful files are returned in canonical D01-D07 order.
+ */
+export async function validateCfnDemoPdfSelection(
+  selectedFiles: readonly File[],
+): Promise<CfnDemoPdfSelectionValidation> {
+  const issues: CfnDemoPdfSelectionIssue[] = [];
+  const filesByName = new Map<string, File>();
+
+  if (selectedFiles.length !== CFN_DEMO_PDF_ALLOWLIST.length) {
+    issues.push({ code: "wrong_file_count" });
+  }
+
+  for (const file of selectedFiles) {
+    if (filesByName.has(file.name)) {
+      issues.push({ code: "duplicate_file_name", fileName: file.name });
+      continue;
+    }
+    filesByName.set(file.name, file);
+
+    if (!CFN_DEMO_PDF_ALLOWLIST.some((entry) => entry.fileName === file.name)) {
+      issues.push({ code: "unknown_file_name", fileName: file.name });
+    }
+  }
+
+  const verifiedFiles: VerifiedCfnDemoPdfFile[] = [];
+  for (const expected of CFN_DEMO_PDF_ALLOWLIST) {
+    const file = filesByName.get(expected.fileName);
+    if (!file) continue;
+
+    if (file.type !== "application/pdf") {
+      issues.push({ code: "invalid_file_type", fileName: file.name });
+      continue;
+    }
+    if (file.size !== expected.byteLength) {
+      issues.push({ code: "invalid_file_size", fileName: file.name });
+      continue;
+    }
+
+    const bytes = await file.arrayBuffer();
+    if (!hasPdfHeader(bytes)) {
+      issues.push({ code: "invalid_pdf_header", fileName: file.name });
+      continue;
+    }
+    if (bytes.byteLength !== expected.byteLength) {
+      issues.push({ code: "invalid_file_size", fileName: file.name });
+      continue;
+    }
+
+    const digest = await sha256File(bytes);
+    if (digest !== expected.sha256) {
+      issues.push({ code: "digest_mismatch", fileName: file.name });
+      continue;
+    }
+
+    verifiedFiles.push({
+      documentId: expected.documentId,
+      fileName: expected.fileName,
+      byteLength: expected.byteLength,
+      sha256: expected.sha256,
+      selectionStatus: "selected",
+      verificationStatus: "verified",
+      readinessStatus: "ready",
+      file,
+    });
+  }
+
+  if (issues.length > 0 || verifiedFiles.length !== CFN_DEMO_PDF_ALLOWLIST.length) {
+    return {
+      status: "rejected",
+      packetStatus: "error",
+      files: [],
+      issues,
+      error: { code: "packet_validation_failed" },
+    };
+  }
+
+  return {
+    status: "verified",
+    packetStatus: "success",
+    files: verifiedFiles,
+    issues: [],
+    error: null,
+  };
 }
 
 function textItemsToPage(items: PdfTextItem[]): ExtractedPage {
@@ -328,13 +519,41 @@ export class CfnDemoPdfSourceService {
   private loadingTasks = new Set<PdfLoadingTaskLike>();
   private documents = new Set<PdfDocumentLike>();
   private pages = new Set<PdfPageLike>();
-  private objectUrls = new Set<string>();
   private extractedPagesById = new Map<string, ExtractedPage>();
   private cleanedUp = false;
 
   constructor(private readonly runtimeLoader: () => Promise<PdfJsRuntimeLike> = loadBrowserPdfJsRuntime) {}
 
   async processFixture(): Promise<CfnDemoDocumentServiceResult> {
+    return this.processSources(
+      new Map(
+        cfnDemoFixture.documents.map((document) => [
+          document.id,
+          { url: fixturePathFor(document) } satisfies PdfDocumentSource,
+        ]),
+      ),
+    );
+  }
+
+  async processSelectedFiles(selectedFiles: readonly File[]): Promise<CfnDemoDocumentServiceResult> {
+    const validation = await validateCfnDemoPdfSelection(selectedFiles);
+    if (validation.status !== "verified") {
+      throw toSafeDocumentError("INVALID_REQUEST", "intake_validation");
+    }
+
+    const sourcesByDocumentId = new Map<string, PdfDocumentSource>();
+    for (const selected of validation.files) {
+      sourcesByDocumentId.set(selected.documentId, {
+        data: new Uint8Array(await selected.file.arrayBuffer()),
+      });
+    }
+
+    return this.processSources(sourcesByDocumentId);
+  }
+
+  private async processSources(
+    sourcesByDocumentId: ReadonlyMap<string, PdfDocumentSource>,
+  ): Promise<CfnDemoDocumentServiceResult> {
     if (this.cleanedUp) {
       throw toSafeDocumentError("INVALID_REQUEST", "intake_validation");
     }
@@ -347,12 +566,16 @@ export class CfnDemoPdfSourceService {
     const failedPagesById = new Map<string, SafeErrorCode>();
 
     for (const document of cfnDemoFixture.documents) {
-      const url = fixturePathFor(document);
-      if (!isAllowedFixturePath(url)) {
+      const source = sourcesByDocumentId.get(document.id);
+      if (
+        !source ||
+        ("url" in source && !isAllowedFixturePath(source.url)) ||
+        ("data" in source && source.data.byteLength === 0)
+      ) {
         throw toSafeDocumentError("INVALID_REQUEST", "intake_validation", document.id);
       }
 
-      const task = runtime.getDocument({ url });
+      const task = runtime.getDocument(source);
       this.loadingTasks.add(task);
 
       let pdf: PdfDocumentLike;
@@ -423,12 +646,9 @@ export class CfnDemoPdfSourceService {
       await document.destroy?.();
     }
     for (const task of this.loadingTasks) await task.destroy?.();
-    for (const url of this.objectUrls) URL.revokeObjectURL(url);
-
     this.pages.clear();
     this.documents.clear();
     this.loadingTasks.clear();
-    this.objectUrls.clear();
     this.extractedPagesById.clear();
     this.cleanedUp = true;
   }

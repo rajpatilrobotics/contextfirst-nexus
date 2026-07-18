@@ -337,16 +337,16 @@ export function SourceDrawer({ state, selection, mode, onClose, onCommand }: Sou
           </Alert>
           {!revealed ? (
             showRevealWarning ? (
-              <Alert title="Reveal original synthetic source?" tone="warning">
-                <p className="mb-3">This intentional review action shows browser-local unmasked synthetic text. It is not persisted or sent to a provider.</p>
-                <Button onClick={revealSource} variant="danger">Reveal original synthetic source</Button>
+              <Alert title="Reveal original demo source?" tone="warning">
+                <p className="mb-3">This intentional review action shows browser-local unmasked demo text. It is not persisted or sent to an external service.</p>
+                <Button onClick={revealSource} variant="danger">Reveal original demo source</Button>
               </Alert>
             ) : (
               <Button onClick={() => setShowRevealWarning(true)} variant="secondary">Review reveal warning</Button>
             )
           ) : (
-            <section aria-label="Original synthetic source" className="grid gap-2">
-              <h3 className="cfn-type-label">Original synthetic source — intentionally revealed</h3>
+            <section aria-label="Original demo source" className="grid gap-2">
+              <h3 className="cfn-type-label">Original demo source — intentionally revealed</h3>
               <p className="whitespace-pre-wrap break-words rounded-[var(--radius-control)] border border-[var(--color-warning)] bg-[var(--color-warning-subtle)] p-3 text-sm leading-6">{segment.rawText}</p>
             </section>
           )}

@@ -199,7 +199,7 @@ describe("TASK-017 landing boundary screen", () => {
     expect(screen.getByRole("heading", { level: 1, name: "ContextFirst Nexus" })).toBeInTheDocument();
     expect(screen.getByText(/qualified practitioners prepare source-grounded case handoffs/i)).toBeInTheDocument();
     expect(screen.getByText(/legal aid, public defender, NGO legal/i)).toBeInTheDocument();
-    expect(screen.getByText(/fictional synthetic adult fixture CFN-DEMO-001/i)).toBeInTheDocument();
+    expect(screen.getByText(/fictional adult demo case CFN-DEMO-001/i)).toBeInTheDocument();
     expect(screen.getByText(/does not determine trafficking status, credibility, guilt, legal eligibility/i)).toBeInTheDocument();
     expect(screen.getByText(/not a survivor chatbot, emergency service, reporting channel/i)).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Start demo" })).toHaveAttribute("href", "/case/demo/purpose");
@@ -270,7 +270,7 @@ describe("TASK-017 case shell", () => {
     expect(screen.queryByText("gpt-5.6-sol")).not.toBeInTheDocument();
     expect(screen.queryByText("Provider", { selector: "dt" })).not.toBeInTheDocument();
     expect(screen.queryByText("Model", { selector: "dt" })).not.toBeInTheDocument();
-    expect(screen.queryByText("Prepared synthetic review checkpoint")).not.toBeInTheDocument();
+    expect(screen.queryByText("Prepared demo review checkpoint")).not.toBeInTheDocument();
   });
 
   it("shows local replay and prepared checkpoint as plain-language status variants", () => {
@@ -279,8 +279,8 @@ describe("TASK-017 case shell", () => {
       checkpointLabel: null,
     });
     expect(describeRunProvenance(replayRun(true))).toMatchObject({
-      analysisStatusLabel: "Prepared synthetic checkpoint active",
-      checkpointLabel: "Prepared synthetic review checkpoint",
+      analysisStatusLabel: "Prepared demo checkpoint active",
+      checkpointLabel: "Prepared demo review checkpoint",
     });
 
     render(
@@ -290,9 +290,9 @@ describe("TASK-017 case shell", () => {
     );
 
     expect(screen.getByText("Analysis status").nextElementSibling).toHaveTextContent(
-      "Prepared synthetic checkpoint active",
+      "Prepared demo checkpoint active",
     );
-    expect(screen.getByText("Prepared synthetic review checkpoint")).toBeInTheDocument();
+    expect(screen.getByText("Prepared demo review checkpoint")).toBeInTheDocument();
     expect(screen.queryByText("frozen_replay_output")).not.toBeInTheDocument();
   });
 
@@ -324,7 +324,7 @@ describe("TASK-017 case shell", () => {
     });
     expect(onNavigate).toHaveBeenCalledWith("/case/demo/purpose");
     expect(routerPush).not.toHaveBeenCalled();
-    expect(screen.getByRole("status")).toHaveTextContent("Case reset to the synthetic demo start.");
+    expect(screen.getByRole("status")).toHaveTextContent("Case reset to the demo start.");
     expect(screen.getByText("Analysis status").nextElementSibling).toHaveTextContent("Not started");
     expect(JSON.parse(window.sessionStorage.getItem("contextfirst-nexus.case-state.v1") ?? "{}")).toMatchObject({
       caseRevision: 0,
@@ -346,9 +346,9 @@ describe("TASK-017 case shell", () => {
     expect(screen.getByTestId("route-command-result")).toHaveTextContent("applied");
     expect(screen.getByTestId("route-run-id")).toHaveTextContent("RUN-CHECKPOINT-1");
     expect(screen.getByText("Analysis status").nextElementSibling).toHaveTextContent(
-      "Prepared synthetic checkpoint active",
+      "Prepared demo checkpoint active",
     );
-    expect(screen.getByText("Prepared synthetic review checkpoint")).toBeInTheDocument();
+    expect(screen.getByText("Prepared demo review checkpoint")).toBeInTheDocument();
     expect(JSON.parse(window.sessionStorage.getItem("contextfirst-nexus.case-state.v1") ?? "{}")).toMatchObject({
       activeAnalysisRunId: "RUN-CHECKPOINT-1",
     });
@@ -368,9 +368,9 @@ describe("TASK-017 case shell", () => {
 
     await waitFor(() => expect(screen.getByTestId("route-run-id")).toHaveTextContent("RUN-CHECKPOINT-1"));
     expect(screen.getByText("Analysis status").nextElementSibling).toHaveTextContent(
-      "Prepared synthetic checkpoint active",
+      "Prepared demo checkpoint active",
     );
-    expect(screen.getByText("Prepared synthetic review checkpoint")).toBeInTheDocument();
+    expect(screen.getByText("Prepared demo review checkpoint")).toBeInTheDocument();
     const persistedBefore = window.sessionStorage.getItem("contextfirst-nexus.case-state.v1");
     await user.click(screen.getByRole("button", { name: "Dispatch stale command" }));
     expect(screen.getByTestId("route-command-result")).toHaveTextContent("stale_case_revision");

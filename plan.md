@@ -8,6 +8,58 @@ The original documentation foundation and TASK-001 through TASK-038 implementati
 - TASK-040 will begin with exact contract and architecture reconciliation, then implement server-managed live-provider routing only behind the existing global server gate and static admission. Its frozen future order is OpenAI, Gemini, Mistral, then an evaluated fourth provider. Groq `openai/gpt-oss-120b` is only the current fourth-provider evaluation candidate and is not admitted, enabled, configured, or approved for calls or deployment.
 - This direction explicitly supersedes the practitioner-controlled provider-selection and provider-switching plan recorded in DEC-025. Replay remains separate from live AI, and no live provider may be enabled without exact evaluation, reviewed static admission, credentials, spend approval, and separate production approval.
 
+## Current implementation pass, 2026-07-18
+
+### Goal
+
+Make the hackathon demo feel interactive: remove model/provider choices from the practitioner UI and make Documents begin empty until the user selects the seven bundled demo PDFs.
+
+### Problem
+
+The current Documents screen immediately shows D01-D07, so it looks prefilled and static. The practitioner-facing Purpose flow also exposes implementation details that should be managed by the system.
+
+### Proposed solution
+
+- Keep one plain-language analysis action with provider/model details hidden from practitioners.
+- Add a real browser-local multi-file PDF chooser. Nothing is transmitted to a server.
+- Validate the selected packet against the seven bundled demo files, then show clear `Selected`, `Verified`, `Processing`, and `Ready` progress.
+- Reveal D01-D07 and enable the existing processing/review flow only after validation succeeds.
+- Use plain demo-safety copy on Documents without presenting the packet as already loaded.
+
+### Files to change
+
+- Purpose/provider UI files already owned by TASK-039.
+- `features/documents/`, `lib/documents/`, and focused component/unit tests.
+- This plan checkpoint.
+
+### Step by step tasks
+
+1. Recover and integrate the completed model-selector removal.
+2. Add exact seven-file browser-local PDF packet validation.
+3. Replace the prefilled Documents screen with an empty chooser and visible progress states.
+4. Connect validated files to the existing local PDF processing flow.
+5. Run focused tests, typecheck/build, inspect the local demo once, then commit and push.
+
+### Acceptance criteria
+
+- Documents starts empty and D01-D07 are not shown before selection.
+- The user can choose the seven bundled PDFs from macOS Finder.
+- Unknown, incomplete, duplicate, non-PDF, or modified packets fail safely.
+- Accepted files visibly progress through the four required states and remain browser-local.
+- Existing D04 coverage limitation and D07 inert-content safeguards remain intact.
+- No model/provider chooser is shown to practitioners.
+
+### Testing plan
+
+- Focused Documents unit/component tests.
+- Focused Purpose/analysis UI tests.
+- Typecheck and production build.
+- One local browser pass through empty, rejected, and accepted packet states.
+
+### Open questions
+
+- None for this pass. Server upload, arbitrary real-case files, OCR, and cloud storage remain out of scope.
+
 ## 1. Goal
 
 Create a complete, consistent documentation foundation that gives Codex enough product, technical, safety, design, testing, and execution context to build ContextFirst Nexus through a rolling pool of separate worktree tasks.
@@ -68,7 +120,7 @@ Add `.codex/config.toml`, `.env.example`, or `.worktreeinclude` only later if th
 11. [x] Present the final documentation package for approval before any application implementation.
 12. [x] After explicit approval, commit and push the documentation to the permanent repository.
 13. [x] Add the exact `contextfirst-nexus` Git repository folder as a Codex project and complete the rolling implementation and replay-only release program through TASK-038 and TASK-025.
-14. [ ] Implement and integrate TASK-039 to remove practitioner-facing provider/model selection and provide one fail-closed replay-only `Start analysis` experience.
+14. [x] Implement and integrate TASK-039 to remove practitioner-facing provider/model selection and provide one fail-closed replay-only `Start analysis` experience.
 15. [ ] After TASK-039 integrates, reconcile and implement TASK-040 managed server-side routing with classified safe fallback, exact admission gates, bounded attempts, isolated outputs, and no replay misrepresentation.
 
 ## 6. Acceptance criteria

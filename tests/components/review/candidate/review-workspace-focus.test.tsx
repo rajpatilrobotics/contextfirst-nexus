@@ -254,7 +254,7 @@ describe("TASK-032 Review workspace remediation focus bridge", () => {
     setReviewUrl();
     renderWorkspace();
 
-    expect(screen.getByText("Prepared synthetic review checkpoint")).toBeInTheDocument();
+    expect(screen.getByText("Prepared demo review checkpoint")).toBeInTheDocument();
     expect(screen.getByText("Bundled deterministic replay, not live AI")).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Review queue" })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Candidate review" })).toBeInTheDocument();

@@ -78,28 +78,28 @@ export function SensitiveReveal({
           id={revealButtonId}
           onClick={() => setDialogOpen(true)}
         >
-          Reveal synthetic original
+          Reveal demo original
         </Button>
       </div>
 
       {dialogOpen ? (
-        <Dialog title={revealed ? "Synthetic original revealed" : "Reveal synthetic original?"}>
+        <Dialog title={revealed ? "Demo original revealed" : "Reveal demo original?"}>
           <div className="mt-3 grid gap-4">
             {!revealed ? (
               <>
                 <Alert title="Intentional sensitive-source review" tone="warning">
                   <p>
-                    The redacted derivative is the safe default. Continue only to inspect this fictional bundled source; the reveal is recorded in the case audit.
+                    The redacted derivative is the safe default. Continue only to inspect this demo-only source; the reveal is recorded in the case audit.
                   </p>
                 </Alert>
                 {revealFailed ? (
                   <p className="cfn-type-body-small text-[var(--color-danger)]" role="alert">
-                    The reveal was not recorded, so the synthetic original remains hidden.
+                    The reveal was not recorded, so the demo original remains hidden.
                   </p>
                 ) : null}
                 <div className="flex flex-wrap gap-2">
                   <Button id={dialogActionId} onClick={confirmReveal} variant="danger">
-                    Confirm synthetic-original reveal
+                    Confirm demo-original reveal
                   </Button>
                   <Button onClick={closeReveal}>Cancel</Button>
                 </div>

@@ -14,7 +14,7 @@ import { getTrustPageData } from "../../features/trust/trust-data.server";
 export const metadata: Metadata = {
   title: "Trust and Safety | ContextFirst Nexus",
   description:
-    "System Card, synthetic evaluation evidence, guidance provenance, safe audit history, and local-only unsafe-output reporting for ContextFirst Nexus.",
+    "System Card, demo evaluation evidence, guidance provenance, safe audit history, and local-only unsafe-output reporting for ContextFirst Nexus.",
 };
 
 const SECTION_LINKS = [
@@ -40,7 +40,7 @@ export default function TrustPage() {
         className="border-b border-[var(--color-warning)] bg-[var(--color-warning-subtle)] px-4 py-3 text-sm font-semibold text-[var(--color-warning)]"
         role="note"
       >
-        Synthetic training case only. Do not upload, paste, or enter real case, survivor, client, child, credential, or provider data.
+        Fictional hackathon demo only. Do not upload, paste, or enter real case, survivor, client, child, credential, or service data.
       </div>
 
       <header className="border-b border-[var(--color-border)] bg-[var(--color-surface)]">
@@ -74,7 +74,7 @@ export default function TrustPage() {
                   className="cfn-control-target inline-flex items-center justify-center rounded-[var(--radius-control)] border border-[var(--color-brand)] bg-[var(--color-brand)] px-4 py-2 text-sm font-semibold !text-white !no-underline hover:bg-[var(--color-brand-hover)]"
                   href="/case/demo/purpose"
                 >
-                  Open synthetic case
+                  Open demo case
                 </a>
                 <a
                   className="cfn-control-target inline-flex items-center justify-center rounded-[var(--radius-control)] border border-[var(--color-control-border)] bg-[var(--color-surface)] px-4 py-2 text-sm font-semibold text-[var(--color-ink)] no-underline hover:bg-[var(--color-surface-subtle)]"
@@ -90,7 +90,7 @@ export default function TrustPage() {
                 <ShieldCheck aria-hidden="true" className="text-[var(--color-brand)]" size={22} />
                 <h2 className="cfn-type-heading-3">Public prototype boundary</h2>
               </div>
-              <p>Working synthetic hackathon prototype—not a legal service, production case system, survivor chatbot, reporting channel, emergency service, or validated intervention.</p>
+              <p>Working fictional-data hackathon prototype—not a legal service, production case system, survivor chatbot, reporting channel, emergency service, or validated intervention.</p>
               <p>No trafficking detection, victim identification, legal outcome, certification, endorsement, guaranteed anonymity, or production readiness is claimed.</p>
             </Card>
           </div>
@@ -120,7 +120,7 @@ export default function TrustPage() {
             <p className="cfn-type-label text-[var(--color-brand)]">Case-linked local state</p>
             <h2 className="cfn-type-heading-1" id="case-session-heading">Session provenance, audit, and reporting</h2>
             <p className="cfn-reading-column text-[var(--color-ink-muted)]">
-              This area reads only the validated synthetic case projection stored in this browser session. It performs no provider, account, analytics, or external reporting request.
+              This area reads only the validated demo case projection stored in this browser session. It performs no service, account, analytics, or external reporting request.
             </p>
           </div>
           <CaseStateProvider>
@@ -134,7 +134,7 @@ export default function TrustPage() {
 
       <footer className="border-t border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-6 sm:px-6">
         <div className="mx-auto flex max-w-7xl flex-wrap justify-between gap-3 text-sm text-[var(--color-ink-muted)]">
-          <p>ContextFirst Nexus · synthetic source-grounded practitioner demo</p>
+          <p>ContextFirst Nexus · fictional source-grounded practitioner demo</p>
           <p>Local legal verification required.</p>
         </div>
       </footer>

@@ -32,7 +32,7 @@ export function AuditHistory({ events }: { events: AuditEvent[] }) {
           <p className="cfn-type-label text-[var(--color-brand)]">Browser-session record</p>
           <h2 className="cfn-type-heading-2" id="audit-heading">Safe Audit History</h2>
           <p className="text-[var(--color-ink-muted)]">
-            An explanatory synthetic-demo record, not an immutable, forensic, tamper-evident, independently witnessed, or production-grade audit log.
+            An explanatory hackathon-demo record, not an immutable, forensic, tamper-evident, independently witnessed, or production-grade audit log.
           </p>
         </div>
       </div>

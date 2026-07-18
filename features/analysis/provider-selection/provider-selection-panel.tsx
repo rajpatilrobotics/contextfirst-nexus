@@ -78,7 +78,7 @@ export function AnalysisDisclosurePanel({
     >
       <legend className="cfn-type-heading-3 px-1">How analysis works</legend>
       <p>
-        {REPLAY_VISIBLE_LABEL}. Analysis uses frozen synthetic replay output bundled with this demo.
+        {REPLAY_VISIBLE_LABEL}. Analysis uses frozen fictional demo output stored with this app.
       </p>
       <p className="cfn-type-body-small text-[var(--color-ink-muted)]">
         No case content is sent to an external service. Saving the Purpose Brief does not
@@ -89,7 +89,7 @@ export function AnalysisDisclosurePanel({
         checked={acknowledged}
         disabled={disabled}
         id="analysis-disclosure-acknowledgement"
-        label="I understand that this analysis uses frozen local synthetic output, is not live AI, and sends nothing to an external service."
+        label="I understand that this analysis uses frozen local demo output, is not live AI, and sends nothing to an external service."
         onChange={(event) => onAcknowledgementChange(event.currentTarget.checked)}
       />
       {error ? <FieldError id="analysis-disclosure-error">{error}</FieldError> : null}

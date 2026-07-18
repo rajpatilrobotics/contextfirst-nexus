@@ -47,7 +47,7 @@ test.describe("TASK-024 browser security and integration smoke flows", () => {
     await expect(page.getByRole("navigation", { name: /case steps/i })).toBeVisible();
     await expect(page.getByRole("link", { name: /purpose/i })).toHaveAttribute("aria-current", "step");
     await expect(page.getByRole("button", { name: /reset case/i })).toBeVisible();
-    await expect(page.getByText(/Synthetic training case\. Do not upload or enter real case data\./i)).toBeVisible();
+    await expect(page.getByText(/Hackathon demo case\. Do not upload or enter real case data\./i)).toBeVisible();
   });
 
   test("purpose validation focuses a safe error summary and starts no analysis automatically", async ({ page }) => {
