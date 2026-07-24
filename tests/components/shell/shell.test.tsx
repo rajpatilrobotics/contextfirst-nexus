@@ -282,7 +282,7 @@ describe("TASK-017 case shell", () => {
     ).toBeTruthy();
     const links = within(nav).getAllByRole("link");
     expect(links.map((link) => link.getAttribute("href"))).toEqual(
-      WORKSPACE_NAVIGATION.flatMap((item) => item.href ?? []),
+      WORKSPACE_NAVIGATION.map((item) => item.href),
     );
     expect(within(nav).getByRole("link", { name: "Structured Analysis" })).toHaveAttribute(
       "aria-current",
@@ -292,9 +292,7 @@ describe("TASK-017 case shell", () => {
       "href",
       "/case/demo/analysis",
     );
-    for (const item of WORKSPACE_NAVIGATION.filter((entry) => entry.href === null)) {
-      expect(within(nav).getByText(item.label).closest("[aria-disabled='true']")).not.toBeNull();
-    }
+    expect(within(nav).queryByText("Later")).not.toBeInTheDocument();
   });
 
   it("derives journey progress from canonical case state instead of the current URL", () => {
@@ -309,6 +307,16 @@ describe("TASK-017 case shell", () => {
     expect(deriveCurrentStep("/case/demo/analysis")).toBe("analysis");
     expect(deriveCurrentStep("/case/demo/review")).toBe("analysis");
     expect(deriveCurrentStep("/case/demo/review#nexus")).toBe("review");
+    expect(deriveCurrentStep("/case/demo/urgent-needs")).toBe("analysis");
+    expect(deriveCurrentStep("/case/demo/gaps")).toBe("analysis");
+    expect(deriveCurrentStep("/case/demo/interview")).toBe("planning");
+    expect(deriveCurrentStep("/case/demo/services")).toBe("planning");
+    expect(deriveCurrentStep("/case/demo/tasks")).toBe("planning");
+    expect(deriveCurrentStep("/case/demo/notes")).toBe("planning");
+    expect(deriveCurrentStep("/case/demo/nexus")).toBe("review");
+    expect(deriveCurrentStep("/case/demo/timeline")).toBe("review");
+    expect(deriveCurrentStep("/case/demo/audit")).toBe("export");
+    expect(deriveCurrentStep("/trust")).toBe("export");
     expect(deriveStepProgress("purpose", initial)).toBe("active");
     expect(deriveStepProgress("documents", initial)).toBe("pending");
     expect(deriveStepProgress("analysis", initial)).toBe("pending");
@@ -557,17 +565,20 @@ describe("TASK-017 case shell", () => {
     );
 
     expect(screen.getByRole("button", { name: /Reset Case/i })).toBeEnabled();
-    expect(screen.getByRole("link", { name: /Documents/ })).toHaveAttribute(
+    const workspaceNavigation = screen.getByRole("navigation", {
+      name: "Case workspace",
+    });
+    expect(within(workspaceNavigation).getByRole("link", { name: "Documents & Source Health" })).toHaveAttribute(
       "href",
       "/case/demo/intake",
     );
-    expect(screen.getByRole("link", { name: /Documents/ })).toHaveAttribute(
+    expect(within(workspaceNavigation).getByRole("link", { name: "Documents & Source Health" })).toHaveAttribute(
       "aria-current",
       "page",
     );
     expect(screen.getByRole("region", { name: "Six-stage case progress" })).toBeInTheDocument();
     for (const item of WORKSPACE_NAVIGATION.filter((entry) => entry.href !== null)) {
-      expect(screen.getByRole("link", { name: item.label })).toBeInTheDocument();
+      expect(within(workspaceNavigation).getByRole("link", { name: item.label })).toBeInTheDocument();
     }
   });
 });

@@ -1,4 +1,5 @@
 export * from "./audit-history";
+export * from "./audit-workspace";
 export * from "./case-trust-experience";
 export * from "./guidance-cards";
 export * from "./safety-lab";

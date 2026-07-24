@@ -175,7 +175,24 @@ export function assembleCandidates(input: ReviewAssemblyInput = {}): CaseCandida
 export const assembleReviewCandidates = assembleCandidates;
 
 export function selectTimeline(candidates: CaseCandidate[]) {
-  return candidates.filter((candidate): candidate is Extract<CaseCandidate, { kind: "timeline_event" }> => candidate.kind === "timeline_event").sort((a, b) => (a.dateStart ?? "").localeCompare(b.dateStart ?? ""));
+  return candidates
+    .filter(
+      (
+        candidate,
+      ): candidate is Extract<CaseCandidate, { kind: "timeline_event" }> =>
+        candidate.kind === "timeline_event",
+    )
+    .sort((left, right) => {
+      const leftUnknown =
+        left.datePrecision === "unknown" || left.dateStart === undefined;
+      const rightUnknown =
+        right.datePrecision === "unknown" || right.dateStart === undefined;
+      if (leftUnknown !== rightUnknown) return leftUnknown ? 1 : -1;
+      return (
+        (left.dateStart ?? "").localeCompare(right.dateStart ?? "") ||
+        left.id.localeCompare(right.id)
+      );
+    });
 }
 
 export function selectNexus(candidates: CaseCandidate[]) { return candidates.filter((candidate) => candidate.kind === "nexus_relationship"); }

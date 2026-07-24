@@ -64,10 +64,10 @@ export default function TrustPage() {
         <section aria-labelledby="trust-heading" className="grid gap-6">
           <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(280px,420px)] lg:items-start">
             <div className="grid gap-4">
-              <p className="cfn-type-label text-[var(--color-brand)]">Trust and Safety</p>
-              <h1 className="cfn-type-display" id="trust-heading">Inspect the boundary, provenance, and evidence</h1>
+              <p className="cfn-type-label text-[var(--color-brand)]">Trust &amp; Safety</p>
+              <h1 className="cfn-type-display" id="trust-heading">How this workspace is bounded</h1>
               <p className="cfn-type-body max-w-3xl text-[var(--color-ink-muted)]">
-                ContextFirst Nexus is a source-grounded case-preparation workspace for qualified practitioners using one fictional adult fixture. It organizes and suggests; a qualified practitioner makes every consequential decision.
+                ContextFirst Nexus organizes source-linked material for qualified practitioners using one fictional adult fixture. It does not decide trafficking status, credibility, guilt, or eligibility; a qualified practitioner makes every consequential decision.
               </p>
               <div className="flex flex-wrap gap-3">
                 <a

@@ -178,15 +178,40 @@ export function ExportWorkspace() {
       : state.exportGate.status === "blocked" && gateMatchesSelection
         ? `Blocked (${state.exportGate.blockers.length})`
         : "Stale for this selection";
+  const pendingReviewCount = state.candidates.filter(
+    (candidate) =>
+      candidate.inclusionStatus === "active" &&
+      candidate.reviewRequirement === "individual" &&
+      (candidate.reviewStatus === "pending" ||
+        candidate.reviewStatus === "invalidated"),
+  ).length;
+  const currentBlockerCount =
+    gateMatchesSelection && state.exportGate?.status === "blocked"
+      ? state.exportGate.blockers.length
+      : 0;
 
   return (
     <div className="grid min-w-0 gap-6">
-      <header className="grid gap-2">
-        <p className="cfn-type-label text-[var(--color-ink-muted)]">Final step</p>
-        <h2 className="cfn-type-heading-2">Create your handoff</h2>
-        <p className="max-w-[780px]">
-          Check that the case is ready, create the reviewed handoff, then download it locally. Nothing is sent from this page.
-        </p>
+      <header className="grid gap-4 border-b border-[var(--color-border)] pb-5">
+        <div>
+          <p className="cfn-type-label text-[var(--color-ink-muted)]">Stage 6 · Export</p>
+          <h1 className="cfn-type-heading-1">Export Gate &amp; Safe Handoff</h1>
+          <p className="mt-1 max-w-[780px] text-sm text-[var(--color-ink-muted)]">
+            Check readiness, create one canonical reviewed handoff, then render a local download. Nothing is sent from this page.
+          </p>
+        </div>
+        <dl className="grid gap-2 sm:grid-cols-3">
+          {[
+            ["Gate status", gateStatus],
+            ["Pending individual review", pendingReviewCount],
+            ["Current blockers", currentBlockerCount],
+          ].map(([label, value]) => (
+            <div className="rounded-[var(--radius-control)] border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-2" key={label}>
+              <dt className="cfn-type-label">{label}</dt>
+              <dd className="mt-1 font-serif text-xl">{value}</dd>
+            </div>
+          ))}
+        </dl>
       </header>
 
       <details className="rounded-[var(--radius-control)] border border-[var(--color-border)] bg-[var(--color-surface)] p-4">

@@ -6,7 +6,11 @@ import type { CaseCandidate, CaseCommand, CaseState } from "../../../lib/contrac
 import { ReviewStatusBadge, SupportStatusBadge } from "../../../components/status";
 import { Alert, Button, FieldError, Label, Textarea } from "../../../components/ui";
 import { selectContextGaps } from "../../../lib/review";
-import type { CaseCommandDispatcher } from "../source";
+import {
+  CitationLink,
+  type CaseCommandDispatcher,
+  type SourceSelection,
+} from "../source";
 
 type ContextGap = Extract<CaseCandidate, { kind: "context_gap" }>;
 type GapAction = "answered" | "deferred" | "outside_scope";
@@ -38,10 +42,12 @@ export function ContextGapPanel({
   gap,
   state,
   onCommand,
+  onOpenSource,
 }: {
   gap: ContextGap;
   state: CaseState;
   onCommand: CaseCommandDispatcher;
+  onOpenSource?: (selection: SourceSelection) => void;
 }) {
   const fieldId = useId();
   const [activeAction, setActiveAction] = useState<GapAction | null>(null);
@@ -180,6 +186,54 @@ export function ContextGapPanel({
         </Alert>
       ) : null}
 
+      <section aria-label={`Evidence and dependencies for ${gap.id}`} className="grid gap-3">
+        <h4 className="cfn-type-label">Evidence, limitations, and dependencies</h4>
+        {gap.dependencies.length ? (
+          <ul className="grid gap-2">
+            {gap.dependencies.map((dependency) => {
+              const target =
+                dependency.kind === "source"
+                  ? dependency.sourceSegmentId
+                  : dependency.kind === "candidate"
+                    ? dependency.candidateId
+                    : dependency.nexusCandidateId;
+              return (
+                <li
+                  className="grid gap-2 rounded-[var(--radius-control)] border border-[var(--color-border)] bg-[var(--color-canvas)] p-3 text-sm"
+                  key={dependency.id}
+                >
+                  <p>
+                    <span className="font-mono text-xs">{target}</span>
+                    {" · "}
+                    {dependency.relationship.replaceAll("_", " ")}
+                    {" · "}
+                    {dependency.active ? "active" : "inactive after recalculation"}
+                  </p>
+                  {dependency.kind === "source" && onOpenSource ? (
+                    <CitationLink
+                      candidateId={gap.id}
+                      citationId={dependency.citationId}
+                      onOpen={onOpenSource}
+                      state={state}
+                    />
+                  ) : null}
+                </li>
+              );
+            })}
+          </ul>
+        ) : (
+          <p className="text-sm text-[var(--color-ink-muted)]">
+            No source or candidate dependency is recorded for this gap.
+          </p>
+        )}
+        {gap.relatedCoverageIssueIds.length ? (
+          <Alert title="Source coverage limitation" tone="warning">
+            Related coverage issue: {gap.relatedCoverageIssueIds.join(", ")}.
+            Missing or unreadable material is not treated as negative evidence.
+          </Alert>
+        ) : null}
+      </section>
+
       <div aria-label={`Context gap actions for ${gap.id}`} className="flex flex-wrap gap-2">
         <Button disabled={reviewComplete} onClick={() => setActiveAction("answered")} variant="secondary">
           Answer
@@ -255,6 +309,11 @@ export function ContextGapPanel({
           </Button>
         </section>
       )}
+      <p className="border-t border-[var(--color-border)] pt-3 text-xs text-[var(--color-ink-muted)]">
+        Export impact: {reviewComplete
+          ? "the required practitioner decision is complete; other canonical blockers may still apply."
+          : "this gap remains part of review completeness until its required practitioner decision is recorded."}
+      </p>
       {commandMessage ? (
         <p
           className={commandMessage.includes("not accepted") ? "text-sm text-[var(--color-danger)]" : "text-sm text-[var(--color-supported)]"}
@@ -270,9 +329,11 @@ export function ContextGapPanel({
 export function ContextGapList({
   state,
   onCommand,
+  onOpenSource,
 }: {
   state: CaseState;
   onCommand: CaseCommandDispatcher;
+  onOpenSource?: (selection: SourceSelection) => void;
 }) {
   const gaps = selectContextGaps(state.candidates);
   return (
@@ -286,7 +347,15 @@ export function ContextGapList({
       </div>
       {gaps.length ? (
         <div className="grid gap-4 xl:grid-cols-2">
-          {gaps.map((gap) => <ContextGapPanel gap={gap} key={gap.id} onCommand={onCommand} state={state} />)}
+          {gaps.map((gap) => (
+            <ContextGapPanel
+              gap={gap}
+              key={gap.id}
+              onCommand={onCommand}
+              onOpenSource={onOpenSource}
+              state={state}
+            />
+          ))}
         </div>
       ) : (
         <Alert title="No context-gap candidates" tone="neutral">

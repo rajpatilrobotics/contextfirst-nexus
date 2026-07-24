@@ -7,7 +7,11 @@ import {
   ShieldCheck,
   UserRound,
 } from "lucide-react";
-import { CaseStateProvider, useCaseState } from "../../components/shell";
+import {
+  CaseStateProvider,
+  WORKSPACE_NAVIGATION,
+  useCaseState,
+} from "../../components/shell";
 import { CaseStatusBadge } from "../../components/status";
 import { analysisRunInputMatchesState } from "../../lib/analysis/freshness";
 import type { CaseState } from "../../lib/contracts";
@@ -112,6 +116,36 @@ function CaseDashboardContent() {
           <ShieldCheck aria-hidden="true" size={16} />
           Review safety boundary
         </a>
+
+        <nav
+          aria-label="M. Chen workspace destinations"
+          className="mt-4 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-4"
+        >
+          <div className="flex flex-wrap items-end justify-between gap-2">
+            <div>
+              <p className="font-mono text-[10px] uppercase tracking-[0.16em] text-[var(--color-ink-muted)]">
+                Direct destinations
+              </p>
+              <h3 className="mt-1 font-serif text-lg">Open any workspace screen</h3>
+            </div>
+            <span className="text-xs text-[var(--color-ink-muted)]">
+              Preview routes remain separate from canonical counts and export.
+            </span>
+          </div>
+          <ul className="mt-3 grid gap-1.5 sm:grid-cols-2 lg:grid-cols-3">
+            {WORKSPACE_NAVIGATION.map((item) => (
+              <li key={item.id}>
+                <a
+                  className="flex min-h-10 items-center justify-between gap-2 rounded-[var(--radius-control)] border border-[var(--color-border)] px-3 py-2 text-sm font-semibold text-[var(--color-ink)] no-underline hover:border-[var(--amber)] hover:bg-[var(--color-surface-subtle)]"
+                  href={item.href}
+                >
+                  <span>{item.label}</span>
+                  <ArrowRight aria-hidden="true" size={15} />
+                </a>
+              </li>
+            ))}
+          </ul>
+        </nav>
       </section>
 
       <section

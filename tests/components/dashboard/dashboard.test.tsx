@@ -5,6 +5,7 @@ import {
   PRIMARY_CASE_DISPLAY_ID,
   derivePrimaryCaseSummary,
 } from "../../../features/dashboard/case-dashboard";
+import { WORKSPACE_NAVIGATION } from "../../../components/shell";
 import { applyCaseCommand, createInitialCaseState } from "../../../lib/state";
 
 const NOW = "2026-07-24T00:00:00.000Z";
@@ -49,6 +50,19 @@ describe("fast-track Case Dashboard", () => {
       expect(within(card).getByText("Read-only")).toBeInTheDocument();
       expect(within(card).getByText("Workspace access disabled")).toBeInTheDocument();
       expect(within(card).queryByRole("link")).not.toBeInTheDocument();
+    }
+
+    const destinations = screen.getByRole("navigation", {
+      name: "M. Chen workspace destinations",
+    });
+    expect(within(destinations).getByText("Open any workspace screen")).toBeInTheDocument();
+    expect(
+      within(destinations).queryByText("Open any connected workspace view"),
+    ).not.toBeInTheDocument();
+    for (const destination of WORKSPACE_NAVIGATION) {
+      expect(
+        within(destinations).getByRole("link", { name: destination.label }),
+      ).toHaveAttribute("href", destination.href);
     }
   });
 

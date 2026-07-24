@@ -53,6 +53,14 @@ function dateLabel(event: TimelineEvent) {
   return "Date unknown from the available packet";
 }
 
+function dateQualificationLabel(event: TimelineEvent) {
+  if (event.datePrecision === "day") return "Exact date";
+  if (event.datePrecision === "date_range") return "Date range";
+  if (event.datePrecision === "approximate") return "Approximate date";
+  if (event.datePrecision === "conflicting") return "Conflicting dates";
+  return "Unknown date · outside exact chronology";
+}
+
 function SourceDependency({
   dependency,
   event,
@@ -87,10 +95,12 @@ export function TimelineEventCard({
   event,
   state,
   onOpen,
+  showDateLabel = true,
 }: {
   event: TimelineEvent;
   state: CaseState;
   onOpen: (selection: SourceSelection) => void;
+  showDateLabel?: boolean;
 }) {
   const sourceDependencies = event.dependencies.filter(
     (dependency): dependency is Extract<EvidenceDependency, { kind: "source" }> => dependency.kind === "source",
@@ -107,7 +117,9 @@ export function TimelineEventCard({
   return (
     <article className="grid gap-4 rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface)] p-4">
       <div className="grid gap-2">
-        <p className="cfn-type-label text-[var(--color-ink-muted)]">{dateLabel(event)}</p>
+        {showDateLabel ? (
+          <p className="cfn-type-label text-[var(--color-ink-muted)]">{dateLabel(event)}</p>
+        ) : null}
         <h3 className="cfn-type-heading-3">{event.title}</h3>
         <p>{event.currentText}</p>
         {event.datePrecision === "conflicting" ? (
@@ -215,8 +227,31 @@ export function Timeline({
       {!filtered.length ? (
         <Alert title="No timeline events" tone="neutral">No canonical events match this filter. This does not mean the packet contains no relevant information.</Alert>
       ) : (
-        <ol className="grid gap-4" aria-label="Qualified timeline events">
-          {filtered.map((event) => <li key={event.id}><TimelineEventCard event={event} onOpen={onOpenSource} state={state} /></li>)}
+        <ol className="grid gap-6" aria-label="Qualified timeline events">
+          {filtered.map((event) => (
+            <li
+              aria-label={`Timeline event: ${event.id}`}
+              className="grid min-w-0 gap-2 md:grid-cols-[10.5rem_minmax(0,1fr)] md:gap-5"
+              key={event.id}
+            >
+              <div className="md:border-r md:border-[var(--color-border)] md:pr-4">
+                <div className="rounded-[var(--radius-control)] border border-[var(--color-border)] bg-[var(--color-surface-subtle)] px-3 py-2 md:border-0 md:bg-transparent md:px-0 md:py-0">
+                  <p className="font-mono text-[10px] font-semibold uppercase tracking-[0.14em] text-[var(--color-ink-muted)]">
+                    {dateQualificationLabel(event)}
+                  </p>
+                  <p className="mt-1 text-sm font-semibold leading-5">
+                    {dateLabel(event)}
+                  </p>
+                </div>
+              </div>
+              <TimelineEventCard
+                event={event}
+                onOpen={onOpenSource}
+                showDateLabel={false}
+                state={state}
+              />
+            </li>
+          ))}
         </ol>
       )}
     </section>

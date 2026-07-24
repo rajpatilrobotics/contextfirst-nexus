@@ -178,13 +178,13 @@ function AnalysisHeader({
   const conflicts = candidates.filter(candidateHasCanonicalConflict).length;
 
   return (
-    <header className="grid gap-4 border-b border-[var(--color-border)] pb-5">
+    <header className="grid gap-3 border-b border-[var(--color-border)] pb-4">
       <div>
         <p className="font-mono text-[10px] font-semibold uppercase tracking-[0.18em] text-[var(--color-ink-muted)]">
           Stage 3 · Analysis
         </p>
-        <h1 className="mt-1 cfn-type-heading-1">Structured Analysis</h1>
-        <p className="mt-2 max-w-3xl text-sm text-[var(--color-ink-muted)]">
+        <h1 className="mt-1 text-3xl">Structured Analysis</h1>
+        <p className="mt-1 max-w-3xl text-sm text-[var(--color-ink-muted)]">
           Source-linked canonical candidates organized for explicit human review.
           Lanes and filters are projections only; they never create findings or
           change candidate membership.
@@ -198,13 +198,13 @@ function AnalysisHeader({
           ["Conflicts", conflicts],
         ].map(([label, value]) => (
           <div
-            className="rounded-[var(--radius-control)] border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-2.5"
+            className="rounded-[var(--radius-control)] border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-2"
             key={label}
           >
             <dt className="font-mono text-[9px] uppercase tracking-[0.14em] text-[var(--color-ink-muted)]">
               {label}
             </dt>
-            <dd className="mt-1 font-serif text-2xl">{value}</dd>
+            <dd className="font-serif text-xl">{value}</dd>
           </div>
         ))}
       </dl>
@@ -228,7 +228,7 @@ function LaneSelector({
       </h2>
       <div
         aria-label="Structured analysis lanes"
-        className="grid gap-2 lg:grid-cols-3"
+        className="grid gap-2 md:grid-cols-3"
         role="tablist"
       >
         {LANE_META.map((lane) => {
@@ -240,7 +240,7 @@ function LaneSelector({
             <button
               aria-controls="structured-analysis-workspace"
               aria-selected={active}
-              className={`cfn-control-target grid gap-1 rounded-[var(--radius-control)] border px-3 py-3 text-left ${
+              className={`cfn-control-target grid gap-1 rounded-[var(--radius-control)] border px-3 py-2 text-left ${
                 active
                   ? "border-[var(--amber)] bg-[var(--color-warning-subtle)]"
                   : "border-[var(--color-border)] bg-[var(--color-surface)] hover:bg-[var(--color-surface-subtle)]"
@@ -251,14 +251,14 @@ function LaneSelector({
               type="button"
             >
               <span className="flex items-center justify-between gap-3">
-                <span className="font-serif text-base font-semibold">
+                <span className="font-serif text-sm font-semibold sm:text-base">
                   Lane {lane.code} — {lane.label}
                 </span>
                 <span className="rounded-full border border-[var(--color-border)] px-2 py-0.5 font-mono text-[10px]">
                   {count}
                 </span>
               </span>
-              <span className="text-xs leading-5 text-[var(--color-ink-muted)]">
+              <span className="line-clamp-2 text-xs leading-4 text-[var(--color-ink-muted)]">
                 {lane.boundary}
               </span>
             </button>
@@ -830,7 +830,7 @@ export function StructuredAnalysisWorkspace() {
         aria-hidden={
           sourceSelection && sourceMode === "mobile" ? "true" : undefined
         }
-        className="grid min-w-0 flex-1 gap-5"
+        className="grid min-w-0 flex-1 gap-4"
         ref={workspaceRef}
       >
         {sharedHeader}
@@ -850,7 +850,7 @@ export function StructuredAnalysisWorkspace() {
 
         <section
           aria-label="Structured analysis filters"
-          className="grid gap-3 rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface)] p-3"
+          className="grid gap-2 rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface)] p-2.5"
         >
           <div
             aria-label="Review status filters"
@@ -861,7 +861,7 @@ export function StructuredAnalysisWorkspace() {
               <button
                 aria-label={`${filter.label} (${statusCounts[filter.id]})`}
                 aria-pressed={statusFilter === filter.id}
-                className={`inline-flex min-h-9 items-center gap-1.5 rounded-full border px-3 py-1 text-xs ${
+                className={`inline-flex min-h-8 items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs ${
                   statusFilter === filter.id
                     ? "border-[var(--color-brand)] bg-[var(--color-brand)] text-white"
                     : "border-[var(--color-border)] hover:bg-[var(--color-surface-subtle)]"
@@ -935,6 +935,7 @@ export function StructuredAnalysisWorkspace() {
               </Select>
             </label>
             <Button
+              className="min-h-9 px-3 py-1.5"
               disabled={!filtersActive}
               onClick={clearFilters}
               variant="secondary"

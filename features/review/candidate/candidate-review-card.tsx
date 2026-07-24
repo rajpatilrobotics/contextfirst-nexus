@@ -170,6 +170,14 @@ export function CandidateReviewActions({
     }
   }
 
+  if (candidate.inclusionStatus === "withdrawn") {
+    return (
+      <Alert title="Withdrawn from current findings" tone="warning">
+        This item remains in the audit trail and is excluded from active review and export.
+      </Alert>
+    );
+  }
+
   if (candidate.reviewRequirement === "derived_summary") {
     return (
       <p className="text-sm text-[var(--color-ink-muted)]">
@@ -183,14 +191,6 @@ export function CandidateReviewActions({
       <p className="text-sm text-[var(--color-ink-muted)]">
         Informational Nexus row — no additional approval is required.
       </p>
-    );
-  }
-
-  if (candidate.inclusionStatus === "withdrawn") {
-    return (
-      <Alert title="Withdrawn from current findings" tone="warning">
-        This item remains in the audit trail and is excluded from active review and export.
-      </Alert>
     );
   }
 

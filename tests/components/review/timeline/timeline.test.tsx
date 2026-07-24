@@ -5,6 +5,7 @@ import { createTrustedReplayBundle, createReplayInputState, trustedSegments } fr
 import type { CaseState } from "../../../../lib/contracts";
 import { cfnDemoFixture } from "../../../../lib/fixtures";
 import { createInitialCaseState } from "../../../../lib/state";
+import { selectTimeline } from "../../../../lib/review";
 import { Timeline, TimelineEventCard, TimelineSourceExperience } from "../../../../features/review/timeline";
 
 const NOW = "2026-07-16T00:00:00.000Z";
@@ -78,6 +79,44 @@ describe("TASK-020 qualified timeline", () => {
 
     rerender(<TimelineEventCard event={{ ...event, datePrecision: "unknown", dateStart: undefined }} onOpen={vi.fn()} state={state} />);
     expect(screen.getAllByText(/Date is unknown from the available packet/i).length).toBeGreaterThan(0);
+  });
+
+  it("keeps unknown dates outside exact chronology ordering", () => {
+    const state = reviewState();
+    const event = state.candidates.find(
+      (candidate) => candidate.kind === "timeline_event",
+    )!;
+    const unknown = {
+      ...event,
+      id: "CAND-TIME-UNKNOWN",
+      datePrecision: "unknown" as const,
+      dateStart: undefined,
+      dateEnd: undefined,
+    };
+    const dated = {
+      ...event,
+      id: "CAND-TIME-DATED",
+      datePrecision: "day" as const,
+      dateStart: "2025-01-01",
+    };
+
+    expect(selectTimeline([unknown, dated]).map((item) => item.id)).toEqual([
+      "CAND-TIME-DATED",
+      "CAND-TIME-UNKNOWN",
+    ]);
+
+    render(
+      <Timeline
+        onOpenSource={vi.fn()}
+        state={{ ...state, candidates: [unknown, dated] }}
+      />,
+    );
+    expect(
+      screen.getByRole("listitem", { name: "Timeline event: CAND-TIME-DATED" }),
+    ).toHaveTextContent("Exact date");
+    expect(
+      screen.getByRole("listitem", { name: "Timeline event: CAND-TIME-UNKNOWN" }),
+    ).toHaveTextContent("Unknown date · outside exact chronology");
   });
 
   it("opens a desktop complementary source region and restores the exact citation focus on Escape", async () => {

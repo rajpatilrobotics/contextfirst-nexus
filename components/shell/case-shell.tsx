@@ -10,6 +10,7 @@ import {
   FileText,
   HandHelping,
   HelpCircle,
+  History,
   Home,
   MessageSquare,
   Network,
@@ -43,8 +44,8 @@ type StepId = (typeof STEP_NAVIGATION)[number]["id"];
 type NavigationIcon = ComponentType<{ "aria-hidden"?: boolean | "true"; size?: number }>;
 
 type WorkspaceNavigationItem = {
-  group: "Intake" | "Analysis" | "Planning" | "Review" | "Export";
-  href: string | null;
+  group: "Intake" | "Analysis" | "Planning" | "Review" | "Export" | "Trust";
+  href: string;
   icon: NavigationIcon;
   id:
     | "purpose"
@@ -58,7 +59,9 @@ type WorkspaceNavigationItem = {
     | "notes"
     | "integrity-map"
     | "timeline"
-    | "export";
+    | "export"
+    | "audit"
+    | "trust";
   label: string;
   stage: StepId;
 };
@@ -90,7 +93,7 @@ export const WORKSPACE_NAVIGATION: readonly WorkspaceNavigationItem[] = [
   },
   {
     group: "Analysis",
-    href: null,
+    href: "/case/demo/urgent-needs",
     icon: AlertOctagon,
     id: "urgent-needs",
     label: "Urgent Needs",
@@ -98,7 +101,7 @@ export const WORKSPACE_NAVIGATION: readonly WorkspaceNavigationItem[] = [
   },
   {
     group: "Analysis",
-    href: "/case/demo/review#context-gaps-heading",
+    href: "/case/demo/gaps",
     icon: HelpCircle,
     id: "evidence-gaps",
     label: "Evidence Gaps",
@@ -106,7 +109,7 @@ export const WORKSPACE_NAVIGATION: readonly WorkspaceNavigationItem[] = [
   },
   {
     group: "Planning",
-    href: null,
+    href: "/case/demo/interview",
     icon: MessageSquare,
     id: "interview",
     label: "Interview Planner",
@@ -114,7 +117,7 @@ export const WORKSPACE_NAVIGATION: readonly WorkspaceNavigationItem[] = [
   },
   {
     group: "Planning",
-    href: null,
+    href: "/case/demo/services",
     icon: HandHelping,
     id: "services",
     label: "Services & Referrals",
@@ -122,7 +125,7 @@ export const WORKSPACE_NAVIGATION: readonly WorkspaceNavigationItem[] = [
   },
   {
     group: "Planning",
-    href: null,
+    href: "/case/demo/tasks",
     icon: CheckSquare,
     id: "tasks",
     label: "Case Tasks",
@@ -130,7 +133,7 @@ export const WORKSPACE_NAVIGATION: readonly WorkspaceNavigationItem[] = [
   },
   {
     group: "Planning",
-    href: null,
+    href: "/case/demo/notes",
     icon: NotebookPen,
     id: "notes",
     label: "Notes & Journal",
@@ -138,7 +141,7 @@ export const WORKSPACE_NAVIGATION: readonly WorkspaceNavigationItem[] = [
   },
   {
     group: "Review",
-    href: "/case/demo/review#nexus",
+    href: "/case/demo/nexus",
     icon: Network,
     id: "integrity-map",
     label: "Evidence Integrity Map",
@@ -146,7 +149,7 @@ export const WORKSPACE_NAVIGATION: readonly WorkspaceNavigationItem[] = [
   },
   {
     group: "Review",
-    href: "/case/demo/review#timeline",
+    href: "/case/demo/timeline",
     icon: Clock3,
     id: "timeline",
     label: "Timeline",
@@ -160,9 +163,40 @@ export const WORKSPACE_NAVIGATION: readonly WorkspaceNavigationItem[] = [
     label: "Export Gate",
     stage: "export",
   },
+  {
+    group: "Trust",
+    href: "/case/demo/audit",
+    icon: History,
+    id: "audit",
+    label: "Audit Trail",
+    stage: "export",
+  },
+  {
+    group: "Trust",
+    href: "/trust",
+    icon: ShieldCheck,
+    id: "trust",
+    label: "Trust & Safety",
+    stage: "export",
+  },
 ] as const;
 
-const NAVIGATION_GROUPS = ["Intake", "Analysis", "Planning", "Review", "Export"] as const;
+const NAVIGATION_GROUPS = [
+  "Intake",
+  "Analysis",
+  "Planning",
+  "Review",
+  "Export",
+  "Trust",
+] as const;
+const STEP_DESTINATIONS: Record<StepId, string> = {
+  purpose: "/case/demo/purpose",
+  documents: "/case/demo/intake",
+  analysis: "/case/demo/analysis",
+  planning: "/case/demo/interview",
+  review: "/case/demo/nexus",
+  export: "/case/demo/export",
+};
 const DOCUMENT_PREPARATION_STAGES = new Set([
   "intake_validation",
   "text_extraction",
@@ -195,12 +229,27 @@ function commandMeta(state: CaseState): CaseCommand["meta"] {
 export function deriveCurrentStep(pathname: string | null | undefined): StepId {
   const path = pathname ?? "";
   if (path.includes("/intake")) return "documents";
-  if (path.includes("/analysis")) return "analysis";
-  if (path.includes("/review")) {
-    if (path.includes("#nexus") || path.includes("#timeline")) return "review";
-    return "analysis";
+  if (
+    path.includes("/analysis") ||
+    path.includes("/urgent-needs") ||
+    path.includes("/gaps")
+  ) return "analysis";
+  if (path.includes("/review#nexus") || path.includes("/review#timeline")) {
+    return "review";
   }
-  if (path.includes("/export")) return "export";
+  if (path.includes("/review")) return "analysis";
+  if (
+    path.includes("/interview") ||
+    path.includes("/services") ||
+    path.includes("/tasks") ||
+    path.includes("/notes")
+  ) return "planning";
+  if (path.includes("/nexus") || path.includes("/timeline")) return "review";
+  if (
+    path.includes("/export") ||
+    path.includes("/audit") ||
+    path === "/trust"
+  ) return "export";
   return "purpose";
 }
 
@@ -491,17 +540,15 @@ function CaseShellContent({
                   }`}
                   key={step.id}
                 >
-                  {step.id === "analysis" ? (
-                    <a
-                      aria-label="Open Structured Analysis"
-                      className="flex items-center gap-2 text-[var(--color-ink)] no-underline"
-                      href="/case/demo/analysis"
-                    >
-                      {stepLabel}
-                    </a>
-                  ) : (
-                    <div className="flex items-center gap-2">{stepLabel}</div>
-                  )}
+                  <a
+                    aria-label={`Open ${
+                      step.id === "analysis" ? "Structured Analysis" : step.label
+                    }`}
+                    className="flex items-center gap-2 text-[var(--color-ink)] no-underline"
+                    href={STEP_DESTINATIONS[step.id]}
+                  >
+                    {stepLabel}
+                  </a>
                   <div className="mt-1 pl-8">
                     <NavigationProgressStatus value={progress} />
                   </div>
@@ -526,32 +573,18 @@ function CaseShellContent({
                     const active = item.id === activeDestination;
                     return (
                       <li key={item.id}>
-                        {item.href ? (
-                          <a
-                            aria-current={active ? "page" : undefined}
-                            className={`flex min-h-10 items-center gap-2 rounded-[var(--radius-control)] px-2 py-1.5 text-sm no-underline ${
-                              active
-                                ? "bg-[var(--color-brand)] font-semibold !text-white"
-                                : "text-[var(--color-ink)] hover:bg-[var(--color-surface-subtle)]"
-                            }`}
-                            href={item.href}
-                          >
-                            <Icon aria-hidden="true" size={16} />
-                            <span>{item.label}</span>
-                          </a>
-                        ) : (
-                          <span
-                            aria-disabled="true"
-                            className="flex min-h-10 items-center gap-2 rounded-[var(--radius-control)] px-2 py-1.5 text-sm text-[var(--color-ink-muted)]"
-                            title="This destination will be connected in a later integration slice."
-                          >
-                            <Icon aria-hidden="true" size={16} />
-                            <span>{item.label}</span>
-                            <span className="ml-auto rounded-full border border-[var(--color-border)] px-1.5 py-0.5 font-mono text-[9px] uppercase tracking-[0.1em]">
-                              Later
-                            </span>
-                          </span>
-                        )}
+                        <a
+                          aria-current={active ? "page" : undefined}
+                          className={`flex min-h-10 items-center gap-2 rounded-[var(--radius-control)] px-2 py-1.5 text-sm no-underline ${
+                            active
+                              ? "bg-[var(--color-brand)] font-semibold !text-white"
+                              : "text-[var(--color-ink)] hover:bg-[var(--color-surface-subtle)]"
+                          }`}
+                          href={item.href}
+                        >
+                          <Icon aria-hidden="true" size={16} />
+                          <span>{item.label}</span>
+                        </a>
                       </li>
                     );
                   })}
@@ -579,7 +612,17 @@ function CaseShellContent({
 function deriveActiveDestination(path: string): WorkspaceNavigationItem["id"] {
   if (path.includes("/intake")) return "documents";
   if (path.includes("/analysis")) return "structured-analysis";
+  if (path.includes("/urgent-needs")) return "urgent-needs";
+  if (path.includes("/gaps")) return "evidence-gaps";
+  if (path.includes("/interview")) return "interview";
+  if (path.includes("/services")) return "services";
+  if (path.includes("/tasks")) return "tasks";
+  if (path.includes("/notes")) return "notes";
+  if (path.includes("/nexus")) return "integrity-map";
+  if (path.includes("/timeline")) return "timeline";
   if (path.includes("/export")) return "export";
+  if (path.includes("/audit")) return "audit";
+  if (path === "/trust") return "trust";
   if (path.includes("#context-gaps-heading")) return "evidence-gaps";
   if (path.includes("#nexus")) return "integrity-map";
   if (path.includes("#timeline")) return "timeline";
