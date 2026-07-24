@@ -92,6 +92,18 @@ describe("fast-track Case Dashboard", () => {
     expect(screen.getByText("Export gate").nextElementSibling).toHaveTextContent(
       summary.exportStatus,
     );
+    expect(screen.getByText("Open urgent needs").nextElementSibling).toHaveTextContent(
+      String(summary.openUrgentNeedCount),
+    );
+    expect(screen.getByText("Pending interview questions").nextElementSibling).toHaveTextContent(
+      String(summary.pendingInterviewQuestionCount),
+    );
+    expect(screen.getByText("Open tasks").nextElementSibling).toHaveTextContent(
+      String(summary.openTaskCount),
+    );
+    expect(screen.getByText("Referral plans").nextElementSibling).toHaveTextContent(
+      String(summary.referralPlanCount),
+    );
   });
 
   it("marks a successful analysis stale after Purpose changes through the canonical command", () => {

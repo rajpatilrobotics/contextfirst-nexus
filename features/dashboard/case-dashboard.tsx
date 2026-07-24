@@ -15,6 +15,7 @@ import {
 import { CaseStatusBadge } from "../../components/status";
 import { analysisRunInputMatchesState } from "../../lib/analysis/freshness";
 import type { CaseState } from "../../lib/contracts";
+import { derivePlanningDashboardCounts } from "../../lib/planning";
 import { deriveCaseStatus } from "../../lib/state";
 
 export const PRIMARY_CASE_DISPLAY_ID = "REF-2024-0047-SYN";
@@ -29,7 +30,12 @@ export type PrimaryCaseSummary = {
   documentCount: number;
   exportStatus: string;
   openGapCount: number;
+  openTaskCount: number;
+  openUrgentNeedCount: number;
+  overdueTaskCount: number;
+  pendingInterviewQuestionCount: number;
   pendingReviewCount: number;
+  referralPlanCount: number;
 };
 
 export function derivePrimaryCaseSummary(state: CaseState): PrimaryCaseSummary {
@@ -47,6 +53,7 @@ export function derivePrimaryCaseSummary(state: CaseState): PrimaryCaseSummary {
       candidate.inclusionStatus === "active" &&
       (candidate.responseStatus === "unanswered" || candidate.responseStatus === "deferred"),
   ).length;
+  const planning = derivePlanningDashboardCounts(state);
 
   let analysisStatus = "Not started";
   if (state.pendingLiveAnalysis) analysisStatus = "Running";
@@ -79,7 +86,12 @@ export function derivePrimaryCaseSummary(state: CaseState): PrimaryCaseSummary {
     documentCount: state.documents.length,
     exportStatus,
     openGapCount,
+    openTaskCount: planning.openTasks,
+    openUrgentNeedCount: planning.openUrgentNeeds,
+    overdueTaskCount: planning.overdueTasks,
+    pendingInterviewQuestionCount: planning.pendingInterviewQuestions,
     pendingReviewCount,
+    referralPlanCount: planning.referralPlans,
   };
 }
 
@@ -129,7 +141,7 @@ function CaseDashboardContent() {
               <h3 className="mt-1 font-serif text-lg">Open any workspace screen</h3>
             </div>
             <span className="text-xs text-[var(--color-ink-muted)]">
-              Preview routes remain separate from canonical counts and export.
+              Planning screens use browser-session state and remain separate from evidence findings.
             </span>
           </div>
           <ul className="mt-3 grid gap-1.5 sm:grid-cols-2 lg:grid-cols-3">
@@ -186,6 +198,13 @@ function CaseDashboardContent() {
           <SummaryMetric label="Open evidence gaps" value={summary.openGapCount} />
           <SummaryMetric label="Export gate" value={summary.exportStatus} />
         </dl>
+
+        <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          <DashboardPlanningLink href="/case/demo/urgent-needs" label="Open urgent needs" value={summary.openUrgentNeedCount} />
+          <DashboardPlanningLink href="/case/demo/interview" label="Pending interview questions" value={summary.pendingInterviewQuestionCount} />
+          <DashboardPlanningLink href="/case/demo/tasks" label="Open tasks" value={`${summary.openTaskCount} (${summary.overdueTaskCount} overdue)`} />
+          <DashboardPlanningLink href="/case/demo/services" label="Referral plans" value={summary.referralPlanCount} />
+        </div>
 
         <a
           aria-label={`Open M. Chen workspace (${PRIMARY_CASE_DISPLAY_ID})`}
@@ -272,5 +291,29 @@ function SummaryMetric({ label, value }: { label: string; value: number | string
       </dt>
       <dd className="mt-1 font-serif text-xl text-[var(--color-ink)]">{value}</dd>
     </div>
+  );
+}
+
+function DashboardPlanningLink({
+  href,
+  label,
+  value,
+}: {
+  href: string;
+  label: string;
+  value: number | string;
+}) {
+  return (
+    <a
+      className="rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-3 text-[var(--color-ink)] no-underline hover:border-[var(--amber)] hover:bg-[var(--color-surface-subtle)]"
+      href={href}
+    >
+      <span className="font-mono text-[10px] uppercase tracking-[0.15em] text-[var(--color-ink-muted)]">
+        {label}
+      </span>
+      <span className="mt-1 block font-serif text-xl text-[var(--color-ink)]">
+        {value}
+      </span>
+    </a>
   );
 }

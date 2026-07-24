@@ -1,10 +1,11 @@
 "use client";
 
-import { useId, useState } from "react";
+import { useId, useState, type ReactNode } from "react";
 import { CircleHelp, UserRoundPen } from "lucide-react";
 import type { CaseCandidate, CaseCommand, CaseState } from "../../../lib/contracts";
 import { ReviewStatusBadge, SupportStatusBadge } from "../../../components/status";
 import { Alert, Button, FieldError, Label, Textarea } from "../../../components/ui";
+import { deriveGapActionCoverage } from "../../../lib/planning";
 import { selectContextGaps } from "../../../lib/review";
 import {
   CitationLink,
@@ -14,7 +15,16 @@ import {
 
 type ContextGap = Extract<CaseCandidate, { kind: "context_gap" }>;
 type GapAction = "answered" | "deferred" | "outside_scope";
+type GapPlanningAction =
+  | "create_interview_question"
+  | "create_document_request"
+  | "create_case_task"
+  | "compare_conflicting_sources";
 type GapIntent = Extract<CaseCommand, { type: "respond_context_gap" }>["intent"];
+type CommandMessage = {
+  tone: "success" | "danger";
+  content: ReactNode;
+};
 
 function commandMeta(state: CaseState, prefix: string): CaseCommand["meta"] {
   const createdAt = new Date().toISOString();
@@ -38,6 +48,16 @@ function responseLabel(status: ContextGap["responseStatus"]) {
   return "Preserved as unknown";
 }
 
+function neutralGapQuestion(gap: ContextGap) {
+  if (gap.id === "CAND-SENDER-0402") {
+    return "What, if anything, do you remember about how the communication was sent or received?";
+  }
+  if (gap.id === "CAND-URG-INTERPRETER") {
+    return "What, if anything, have you been told about interpretation support for the hearing?";
+  }
+  return "What, if anything, would you like the practitioner to understand about this unresolved point?";
+}
+
 export function ContextGapPanel({
   gap,
   state,
@@ -53,10 +73,11 @@ export function ContextGapPanel({
   const [activeAction, setActiveAction] = useState<GapAction | null>(null);
   const [responseText, setResponseText] = useState("");
   const [fieldError, setFieldError] = useState<string | null>(null);
-  const [commandMessage, setCommandMessage] = useState<string | null>(null);
+  const [commandMessage, setCommandMessage] = useState<CommandMessage | null>(null);
   const reviewComplete = ["human_accepted", "human_edited", "rejected"].includes(
     gap.reviewStatus,
   );
+  const actionCoverage = deriveGapActionCoverage(state, gap.id);
 
   async function dispatchIntent(intent: GapIntent) {
     setCommandMessage(null);
@@ -66,10 +87,10 @@ export function ContextGapPanel({
       intent,
     });
     if (result && !result.ok) {
-      setCommandMessage(`Gap response was not accepted: ${result.reason ?? "unknown reason"}.`);
+      setCommandMessage({ tone: "danger", content: `Gap response was not accepted: ${result.reason ?? "unknown reason"}.` });
       return false;
     }
-    setCommandMessage(`${gap.id} response recorded without changing source evidence.`);
+    setCommandMessage({ tone: "success", content: `${gap.id} response recorded without changing source evidence.` });
     return true;
   }
 
@@ -136,12 +157,76 @@ export function ContextGapPanel({
     });
     if (result && !result.ok) {
       setCommandMessage(
-        `Required review was not accepted: ${result.reason ?? "unknown reason"}.`,
+        { tone: "danger", content: `Required review was not accepted: ${result.reason ?? "unknown reason"}.` },
       );
       return;
     }
-    setCommandMessage(`${gap.id} required review is complete.`);
+    setCommandMessage({ tone: "success", content: `${gap.id} required review is complete.` });
   }
+
+  async function createGapAction(actionType: GapPlanningAction) {
+    setCommandMessage(null);
+    const base = {
+      gapId: gap.id,
+      owner: "M. Chen",
+      priority: "medium" as const,
+    };
+    const command =
+      actionType === "create_interview_question"
+        ? {
+            type: "create_gap_action" as const,
+            meta: commandMeta(state, `gap-action-${gap.id.toLowerCase()}`),
+	            input: {
+	              actionType,
+	              gapId: gap.id,
+	              body: neutralGapQuestion(gap),
+	              rationale: `Created from ${gap.id}; planning aid only and separate from evidence review.`,
+	            },
+          }
+        : {
+            type: "create_gap_action" as const,
+            meta: commandMeta(state, `gap-action-${gap.id.toLowerCase()}`),
+            input: {
+              ...base,
+              actionType,
+              title:
+                actionType === "create_document_request"
+                  ? `Request source material for ${gap.id}`
+                  : actionType === "compare_conflicting_sources"
+                    ? `Compare source conflict for ${gap.id}`
+                    : `Follow up on ${gap.id}`,
+              description: `Operational planning action created from canonical context gap ${gap.id}. Completion does not resolve the gap or change evidence.`,
+            },
+          };
+	    const result = await onCommand(command);
+	    if (result && !result.ok) {
+	      setCommandMessage({ tone: "danger", content: `Gap action was not accepted: ${result.reason ?? "unknown reason"}.` });
+	      return;
+	    }
+	    const createdState = result && "state" in result ? (result as { state: CaseState }).state : null;
+	    const previousIds = new Set(
+	      actionType === "create_interview_question"
+	        ? state.interviewQuestions.map((question) => question.id)
+	        : state.caseTasks.map((task) => task.id),
+	    );
+	    const createdId =
+	      actionType === "create_interview_question"
+	        ? createdState?.interviewQuestions.find((question) => !previousIds.has(question.id))?.id
+	        : createdState?.caseTasks.find((task) => !previousIds.has(task.id))?.id;
+	    const href = actionType === "create_interview_question" ? "/case/demo/interview" : "/case/demo/tasks";
+	    setCommandMessage({
+	      tone: "success",
+	      content: (
+	        <>
+	          {createdId ?? "Planning action"} created from {gap.id}.{" "}
+	          <a className="underline underline-offset-2" href={href}>
+	            Open {actionType === "create_interview_question" ? "Interview Planner" : "Case Tasks"}
+	          </a>
+	          .
+	        </>
+	      ),
+	    });
+	  }
 
   return (
     <article
@@ -235,6 +320,18 @@ export function ContextGapPanel({
       </section>
 
       <div aria-label={`Context gap actions for ${gap.id}`} className="flex flex-wrap gap-2">
+        <Button disabled={actionCoverage.hasQuestion} onClick={() => createGapAction("create_interview_question")} variant="secondary">
+          Create interview question
+        </Button>
+        <Button disabled={actionCoverage.hasDocumentRequest} onClick={() => createGapAction("create_document_request")} variant="secondary">
+          Create document request
+        </Button>
+        <Button disabled={actionCoverage.hasCaseTask} onClick={() => createGapAction("create_case_task")} variant="secondary">
+          Create case task
+        </Button>
+        <Button disabled={actionCoverage.hasCompareTask} onClick={() => createGapAction("compare_conflicting_sources")} variant="secondary">
+          Compare conflicting sources
+        </Button>
         <Button disabled={reviewComplete} onClick={() => setActiveAction("answered")} variant="secondary">
           Answer
         </Button>
@@ -316,10 +413,10 @@ export function ContextGapPanel({
       </p>
       {commandMessage ? (
         <p
-          className={commandMessage.includes("not accepted") ? "text-sm text-[var(--color-danger)]" : "text-sm text-[var(--color-supported)]"}
+          className={commandMessage.tone === "danger" ? "text-sm text-[var(--color-danger)]" : "text-sm text-[var(--color-supported)]"}
           role="status"
         >
-          {commandMessage}
+          {commandMessage.content}
         </p>
       ) : null}
     </article>

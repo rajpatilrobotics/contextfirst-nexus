@@ -92,6 +92,33 @@ describe("TASK-021 context gaps", () => {
     expect(screen.getByText(/not adverse evidence/i)).toBeInTheDocument();
   });
 
+  it("creates a gap interview question with safe wording and a navigable success link", async () => {
+    const user = userEvent.setup();
+    const state = checkpointState();
+    let recordedCommand: CaseCommand | null = null;
+    const onCommand = vi.fn<CaseCommandDispatcher>((command) => {
+      recordedCommand = command;
+      return applyCaseCommand(state, command);
+    });
+    render(<ContextGapPanel gap={gap(state, "CAND-SENDER-0402")} onCommand={onCommand} state={state} />);
+
+    await user.click(screen.getByRole("button", { name: "Create interview question" }));
+
+    expect(await screen.findByRole("link", { name: "Open Interview Planner" })).toHaveAttribute(
+      "href",
+      "/case/demo/interview",
+    );
+    expect(screen.getByText(/QUESTION-3 created from CAND-SENDER-0402/i)).toBeInTheDocument();
+    expect(recordedCommand).toMatchObject({
+      type: "create_gap_action",
+      input: {
+        actionType: "create_interview_question",
+        body: "What, if anything, do you remember about how the communication was sent or received?",
+      },
+    });
+    expect(JSON.stringify(recordedCommand)).not.toContain("help clarify this point");
+  });
+
   it("completes an unknown context gap through the canonical individual review command", async () => {
     const user = userEvent.setup();
     render(<CanonicalGapHarness />);

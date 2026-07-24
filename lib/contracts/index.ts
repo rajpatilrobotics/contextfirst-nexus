@@ -62,6 +62,12 @@ export const IdSchemas = {
   auditEventId: z.string().regex(/^AUDIT-[A-Z0-9-]+$/),
   analysisRunId: z.string().regex(/^RUN-[A-Z0-9-]+$/),
   exportId: z.string().regex(/^EXPORT-[A-Z0-9-]+$/),
+  urgentNeedId: z.string().regex(/^NEED-\d+$/),
+  interviewQuestionId: z.string().regex(/^QUESTION-\d+$/),
+  caseTaskId: z.string().regex(/^TASK-\d+$/),
+  practitionerNoteId: z.string().regex(/^NOTE-\d+$/),
+  serviceProviderId: z.string().regex(/^SERVICE-\d+$/),
+  referralPlanId: z.string().regex(/^REFERRAL-\d+$/),
   guidanceSourceId: z.string().regex(/^[A-Z]+-\d{3}[A-Z]?$/),
 } as const;
 
@@ -1144,6 +1150,179 @@ export const DependencyChangeSchema = strict({
 });
 export type DependencyChange = z.infer<typeof DependencyChangeSchema>;
 
+export const PlanningRecordOriginSchema = z.enum(["bundled_synthetic", "human_created"]);
+export type PlanningRecordOrigin = z.infer<typeof PlanningRecordOriginSchema>;
+
+export const UrgentNeedCategorySchema = z.enum([
+  "emergency_accommodation",
+  "legal_support",
+  "mental_health_support",
+  "interpretation",
+  "documentation",
+  "safe_contact",
+  "other",
+]);
+export const UrgentNeedUrgencySchema = z.enum([
+  "within_24_hours",
+  "within_72_hours",
+  "within_7_days",
+  "routine",
+]);
+export const UrgentNeedStatusSchema = z.enum([
+  "open",
+  "in_progress",
+  "waiting",
+  "resolved",
+  "cancelled",
+]);
+export const UrgentNeedSchema = strict({
+  id: IdSchemas.urgentNeedId,
+  caseId: IdSchemas.caseId,
+  category: UrgentNeedCategorySchema,
+  description: safeText,
+  urgency: UrgentNeedUrgencySchema,
+  status: UrgentNeedStatusSchema,
+  owner: safeText,
+  safeContactConstraints: safeText,
+  nextAction: safeText,
+  followUpAt: isoUtcTimestamp.optional(),
+  origin: PlanningRecordOriginSchema,
+  linkedCandidateIds: z.array(IdSchemas.candidateId),
+  linkedCitationIds: z.array(nonEmptyString),
+  createdAt: isoUtcTimestamp,
+  updatedAt: isoUtcTimestamp,
+});
+export type UrgentNeed = z.infer<typeof UrgentNeedSchema>;
+
+export const InterviewSessionSetupSchema = strict({
+  id: z.literal("INTERVIEW-SESSION-001"),
+  caseId: IdSchemas.caseId,
+  purpose: safeText,
+  language: safeText,
+  interpreter: safeText,
+  accessibility: safeText,
+  safeContact: safeText,
+  consentConfirmed: z.boolean(),
+  updatedAt: isoUtcTimestamp,
+});
+export type InterviewSessionSetup = z.infer<typeof InterviewSessionSetupSchema>;
+
+export const InterviewQuestionStatusSchema = z.enum([
+  "draft",
+  "approved",
+  "edited",
+  "deferred",
+  "removed",
+  "inappropriate",
+]);
+export const PlanningSourceLinkSchema = strict({
+  sourceType: z.enum(["context_gap", "manual", "urgent_need", "referral"]),
+  sourceId: nonEmptyString.nullable(),
+  sourceAnalysisRunId: IdSchemas.analysisRunId.nullable(),
+  sourceCandidateRevision: nonNegativeInteger.nullable(),
+});
+export type PlanningSourceLink = z.infer<typeof PlanningSourceLinkSchema>;
+
+export const InterviewQuestionSchema = strict({
+  id: IdSchemas.interviewQuestionId,
+  caseId: IdSchemas.caseId,
+  body: safeText,
+  rationale: safeText,
+  status: InterviewQuestionStatusSchema,
+  linkedGapCandidateId: IdSchemas.candidateId.nullable(),
+  source: PlanningSourceLinkSchema,
+  origin: PlanningRecordOriginSchema,
+  createdAt: isoUtcTimestamp,
+  updatedAt: isoUtcTimestamp,
+});
+export type InterviewQuestion = z.infer<typeof InterviewQuestionSchema>;
+
+export const CaseTaskKindSchema = z.enum([
+  "general_task",
+  "document_request",
+  "compare_sources_task",
+]);
+export const CaseTaskPrioritySchema = z.enum(["low", "medium", "high"]);
+export const CaseTaskStatusSchema = z.enum([
+  "todo",
+  "in_progress",
+  "waiting",
+  "completed",
+  "cancelled",
+]);
+export const CaseTaskOriginSchema = z.enum([
+  "manual",
+  "context_gap",
+  "urgent_need",
+  "interview_question",
+  "referral",
+]);
+export const CaseTaskSchema = strict({
+  id: IdSchemas.caseTaskId,
+  caseId: IdSchemas.caseId,
+  kind: CaseTaskKindSchema,
+  title: safeText,
+  description: safeText,
+  origin: CaseTaskOriginSchema,
+  originId: nonEmptyString.nullable(),
+  source: PlanningSourceLinkSchema,
+  owner: safeText,
+  priority: CaseTaskPrioritySchema,
+  status: CaseTaskStatusSchema,
+  dueDate: dateOnly.optional(),
+  createdAt: isoUtcTimestamp,
+  updatedAt: isoUtcTimestamp,
+});
+export type CaseTask = z.infer<typeof CaseTaskSchema>;
+
+export const PractitionerNoteSchema = strict({
+  id: IdSchemas.practitionerNoteId,
+  caseId: IdSchemas.caseId,
+  body: safeText,
+  author: z.enum(["current_practitioner", "fixture_reviewer"]),
+  visibility: z.enum(["private", "team"]),
+  linkedEntityIds: z.array(nonEmptyString),
+  origin: PlanningRecordOriginSchema,
+  archived: z.boolean(),
+  createdAt: isoUtcTimestamp,
+  updatedAt: isoUtcTimestamp,
+});
+export type PractitionerNote = z.infer<typeof PractitionerNoteSchema>;
+
+export const ServiceProviderDirectoryRecordSchema = strict({
+  id: IdSchemas.serviceProviderId,
+  name: safeText,
+  category: safeText,
+  coverageArea: safeText,
+  hours: safeText,
+  languages: z.array(safeText),
+  accessibility: safeText,
+  eligibilityCaveat: safeText,
+  safeContactMethodLabel: safeText,
+  fixtureReviewDate: dateOnly,
+  verificationStatus: z.literal("fictional_unverified"),
+});
+export type ServiceProviderDirectoryRecord = z.infer<typeof ServiceProviderDirectoryRecordSchema>;
+
+export const ReferralPlanStatusSchema = z.enum([
+  "draft",
+  "planned_for_manual_follow_up",
+  "cancelled",
+]);
+export const ReferralPlanSchema = strict({
+  id: IdSchemas.referralPlanId,
+  caseId: IdSchemas.caseId,
+  providerId: IdSchemas.serviceProviderId,
+  planningStatus: ReferralPlanStatusSchema,
+  consentConfirmed: z.literal(true),
+  safeContactAcknowledged: z.literal(true),
+  contactStatus: z.literal("not_contacted"),
+  transmissionStatus: z.literal("not_transmitted"),
+  createdAt: isoUtcTimestamp,
+  updatedAt: isoUtcTimestamp,
+});
+export type ReferralPlan = z.infer<typeof ReferralPlanSchema>;
+
 export const AnalyzeMaskApprovalSchema = strict({
   maskId: nonEmptyString,
   segmentId: IdSchemas.segmentId,
@@ -1874,6 +2053,19 @@ export const AuditEventTypeSchema = z.enum([
   "source_revealed",
   "evidence_withdrawn",
   "dependencies_invalidated",
+  "urgent_need_created",
+  "urgent_need_status_changed",
+  "interview_setup_saved",
+  "interview_question_created",
+  "interview_question_updated",
+  "gap_action_created",
+  "case_task_created",
+  "case_task_status_changed",
+  "practitioner_note_created",
+  "practitioner_note_updated",
+  "practitioner_note_archived",
+  "referral_plan_saved",
+  "referral_plan_status_changed",
   "export_gate_evaluated",
   "export_blocked",
   "export_created",
@@ -1902,11 +2094,11 @@ export const AuditEventSchema = strict({
   reasonCode: z.string().optional(),
   summary: z.string().max(500),
   createdAt: isoUtcTimestamp,
-}).and(
-  z.union([
-    strict({ commandId: nonEmptyString, idempotencyKey: nonEmptyString }),
-    strict({ commandId: z.null(), idempotencyKey: z.null() }),
-  ]),
+  commandId: nonEmptyString.nullable(),
+  idempotencyKey: nonEmptyString.nullable(),
+}).refine(
+  (event) => (event.commandId === null) === (event.idempotencyKey === null),
+  { message: "Audit command identity must be either fully present or fully absent." },
 );
 export type AuditEvent = z.infer<typeof AuditEventSchema>;
 
@@ -2632,6 +2824,104 @@ export const LocalMaskSuggestionInputSchema = strict({
   replacementToken: nonEmptyString,
 });
 
+export const CreateUrgentNeedInputSchema = strict({
+  category: UrgentNeedCategorySchema,
+  description: safeText,
+  urgency: UrgentNeedUrgencySchema,
+  owner: safeText,
+  safeContactConstraints: safeText,
+  nextAction: safeText,
+  followUpAt: isoUtcTimestamp.optional(),
+  linkedCandidateIds: z.array(IdSchemas.candidateId),
+  linkedCitationIds: z.array(nonEmptyString),
+});
+
+export const SaveInterviewSetupInputSchema = strict({
+  purpose: safeText,
+  language: safeText,
+  interpreter: safeText,
+  accessibility: safeText,
+  safeContact: safeText,
+  consentConfirmed: z.boolean(),
+});
+
+export const CreateInterviewQuestionInputSchema = strict({
+  body: safeText,
+  rationale: safeText,
+});
+
+export const UpdateInterviewQuestionInputSchema = strict({
+  questionId: IdSchemas.interviewQuestionId,
+  body: safeText.optional(),
+  rationale: safeText.optional(),
+  status: InterviewQuestionStatusSchema,
+});
+
+export const CreateCaseTaskInputSchema = strict({
+  kind: CaseTaskKindSchema,
+  title: safeText,
+  description: safeText,
+  owner: safeText,
+  priority: CaseTaskPrioritySchema,
+  dueDate: dateOnly.optional(),
+});
+
+export const CreateGapActionInputSchema = z.discriminatedUnion("actionType", [
+  strict({
+    actionType: z.literal("create_interview_question"),
+    gapId: IdSchemas.candidateId,
+    body: safeText,
+    rationale: safeText,
+  }),
+  strict({
+    actionType: z.literal("create_document_request"),
+    gapId: IdSchemas.candidateId,
+    title: safeText,
+    description: safeText,
+    owner: safeText,
+    priority: CaseTaskPrioritySchema,
+    dueDate: dateOnly.optional(),
+  }),
+  strict({
+    actionType: z.literal("create_case_task"),
+    gapId: IdSchemas.candidateId,
+    title: safeText,
+    description: safeText,
+    owner: safeText,
+    priority: CaseTaskPrioritySchema,
+    dueDate: dateOnly.optional(),
+  }),
+  strict({
+    actionType: z.literal("compare_conflicting_sources"),
+    gapId: IdSchemas.candidateId,
+    title: safeText,
+    description: safeText,
+    owner: safeText,
+    priority: CaseTaskPrioritySchema,
+    dueDate: dateOnly.optional(),
+  }),
+]);
+
+export const CreatePractitionerNoteInputSchema = strict({
+  body: safeText,
+  visibility: z.enum(["private", "team"]),
+  linkedEntityIds: z.array(nonEmptyString),
+});
+
+export const UpdatePractitionerNoteInputSchema = strict({
+  noteId: IdSchemas.practitionerNoteId,
+  body: safeText,
+  visibility: z.enum(["private", "team"]),
+  linkedEntityIds: z.array(nonEmptyString),
+});
+
+export const CreateReferralPlanInputSchema = strict({
+  providerId: IdSchemas.serviceProviderId,
+  planningStatus: ReferralPlanStatusSchema,
+  consentConfirmed: z.literal(true),
+  safeContactAcknowledged: z.literal(true),
+});
+
 export const CaseCommandSchema = z.discriminatedUnion("type", [
   strict({ meta: CommandMetaSchema, type: z.literal("save_purpose"), purposeBrief: CasePurposeBriefSchema }),
   strict({ meta: CommandMetaSchema, type: z.literal("begin_fixture_processing") }),
@@ -2656,6 +2946,19 @@ export const CaseCommandSchema = z.discriminatedUnion("type", [
   strict({ meta: CommandMetaSchema, type: z.literal("respond_context_gap"), intent: ContextGapResponseIntentSchema }),
   strict({ meta: CommandMetaSchema, type: z.literal("review_coverage_issue"), intent: CoverageReviewIntentSchema }),
   strict({ meta: CommandMetaSchema, type: z.literal("withdraw_candidate"), candidateId: IdSchemas.candidateId, reason: safeText }),
+  strict({ meta: CommandMetaSchema, type: z.literal("create_urgent_need"), input: CreateUrgentNeedInputSchema }),
+  strict({ meta: CommandMetaSchema, type: z.literal("update_urgent_need_status"), needId: IdSchemas.urgentNeedId, status: UrgentNeedStatusSchema }),
+  strict({ meta: CommandMetaSchema, type: z.literal("save_interview_setup"), input: SaveInterviewSetupInputSchema }),
+  strict({ meta: CommandMetaSchema, type: z.literal("create_interview_question"), input: CreateInterviewQuestionInputSchema }),
+  strict({ meta: CommandMetaSchema, type: z.literal("update_interview_question"), input: UpdateInterviewQuestionInputSchema }),
+  strict({ meta: CommandMetaSchema, type: z.literal("create_gap_action"), input: CreateGapActionInputSchema }),
+  strict({ meta: CommandMetaSchema, type: z.literal("create_case_task"), input: CreateCaseTaskInputSchema }),
+  strict({ meta: CommandMetaSchema, type: z.literal("update_case_task_status"), taskId: IdSchemas.caseTaskId, status: CaseTaskStatusSchema }),
+  strict({ meta: CommandMetaSchema, type: z.literal("create_practitioner_note"), input: CreatePractitionerNoteInputSchema }),
+  strict({ meta: CommandMetaSchema, type: z.literal("update_practitioner_note"), input: UpdatePractitionerNoteInputSchema }),
+  strict({ meta: CommandMetaSchema, type: z.literal("archive_practitioner_note"), noteId: IdSchemas.practitionerNoteId }),
+  strict({ meta: CommandMetaSchema, type: z.literal("create_referral_plan"), input: CreateReferralPlanInputSchema }),
+  strict({ meta: CommandMetaSchema, type: z.literal("update_referral_plan_status"), referralPlanId: IdSchemas.referralPlanId, planningStatus: ReferralPlanStatusSchema }),
   strict({ meta: CommandMetaSchema, type: z.literal("reveal_source"), citationId: nonEmptyString, reasonCode: z.enum(["explicit_synthetic_source_review", "explicit_local_source_review"]) }),
   strict({ meta: CommandMetaSchema, type: z.literal("evaluate_export_gate"), selection: ExportSelectionSchema }),
   strict({ meta: CommandMetaSchema, type: z.literal("create_export"), selection: ExportSelectionSchema }),
@@ -2689,6 +2992,12 @@ export const CaseStateSchema = strict({
   candidates: z.array(CaseCandidateSchema),
   reviews: z.array(ReviewDecisionSchema),
   dependencyChanges: z.array(DependencyChangeSchema),
+  urgentNeeds: z.array(UrgentNeedSchema),
+  interviewSetup: InterviewSessionSetupSchema,
+  interviewQuestions: z.array(InterviewQuestionSchema),
+  caseTasks: z.array(CaseTaskSchema),
+  practitionerNotes: z.array(PractitionerNoteSchema),
+  referralPlans: z.array(ReferralPlanSchema),
   audit: z.array(AuditEventSchema),
   exportGate: ExportGateSchema.nullable(),
   exports: z.array(ExportRecordSchema),

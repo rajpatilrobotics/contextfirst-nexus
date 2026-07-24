@@ -21,6 +21,7 @@ import {
 } from "../../../../lib/contracts";
 import { cfnDemoFixture } from "../../../../lib/fixtures";
 import { bundledGuidancePack } from "../../../../lib/guidance";
+import { createInitialPlanningState } from "../../../../lib/planning";
 import { LIMITATION_TEXT, assembleCandidates, reviewCandidate } from "../../../../lib/review";
 import { applyCaseCommand } from "../../../../lib/state";
 
@@ -186,6 +187,7 @@ function processing(): ProcessingStage[] {
 
 function baseState(): CaseState {
   const candidates = completeReviews(assembleCandidates());
+  const planning = createInitialPlanningState(NOW);
   return {
     schemaVersion: "1.0.0",
     caseId: "CFN-DEMO-001",
@@ -292,6 +294,7 @@ function baseState(): CaseState {
       dependencySnapshot: candidate.dependencies.map((dependency) => dependency.id).sort(),
     })) as ReviewDecision[],
     dependencyChanges: [],
+    ...planning,
     audit: [
       {
         id: "AUDIT-0001",

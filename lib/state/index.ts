@@ -1,10 +1,12 @@
 import {
   CaseCommandSchema,
   CaseStateSchema,
+  PersistedCaseStateSchema,
   type AnalysisRecoveryMetadata,
   type AnalysisRun,
   type AuditEvent,
   type CaseCommand,
+  type CaseTask,
   type CaseState,
   type CaseStatus,
   type CoverageReviewDecision,
@@ -14,6 +16,7 @@ import {
   type PersistedCaseState,
   type ProcessingStage,
 } from "../contracts";
+import { analysisRunInputMatchesState } from "../analysis/freshness";
 import { cfnDemoFixture } from "../fixtures";
 import { bundledGuidancePack } from "../guidance";
 import {
@@ -44,6 +47,7 @@ import {
   trustedSegments,
 } from "../analysis/replay";
 import { buildLocalSourceExtraction } from "../analysis/local-source-extraction";
+import { createInitialPlanningState, serviceProviderDirectory } from "../planning";
 
 export const CASE_STATE_STORAGE_KEY = "contextfirst-nexus.case-state.v1" as const;
 const VERSION = "1.0.0" as const;
@@ -78,6 +82,7 @@ type TerminalAnalyzeResponse = {
 };
 
 export function createInitialCaseState(now = isoNow()): CaseState {
+  const planning = createInitialPlanningState(now);
   return CaseStateSchema.parse({
     schemaVersion: VERSION,
     caseId: "CFN-DEMO-001",
@@ -109,6 +114,7 @@ export function createInitialCaseState(now = isoNow()): CaseState {
     candidates: [],
     reviews: [],
     dependencyChanges: [],
+    ...planning,
     audit: [],
     exportGate: null,
     exports: [],
@@ -422,6 +428,294 @@ function applyValidCommand(state: CaseState, command: CaseCommand): CaseCommandR
         dependencyChanges: [...state.dependencyChanges, { ...result.dependencyChange, commandId: command.meta.commandId }],
         caseRevision: state.caseRevision + 1,
       }, "evidence_withdrawn", [command.candidateId]);
+    }
+    case "create_urgent_need": {
+      validateCandidateAndCitationLinks(state, command.input.linkedCandidateIds, command.input.linkedCitationIds);
+      const need = {
+        id: nextRecordId(state.urgentNeeds, "NEED"),
+        caseId: state.caseId,
+        status: "open" as const,
+        origin: "human_created" as const,
+        createdAt: command.meta.createdAt,
+        updatedAt: command.meta.createdAt,
+        ...command.input,
+      };
+      return commit(staleExport(state), command, {
+        urgentNeeds: [...state.urgentNeeds, need],
+        caseRevision: state.caseRevision + 1,
+      }, "urgent_need_created", [need.id]);
+    }
+    case "update_urgent_need_status": {
+      const need = state.urgentNeeds.find((item) => item.id === command.needId);
+      if (!need) throw new Error("urgent_need_not_found");
+      return commit(staleExport(state), command, {
+        urgentNeeds: state.urgentNeeds.map((item) =>
+          item.id === command.needId
+            ? { ...item, status: command.status, updatedAt: command.meta.createdAt }
+            : item,
+        ),
+        caseRevision: state.caseRevision + 1,
+      }, "urgent_need_status_changed", [command.needId], command.status);
+    }
+    case "save_interview_setup": {
+      return commit(staleExport(state), command, {
+        interviewSetup: {
+          id: "INTERVIEW-SESSION-001",
+          caseId: state.caseId,
+          ...command.input,
+          updatedAt: command.meta.createdAt,
+        },
+        caseRevision: state.caseRevision + 1,
+      }, "interview_setup_saved", ["INTERVIEW-SESSION-001"]);
+    }
+    case "create_interview_question": {
+      validatePlanningQuestion(command.input.body);
+      const question = {
+        id: nextRecordId(state.interviewQuestions, "QUESTION"),
+        caseId: state.caseId,
+        body: command.input.body,
+        rationale: command.input.rationale,
+        status: "draft" as const,
+        linkedGapCandidateId: null,
+        source: {
+          sourceType: "manual" as const,
+          sourceId: null,
+          sourceAnalysisRunId: null,
+          sourceCandidateRevision: null,
+        },
+        origin: "human_created" as const,
+        createdAt: command.meta.createdAt,
+        updatedAt: command.meta.createdAt,
+      };
+      return commit(staleExport(state), command, {
+        interviewQuestions: [...state.interviewQuestions, question],
+        caseRevision: state.caseRevision + 1,
+      }, "interview_question_created", [question.id]);
+    }
+    case "update_interview_question": {
+      const question = state.interviewQuestions.find((item) => item.id === command.input.questionId);
+      if (!question) throw new Error("interview_question_not_found");
+      const body = command.input.body ?? question.body;
+      validatePlanningQuestion(body);
+      return commit(staleExport(state), command, {
+        interviewQuestions: state.interviewQuestions.map((item) =>
+          item.id === command.input.questionId
+            ? {
+                ...item,
+                body,
+                rationale: command.input.rationale ?? item.rationale,
+                status: command.input.status,
+                updatedAt: command.meta.createdAt,
+              }
+            : item,
+        ),
+        caseRevision: state.caseRevision + 1,
+      }, "interview_question_updated", [command.input.questionId], command.input.status);
+    }
+    case "create_gap_action": {
+      const gap = requireCurrentContextGap(state, command.input.gapId);
+      const link = {
+        sourceType: "context_gap" as const,
+        sourceId: gap.id,
+        sourceAnalysisRunId: gap.analysisRunId,
+        sourceCandidateRevision: gap.revision,
+      };
+      if (command.input.actionType === "create_interview_question") {
+        validatePlanningQuestion(command.input.body);
+        if (
+          state.interviewQuestions.some(
+            (question) =>
+              question.linkedGapCandidateId === gap.id &&
+              !["removed", "inappropriate"].includes(question.status),
+          )
+        ) {
+          throw new Error("duplicate_active_gap_action");
+        }
+        const question = {
+          id: nextRecordId(state.interviewQuestions, "QUESTION"),
+          caseId: state.caseId,
+          body: command.input.body,
+          rationale: command.input.rationale,
+          status: "draft" as const,
+          linkedGapCandidateId: gap.id,
+          source: link,
+          origin: "human_created" as const,
+          createdAt: command.meta.createdAt,
+          updatedAt: command.meta.createdAt,
+        };
+        return commit(staleExport(state), command, {
+          interviewQuestions: [...state.interviewQuestions, question],
+          caseRevision: state.caseRevision + 1,
+        }, "gap_action_created", [gap.id, question.id], command.input.actionType);
+      }
+      const kind: CaseTask["kind"] =
+        command.input.actionType === "create_document_request"
+          ? "document_request"
+          : command.input.actionType === "compare_conflicting_sources"
+            ? "compare_sources_task"
+            : "general_task";
+      if (
+        state.caseTasks.some(
+          (task) =>
+            task.origin === "context_gap" &&
+            task.originId === gap.id &&
+            task.kind === kind &&
+            !["completed", "cancelled"].includes(task.status),
+        )
+      ) {
+        throw new Error("duplicate_active_gap_action");
+      }
+      const task = {
+        id: nextRecordId(state.caseTasks, "TASK"),
+        caseId: state.caseId,
+        kind,
+        title: command.input.title,
+        description: command.input.description,
+        origin: "context_gap" as const,
+        originId: gap.id,
+        source: link,
+        owner: command.input.owner,
+        priority: command.input.priority,
+        status: "todo" as const,
+        dueDate: command.input.dueDate,
+        createdAt: command.meta.createdAt,
+        updatedAt: command.meta.createdAt,
+      };
+      return commit(staleExport(state), command, {
+        caseTasks: [...state.caseTasks, task],
+        caseRevision: state.caseRevision + 1,
+      }, "gap_action_created", [gap.id, task.id], command.input.actionType);
+    }
+    case "create_case_task": {
+      const task = {
+        id: nextRecordId(state.caseTasks, "TASK"),
+        caseId: state.caseId,
+        ...command.input,
+        origin: "manual" as const,
+        originId: null,
+        source: {
+          sourceType: "manual" as const,
+          sourceId: null,
+          sourceAnalysisRunId: null,
+          sourceCandidateRevision: null,
+        },
+        status: "todo" as const,
+        createdAt: command.meta.createdAt,
+        updatedAt: command.meta.createdAt,
+      };
+      return commit(staleExport(state), command, {
+        caseTasks: [...state.caseTasks, task],
+        caseRevision: state.caseRevision + 1,
+      }, "case_task_created", [task.id]);
+    }
+    case "update_case_task_status": {
+      const task = state.caseTasks.find((item) => item.id === command.taskId);
+      if (!task) throw new Error("case_task_not_found");
+      return commit(staleExport(state), command, {
+        caseTasks: state.caseTasks.map((item) =>
+          item.id === command.taskId
+            ? { ...item, status: command.status, updatedAt: command.meta.createdAt }
+            : item,
+        ),
+        caseRevision: state.caseRevision + 1,
+      }, "case_task_status_changed", [command.taskId], command.status);
+    }
+    case "create_practitioner_note": {
+      validateNoteLinks(state, command.input.linkedEntityIds);
+      const note = {
+        id: nextRecordId(state.practitionerNotes, "NOTE"),
+        caseId: state.caseId,
+        body: command.input.body,
+        author: "current_practitioner" as const,
+        visibility: command.input.visibility,
+        linkedEntityIds: command.input.linkedEntityIds,
+        origin: "human_created" as const,
+        archived: false,
+        createdAt: command.meta.createdAt,
+        updatedAt: command.meta.createdAt,
+      };
+      return commit(staleExport(state), command, {
+        practitionerNotes: [...state.practitionerNotes, note],
+        caseRevision: state.caseRevision + 1,
+      }, "practitioner_note_created", [note.id]);
+    }
+    case "update_practitioner_note": {
+      const note = state.practitionerNotes.find((item) => item.id === command.input.noteId);
+      if (!note) throw new Error("practitioner_note_not_found");
+      validateNoteLinks(state, command.input.linkedEntityIds);
+      return commit(staleExport(state), command, {
+        practitionerNotes: state.practitionerNotes.map((item) =>
+          item.id === command.input.noteId
+            ? {
+                ...item,
+                body: command.input.body,
+                visibility: command.input.visibility,
+                linkedEntityIds: command.input.linkedEntityIds,
+                updatedAt: command.meta.createdAt,
+              }
+            : item,
+        ),
+        caseRevision: state.caseRevision + 1,
+      }, "practitioner_note_updated", [command.input.noteId]);
+    }
+    case "archive_practitioner_note": {
+      const note = state.practitionerNotes.find((item) => item.id === command.noteId);
+      if (!note) throw new Error("practitioner_note_not_found");
+      return commit(staleExport(state), command, {
+        practitionerNotes: state.practitionerNotes.map((item) =>
+          item.id === command.noteId
+            ? { ...item, archived: true, updatedAt: command.meta.createdAt }
+            : item,
+        ),
+        caseRevision: state.caseRevision + 1,
+      }, "practitioner_note_archived", [command.noteId]);
+    }
+    case "create_referral_plan": {
+      if (!serviceProviderDirectory.some((provider) => provider.id === command.input.providerId)) {
+        throw new Error("service_provider_not_found");
+      }
+      const existing = state.referralPlans.find(
+        (plan) => plan.providerId === command.input.providerId && plan.planningStatus !== "cancelled",
+      );
+      const plan = {
+        id: existing?.id ?? nextRecordId(state.referralPlans, "REFERRAL"),
+        caseId: state.caseId,
+        providerId: command.input.providerId,
+        planningStatus: command.input.planningStatus,
+        consentConfirmed: true as const,
+        safeContactAcknowledged: true as const,
+        contactStatus: "not_contacted" as const,
+        transmissionStatus: "not_transmitted" as const,
+        createdAt: existing?.createdAt ?? command.meta.createdAt,
+        updatedAt: command.meta.createdAt,
+      };
+      return commit(staleExport(state), command, {
+        referralPlans: existing
+          ? state.referralPlans.map((item) => item.id === existing.id ? plan : item)
+          : [...state.referralPlans, plan],
+        caseRevision: state.caseRevision + 1,
+      }, "referral_plan_saved", [plan.id, plan.providerId], plan.planningStatus);
+    }
+    case "update_referral_plan_status": {
+      const plan = state.referralPlans.find((item) => item.id === command.referralPlanId);
+      if (!plan) throw new Error("referral_plan_not_found");
+      if (plan.planningStatus === "cancelled" && command.planningStatus !== "cancelled") {
+        throw new Error("referral_plan_cancelled");
+      }
+      if (
+        command.planningStatus === "planned_for_manual_follow_up" &&
+        (!plan.consentConfirmed || !plan.safeContactAcknowledged)
+      ) {
+        throw new Error("referral_consent_required");
+      }
+      return commit(staleExport(state), command, {
+        referralPlans: state.referralPlans.map((item) =>
+          item.id === command.referralPlanId
+            ? { ...item, planningStatus: command.planningStatus, updatedAt: command.meta.createdAt }
+            : item,
+        ),
+        caseRevision: state.caseRevision + 1,
+      }, "referral_plan_status_changed", [command.referralPlanId], command.planningStatus);
     }
     case "review_coverage_issue": {
       const issue = state.coverage.issues.find((item) => item.id === command.intent.issueId);
@@ -745,6 +1039,134 @@ function staleExport(state: CaseState): CaseState {
   return { ...state, exportGate: null, currentExportId: null, currentExportManifest: null, exportedRevision: null };
 }
 
+function nextRecordId<T extends { id: string }>(items: T[], prefix: string) {
+  const max = items.reduce((value, item) => {
+    const match = new RegExp(`^${prefix}-(\\d+)$`).exec(item.id);
+    return match ? Math.max(value, Number(match[1])) : value;
+  }, 0);
+  return `${prefix}-${max + 1}`;
+}
+
+function validateCandidateAndCitationLinks(
+  state: CaseState,
+  candidateIds: string[],
+  citationIds: string[],
+) {
+  const candidates = new Set(state.candidates.map((candidate) => candidate.id));
+  const citations = new Set(state.citations.map((citation) => citation.id));
+  if (candidateIds.some((id) => !candidates.has(id))) {
+    throw new Error("linked_candidate_not_found");
+  }
+  if (citationIds.some((id) => !citations.has(id))) {
+    throw new Error("linked_citation_not_found");
+  }
+}
+
+function validateNoteLinks(state: CaseState, entityIds: string[]) {
+  const known = new Set([
+    ...state.candidates.map((candidate) => candidate.id),
+    ...state.urgentNeeds.map((need) => need.id),
+    ...state.interviewQuestions.map((question) => question.id),
+    ...state.caseTasks.map((task) => task.id),
+    ...state.referralPlans.map((plan) => plan.id),
+    ...serviceProviderDirectory.map((provider) => provider.id),
+  ]);
+  if (entityIds.some((id) => !known.has(id))) throw new Error("linked_entity_not_found");
+}
+
+function validatePlanningSourceReference(
+  state: CaseState,
+  source: { sourceType: string; sourceId: string | null },
+) {
+  if (source.sourceType === "manual") {
+    if (source.sourceId !== null) throw new Error("planning_source_reference_invalid");
+    return;
+  }
+  if (!source.sourceId) throw new Error("planning_source_reference_invalid");
+  if (source.sourceType === "context_gap") {
+    const candidate = state.candidates.find((item) => item.id === source.sourceId);
+    if (!candidate || candidate.kind !== "context_gap") throw new Error("context_gap_not_found");
+    return;
+  }
+  if (source.sourceType === "urgent_need") {
+    if (!state.urgentNeeds.some((need) => need.id === source.sourceId)) {
+      throw new Error("urgent_need_not_found");
+    }
+    return;
+  }
+  if (source.sourceType === "referral") {
+    if (!state.referralPlans.some((plan) => plan.id === source.sourceId)) {
+      throw new Error("referral_plan_not_found");
+    }
+  }
+}
+
+function validateRestoredPlanningReferences(state: CaseState) {
+  for (const need of state.urgentNeeds) {
+    validateCandidateAndCitationLinks(state, need.linkedCandidateIds, need.linkedCitationIds);
+  }
+  for (const question of state.interviewQuestions) {
+    if (question.linkedGapCandidateId) {
+      const candidate = state.candidates.find((item) => item.id === question.linkedGapCandidateId);
+      if (!candidate || candidate.kind !== "context_gap") throw new Error("context_gap_not_found");
+    }
+    validatePlanningSourceReference(state, question.source);
+  }
+  for (const task of state.caseTasks) {
+    if (task.origin === "manual" && task.originId !== null) throw new Error("task_origin_invalid");
+    if (task.origin !== "manual" && task.originId === null) throw new Error("task_origin_invalid");
+    if (task.origin === "context_gap" && task.originId) {
+      const candidate = state.candidates.find((item) => item.id === task.originId);
+      if (!candidate || candidate.kind !== "context_gap") throw new Error("context_gap_not_found");
+    }
+    if (task.origin === "urgent_need" && task.originId && !state.urgentNeeds.some((need) => need.id === task.originId)) {
+      throw new Error("urgent_need_not_found");
+    }
+    if (
+      task.origin === "interview_question" &&
+      task.originId &&
+      !state.interviewQuestions.some((question) => question.id === task.originId)
+    ) {
+      throw new Error("interview_question_not_found");
+    }
+    if (task.origin === "referral" && task.originId && !state.referralPlans.some((plan) => plan.id === task.originId)) {
+      throw new Error("referral_plan_not_found");
+    }
+    validatePlanningSourceReference(state, task.source);
+  }
+  for (const note of state.practitionerNotes) {
+    validateNoteLinks(state, note.linkedEntityIds);
+  }
+  for (const plan of state.referralPlans) {
+    if (!serviceProviderDirectory.some((provider) => provider.id === plan.providerId)) {
+      throw new Error("service_provider_not_found");
+    }
+  }
+}
+
+function requireCurrentContextGap(state: CaseState, gapId: string) {
+  const run = state.analysisRuns.find((item) => item.id === state.activeAnalysisRunId);
+  if (!run || run.status !== "succeeded") throw new Error("active_successful_run_required");
+  if (!analysisRunInputMatchesState(state, run)) throw new Error("context_gap_source_stale");
+  const gap = state.candidates.find((candidate) => candidate.id === gapId);
+  if (!gap || gap.kind !== "context_gap") throw new Error("context_gap_not_found");
+  if (gap.analysisRunId !== run.id) throw new Error("context_gap_source_stale");
+  if (gap.inclusionStatus !== "active") throw new Error("context_gap_not_current");
+  return gap;
+}
+
+function validatePlanningQuestion(body: string) {
+  const normalized = body.toLowerCase();
+  if (
+    /\bisn'?t it true\b/.test(normalized) ||
+    /\byou were forced\b/.test(normalized) ||
+    /\byou lied\b/.test(normalized) ||
+    /\bwhy didn'?t you\b/.test(normalized)
+  ) {
+    throw new Error("question_not_trauma_informed");
+  }
+}
+
 function isPendingTerminal(type: CaseCommand["type"]) {
   return [
     "complete_live_analysis",
@@ -989,6 +1411,12 @@ export function toPersistedCaseState(state: CaseState, now = isoNow()): Persiste
     candidates: state.candidates,
     reviews: state.reviews,
     dependencyChanges: state.dependencyChanges,
+    urgentNeeds: state.urgentNeeds,
+    interviewSetup: state.interviewSetup,
+    interviewQuestions: state.interviewQuestions,
+    caseTasks: state.caseTasks,
+    practitionerNotes: state.practitionerNotes,
+    referralPlans: state.referralPlans,
     audit: state.audit,
     exportGate: state.exportGate,
     exports: state.exports,
@@ -1017,18 +1445,50 @@ export function restoreCaseState(serialized: string): RestoreResult {
     return { ok: false, reason: "persisted_payload_too_large", resetState: createInitialCaseState() };
   }
   try {
-    const parsed = JSON.parse(serialized) as PersistedCaseState;
-    if (parsed.storageKey !== CASE_STATE_STORAGE_KEY || parsed.caseId !== "CFN-DEMO-001" || parsed.fixtureVersion !== VERSION || parsed.schemaVersion !== VERSION) {
+    const raw = JSON.parse(serialized) as unknown;
+    if (!raw || typeof raw !== "object" || Array.isArray(raw)) {
+      return { ok: false, reason: "persisted_json_invalid", resetState: createInitialCaseState() };
+    }
+    const rawRecord = raw as Record<string, unknown>;
+    if (
+      rawRecord.storageKey !== CASE_STATE_STORAGE_KEY ||
+      rawRecord.caseId !== "CFN-DEMO-001" ||
+      rawRecord.fixtureVersion !== VERSION ||
+      rawRecord.schemaVersion !== VERSION ||
+      rawRecord.canonicalFixtureDigest !== cfnDemoFixture.canonicalFixtureDigest
+    ) {
       return { ok: false, reason: "persisted_fixture_mismatch", resetState: createInitialCaseState() };
     }
+    const planningDefaults = createInitialPlanningState(
+      typeof rawRecord.lastUpdatedAt === "string" ? rawRecord.lastUpdatedAt : isoNow(),
+    );
+    const persistedResult = PersistedCaseStateSchema.safeParse({
+      ...rawRecord,
+      urgentNeeds: rawRecord.urgentNeeds ?? planningDefaults.urgentNeeds,
+      interviewSetup: rawRecord.interviewSetup ?? planningDefaults.interviewSetup,
+      interviewQuestions: rawRecord.interviewQuestions ?? planningDefaults.interviewQuestions,
+      caseTasks: rawRecord.caseTasks ?? planningDefaults.caseTasks,
+      practitionerNotes: rawRecord.practitionerNotes ?? planningDefaults.practitionerNotes,
+      referralPlans: rawRecord.referralPlans ?? planningDefaults.referralPlans,
+    });
+    if (!persistedResult.success) {
+      return { ok: false, reason: "persisted_schema_invalid", resetState: createInitialCaseState() };
+    }
+    const parsed = persistedResult.data;
     if (parsed.documents.some((document) => document.dataOrigin === "browser_local")) {
       return { ok: false, reason: "browser_local_state_not_persisted", resetState: createInitialCaseState() };
     }
     const replacedGuidanceIdentity =
       parsed.guidancePack.version !== bundledGuidancePack.identity.version ||
       parsed.guidancePack.digest !== bundledGuidancePack.identity.digest;
-    const state = withDerivedStatus({
-      ...parsed,
+    const {
+      storageKey: _storageKey,
+      persistedAt: _persistedAt,
+      canonicalFixtureDigest: _canonicalFixtureDigest,
+      ...caseProjection
+    } = parsed;
+    const caseResult = CaseStateSchema.safeParse({
+      ...caseProjection,
       caseStatus: "draft",
       segments: trustedSegments(),
       pendingLiveAnalysis: null,
@@ -1038,7 +1498,20 @@ export function restoreCaseState(serialized: string): RestoreResult {
       currentExportId: replacedGuidanceIdentity ? null : parsed.currentExportId,
       currentExportManifest: replacedGuidanceIdentity ? null : parsed.currentExportManifest,
       exportedRevision: replacedGuidanceIdentity ? null : parsed.exportedRevision,
-    } as CaseState);
+    });
+    if (!caseResult.success) {
+      return { ok: false, reason: "case_state_schema_invalid", resetState: createInitialCaseState() };
+    }
+    const stateResult = CaseStateSchema.safeParse(withDerivedStatus(caseResult.data));
+    if (!stateResult.success) {
+      return { ok: false, reason: "case_state_schema_invalid", resetState: createInitialCaseState() };
+    }
+    const state = stateResult.data;
+    try {
+      validateRestoredPlanningReferences(state);
+    } catch {
+      return { ok: false, reason: "planning_reference_invalid", resetState: createInitialCaseState() };
+    }
     return { ok: true, state, replacedGuidanceIdentity };
   } catch {
     return { ok: false, reason: "persisted_json_invalid", resetState: createInitialCaseState() };
