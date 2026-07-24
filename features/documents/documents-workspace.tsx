@@ -585,10 +585,14 @@ export function DocumentsWorkspace({
   return (
     <div className="grid min-w-0 gap-5">
       <header className="grid gap-1">
-        <p className="cfn-type-label text-[var(--color-brand)]">Step 2 of 4</p>
-        <h1 className="cfn-type-heading-1">Prepare documents</h1>
+        <p className="font-mono text-[10px] uppercase tracking-[0.18em] text-[var(--color-ink-muted)]">
+          Stage 2 · Intake
+        </p>
+        <h1 className="cfn-type-heading-1">Documents &amp; Source Health</h1>
         <p className="max-w-3xl text-sm text-[var(--color-ink-muted)]">
-          Add one or more PDFs. The browser checks readability first; analysis begins only when you explicitly start it.
+          Every selected source reports what was processed, what remains
+          unreadable, and which limitations require practitioner review.
+          Analysis begins only when you explicitly start it.
         </p>
       </header>
 

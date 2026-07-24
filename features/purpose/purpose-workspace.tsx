@@ -96,23 +96,41 @@ export function PurposeWorkspace() {
     && state.purposeBrief.providerSelection.releaseConfigurationId === "prepared-replay-v1";
 
   return (
-    <div className="mx-auto grid w-full max-w-5xl gap-5">
-      <header className="grid gap-1 border-b border-[var(--color-border)] pb-4">
-        <p className="cfn-type-label text-[var(--color-ink-muted)]">Step 1 of 4 · Purpose</p>
-        <h2 className="cfn-type-heading-2">Case Purpose Brief</h2>
-        <p className="max-w-[760px]">
-          Tell us who is preparing the handoff and why. Save this brief, then continue directly to Documents.
+    <div className="mx-auto grid w-full max-w-6xl gap-5">
+      <header className="grid gap-2 border-b border-[var(--color-border)] pb-5">
+        <p className="font-mono text-[11px] font-semibold uppercase tracking-[0.18em] text-[var(--color-ink-muted)]">
+          Stage 1 · Intake
+        </p>
+        <h2 className="cfn-type-heading-2">Purpose Brief</h2>
+        <p className="max-w-[760px] text-[var(--color-ink-muted)]">
+          Record why this review is being prepared, who will receive it, and which decisions remain
+          with a qualified practitioner.
         </p>
       </header>
 
       <section
         aria-label="Test workspace summary"
-        className="rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface-subtle)] px-4 py-3"
+        className="overflow-hidden rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface)]"
       >
-        <dl className="grid gap-3 text-sm sm:grid-cols-3">
-          <div><dt className="cfn-type-label">Workspace</dt><dd>CFN-DEMO-001 · Fictional testing only</dd></div>
-          <div><dt className="cfn-type-label">Data boundary</dt><dd>No real or private data</dd></div>
-          <div><dt className="cfn-type-label">Next</dt><dd>Select fictional or hackathon test PDFs in Documents</dd></div>
+        <dl className="grid text-sm sm:grid-cols-3 sm:divide-x sm:divide-[var(--color-border)]">
+          <div className="border-b border-[var(--color-border)] px-4 py-3 sm:border-b-0">
+            <dt className="font-mono text-[10px] font-semibold uppercase tracking-[0.16em] text-[var(--color-ink-muted)]">
+              Workspace
+            </dt>
+            <dd className="mt-1 font-semibold">CFN-DEMO-001 · Fictional testing only</dd>
+          </div>
+          <div className="border-b border-[var(--color-border)] px-4 py-3 sm:border-b-0">
+            <dt className="font-mono text-[10px] font-semibold uppercase tracking-[0.16em] text-[var(--color-ink-muted)]">
+              Data boundary
+            </dt>
+            <dd className="mt-1 font-semibold">No real or private data</dd>
+          </div>
+          <div className="px-4 py-3">
+            <dt className="font-mono text-[10px] font-semibold uppercase tracking-[0.16em] text-[var(--color-ink-muted)]">
+              Next
+            </dt>
+            <dd className="mt-1 font-semibold">Review source health in Documents</dd>
+          </div>
         </dl>
       </section>
 
@@ -160,10 +178,12 @@ export function PurposeWorkspace() {
         </Alert>
       ) : null}
 
-      <Card className="flex flex-col items-start justify-between gap-3 border-dashed sm:flex-row sm:items-center">
+      <Card className="grid gap-3 border-dashed lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center">
         <div className="max-w-2xl">
-          <p className="cfn-type-label text-[var(--color-ink-muted)]">Optional judging shortcut</p>
-          <h3 className="cfn-type-heading-3">Jump to a prepared Review checkpoint</h3>
+          <p className="font-mono text-[10px] font-semibold uppercase tracking-[0.16em] text-[var(--color-ink-muted)]">
+            Optional judging shortcut
+          </p>
+          <h3 className="mt-1 cfn-type-heading-3">Jump to a prepared Review checkpoint</h3>
           <p className="cfn-type-body-small text-[var(--color-ink-muted)]">
             Skip the normal Purpose and Documents journey only when demonstrating the Review workspace.
             This uses a trusted local replay and sends nothing externally.
