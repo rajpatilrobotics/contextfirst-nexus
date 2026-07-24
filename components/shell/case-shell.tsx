@@ -82,7 +82,7 @@ export const WORKSPACE_NAVIGATION: readonly WorkspaceNavigationItem[] = [
   },
   {
     group: "Analysis",
-    href: "/case/demo/review#review-workspace",
+    href: "/case/demo/analysis",
     icon: Search,
     id: "structured-analysis",
     label: "Structured Analysis",
@@ -195,6 +195,7 @@ function commandMeta(state: CaseState): CaseCommand["meta"] {
 export function deriveCurrentStep(pathname: string | null | undefined): StepId {
   const path = pathname ?? "";
   if (path.includes("/intake")) return "documents";
+  if (path.includes("/analysis")) return "analysis";
   if (path.includes("/review")) {
     if (path.includes("#nexus") || path.includes("#timeline")) return "review";
     return "analysis";
@@ -464,6 +465,22 @@ function CaseShellContent({
             {STEP_NAVIGATION.map((step) => {
               const progress = deriveStepProgress(step.id, state);
               const isCurrent = step.id === currentStep;
+              const stepLabel = (
+                <>
+                  <span
+                    className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full border font-mono text-[10px] ${
+                      isCurrent
+                        ? "border-[var(--amber)]"
+                        : "border-[var(--color-border-strong)]"
+                    }`}
+                  >
+                    {step.index}
+                  </span>
+                  <span className="truncate font-mono text-[10px] uppercase tracking-[0.12em]">
+                    {step.label}
+                  </span>
+                </>
+              );
               return (
                 <li
                   aria-current={isCurrent ? "step" : undefined}
@@ -474,20 +491,17 @@ function CaseShellContent({
                   }`}
                   key={step.id}
                 >
-                  <div className="flex items-center gap-2">
-                    <span
-                      className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full border font-mono text-[10px] ${
-                        isCurrent
-                          ? "border-[var(--amber)]"
-                          : "border-[var(--color-border-strong)]"
-                      }`}
+                  {step.id === "analysis" ? (
+                    <a
+                      aria-label="Open Structured Analysis"
+                      className="flex items-center gap-2 text-[var(--color-ink)] no-underline"
+                      href="/case/demo/analysis"
                     >
-                      {step.index}
-                    </span>
-                    <span className="truncate font-mono text-[10px] uppercase tracking-[0.12em]">
-                      {step.label}
-                    </span>
-                  </div>
+                      {stepLabel}
+                    </a>
+                  ) : (
+                    <div className="flex items-center gap-2">{stepLabel}</div>
+                  )}
                   <div className="mt-1 pl-8">
                     <NavigationProgressStatus value={progress} />
                   </div>
@@ -564,6 +578,7 @@ function CaseShellContent({
 
 function deriveActiveDestination(path: string): WorkspaceNavigationItem["id"] {
   if (path.includes("/intake")) return "documents";
+  if (path.includes("/analysis")) return "structured-analysis";
   if (path.includes("/export")) return "export";
   if (path.includes("#context-gaps-heading")) return "evidence-gaps";
   if (path.includes("#nexus")) return "integrity-map";

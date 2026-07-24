@@ -238,8 +238,8 @@ describe("TASK-017 landing boundary screen", () => {
 describe("TASK-017 case shell", () => {
   it("renders the persistent banner, six-stage tracker, case identity, and truthful workspace navigation", () => {
     render(
-      <CaseShell currentPath="/case/demo/review" initialState={createInitialCaseState(NOW)}>
-        <h2>Review child route</h2>
+      <CaseShell currentPath="/case/demo/analysis" initialState={createInitialCaseState(NOW)}>
+        <h2>Structured Analysis child route</h2>
       </CaseShell>,
     );
 
@@ -271,6 +271,9 @@ describe("TASK-017 case shell", () => {
     expect(within(tracker).getByRole("listitem", { current: "step" })).toHaveTextContent(
       "Analysis",
     );
+    expect(
+      within(tracker).getByRole("link", { name: "Open Structured Analysis" }),
+    ).toHaveAttribute("href", "/case/demo/analysis");
 
     const nav = screen.getByRole("navigation", { name: "Case workspace" });
     expect(nav.closest("aside")).not.toBeNull();
@@ -284,6 +287,10 @@ describe("TASK-017 case shell", () => {
     expect(within(nav).getByRole("link", { name: "Structured Analysis" })).toHaveAttribute(
       "aria-current",
       "page",
+    );
+    expect(within(nav).getByRole("link", { name: "Structured Analysis" })).toHaveAttribute(
+      "href",
+      "/case/demo/analysis",
     );
     for (const item of WORKSPACE_NAVIGATION.filter((entry) => entry.href === null)) {
       expect(within(nav).getByText(item.label).closest("[aria-disabled='true']")).not.toBeNull();
@@ -299,6 +306,7 @@ describe("TASK-017 case shell", () => {
     const checkpoint = checkpointState();
 
     expect(deriveCurrentStep("/case/demo/intake")).toBe("documents");
+    expect(deriveCurrentStep("/case/demo/analysis")).toBe("analysis");
     expect(deriveCurrentStep("/case/demo/review")).toBe("analysis");
     expect(deriveCurrentStep("/case/demo/review#nexus")).toBe("review");
     expect(deriveStepProgress("purpose", initial)).toBe("active");
