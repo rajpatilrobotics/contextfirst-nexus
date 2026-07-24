@@ -2,7 +2,6 @@ import { createHash } from "node:crypto";
 import {
   ExportGateSchema,
   ExportManifestSchema,
-  type AnalysisRun,
   type AuditEvent,
   type CaseCandidate,
   type CaseState,
@@ -14,8 +13,10 @@ import {
   type GuidanceCard,
   type ReviewDecision,
 } from "../../contracts";
-import { cfnDemoFixture } from "../../fixtures";
-import { bundledGuidancePack } from "../../guidance";
+import {
+  analysisRunInputMatchesState,
+  selectSuccessfulActiveAnalysisRun,
+} from "../../analysis/freshness";
 
 const MANIFEST_SCHEMA_VERSION = "1.0.0" as const;
 const REVIEWED_HASH_PROJECTION_VERSION = "1.0.0" as const;
@@ -97,35 +98,6 @@ function activeReviewedCandidates(state: CaseState) {
     (candidate) =>
       candidate.kind !== "context_gap" &&
       (candidate.reviewStatus === "human_accepted" || candidate.reviewStatus === "human_edited"),
-  );
-}
-
-function latestSuccessfulActiveRun(state: CaseState): AnalysisRun | null {
-  const activeRuns = state.analysisRuns.filter((run) => run.id === state.activeAnalysisRunId);
-  if (activeRuns.length !== 1) return null;
-  const [run] = activeRuns;
-  return run.status === "succeeded" ? run : null;
-}
-
-function sameOrderedStrings(left: string[], right: string[]) {
-  return left.length === right.length && left.every((value, index) => value === right[index]);
-}
-
-function currentRunInputMatchesState(state: CaseState, run: AnalysisRun) {
-  if (!state.purposeBrief) return false;
-  return (
-    run.inputState.purposeBriefId === state.purposeBrief.id &&
-    run.inputState.purposeBriefRevision === state.purposeBrief.revision &&
-    run.inputState.maskingRevision === state.masking.revision &&
-    sameOrderedStrings(run.inputState.selectedSegmentIds, state.selectedSegmentIds) &&
-    run.inputState.approvedRedactedInputDigest === cfnDemoFixture.approvedRedactedInputDigest &&
-    run.inputState.canonicalFixtureDigest === cfnDemoFixture.canonicalFixtureDigest &&
-    run.fixtureVersion === state.fixtureVersion &&
-    state.fixtureVersion === cfnDemoFixture.fixtureVersion &&
-    state.caseId === cfnDemoFixture.caseId &&
-    run.rulesetVersion === state.guidancePack.version &&
-    state.guidancePack.version === bundledGuidancePack.identity.version &&
-    state.guidancePack.digest === bundledGuidancePack.identity.digest
   );
 }
 
@@ -214,7 +186,7 @@ function buildBlockers(state: CaseState, selection: ExportSelection, options: Ex
   const normalizedSelection = normalizeExportSelection(selection);
   const blockers: ExportBlocker[] = [];
   const purpose = state.purposeBrief;
-  const activeRun = latestSuccessfulActiveRun(state);
+  const activeRun = selectSuccessfulActiveAnalysisRun(state);
   const guidanceCards = options.guidanceCards ?? [];
 
   if (!purpose || purpose.status !== "complete") {
@@ -271,7 +243,7 @@ function buildBlockers(state: CaseState, selection: ExportSelection, options: Ex
   ) {
     blockers.push(blocker("SAFETY_VALIDATION_FAILED", ["analysis"], "A safety validation failure is present.", "Create a clean successful analysis run."));
   }
-  if (!activeRun || !currentRunInputMatchesState(state, activeRun)) {
+  if (!activeRun || !analysisRunInputMatchesState(state, activeRun)) {
     blockers.push(blocker("ANALYSIS_RUN_STALE", [state.activeAnalysisRunId ?? "analysis"], "Active analysis run does not match the current reviewed state.", "Run analysis again for the current state."));
   }
   if (state.exportGate && state.exportGate.caseRevision !== state.caseRevision) {
@@ -290,7 +262,7 @@ function buildBlockers(state: CaseState, selection: ExportSelection, options: Ex
 
 export function evaluateExportGate(state: CaseState, selection: ExportSelection, options: ExportCoreOptions = {}): ExportGate {
   const normalizedSelection = normalizeExportSelection(selection);
-  const activeRun = latestSuccessfulActiveRun(state);
+  const activeRun = selectSuccessfulActiveAnalysisRun(state);
   const blockers = buildBlockers(state, normalizedSelection, options);
   const reusableGate =
     options.previousGate?.status === "ready" &&
@@ -457,7 +429,7 @@ export function createExportManifest(state: CaseState, selection: ExportSelectio
     throw new Error(`Export is blocked: ${gate.blockers.map((entry) => entry.code).join(", ")}`);
   }
   if (!state.purposeBrief) throw new Error("Export is blocked: PURPOSE_INCOMPLETE");
-  const run = latestSuccessfulActiveRun(state);
+  const run = selectSuccessfulActiveAnalysisRun(state);
   if (!run) throw new Error("Export is blocked: ANALYSIS_RUN_STALE");
 
   const selectedCandidates = selectedCandidatesForManifest(state, gate.exportSelection);

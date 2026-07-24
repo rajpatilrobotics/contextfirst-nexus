@@ -5,8 +5,8 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import Home from "../../../app/page";
 import {
   CaseShell,
-  STEP_NAVIGATION,
   SYNTHETIC_BANNER_TEXT,
+  WORKSPACE_NAVIGATION,
   deriveCurrentStep,
   deriveStepProgress,
   describeRunProvenance,
@@ -142,6 +142,16 @@ function checkpointState() {
   return result.state;
 }
 
+function readyPreAnalysisState(): CaseState {
+  return {
+    ...checkpointState(),
+    activeAnalysisRunId: null,
+    analysisRuns: [],
+    candidates: [],
+    citations: [],
+  };
+}
+
 function SharedRouteChild() {
   const { state, dispatchCaseCommand } = useCaseState();
   const [result, setResult] = useState("not-run");
@@ -196,20 +206,37 @@ describe("TASK-017 landing boundary screen", () => {
   it("presents purpose, audience, synthetic-only boundary, prohibited decisions, and demo links", () => {
     render(<Home />);
 
-    expect(screen.getByRole("heading", { level: 1, name: "ContextFirst Nexus" })).toBeInTheDocument();
-    expect(screen.getByText(/qualified practitioners prepare source-grounded case handoffs/i)).toBeInTheDocument();
-    expect(screen.getByText(/legal aid, public defender, NGO legal/i)).toBeInTheDocument();
-    expect(screen.getByText(/fictional adult demo case CFN-DEMO-001/i)).toBeInTheDocument();
-    expect(screen.getByText(/does not determine trafficking status, credibility, guilt, legal eligibility/i)).toBeInTheDocument();
-    expect(screen.getByText(/not a survivor chatbot, emergency service, reporting channel/i)).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Start demo" })).toHaveAttribute("href", "/case/demo/purpose");
-    expect(screen.getByRole("link", { name: "Trust and Safety" })).toHaveAttribute("href", "/trust");
-    expect(screen.queryByText(/upload/i)).toHaveTextContent("Do not upload, paste, or enter real case data.");
+    expect(
+      screen.getByRole("heading", {
+        level: 1,
+        name: /Source-grounded case preparation for forced-criminality matters/i,
+      }),
+    ).toBeInTheDocument();
+    expect(screen.getByText(/Qualified practitioners preparing complex cases/i)).toBeInTheDocument();
+    expect(screen.getByText(/fictional adult fixture CFN-DEMO-001/i)).toBeInTheDocument();
+    expect(
+      screen.getByText(/does not decide trafficking status, credibility, guilt, eligibility/i),
+    ).toBeInTheDocument();
+    expect(screen.getByText(/Not survivor-facing crisis support/i)).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Start demonstration" })).toHaveAttribute(
+      "href",
+      "/dashboard",
+    );
+    const dashboardLinks = screen.getAllByRole("link", { name: /Open case dashboard/i });
+    expect(dashboardLinks.length).toBeGreaterThan(0);
+    for (const link of dashboardLinks) {
+      expect(link).toHaveAttribute("href", "/dashboard");
+    }
+    expect(screen.getByRole("link", { name: "How safety works" })).toHaveAttribute(
+      "href",
+      "/trust",
+    );
+    expect(screen.getByText(/Do not upload, paste, or enter real case data/i)).toBeInTheDocument();
   });
 });
 
 describe("TASK-017 case shell", () => {
-  it("renders the persistent banner, landmarks, case identity, and exact navigation order", () => {
+  it("renders the persistent banner, six-stage tracker, case identity, and truthful workspace navigation", () => {
     render(
       <CaseShell currentPath="/case/demo/review" initialState={createInitialCaseState(NOW)}>
         <h2>Review child route</h2>
@@ -218,35 +245,49 @@ describe("TASK-017 case shell", () => {
 
     expect(screen.getByText(SYNTHETIC_BANNER_TEXT)).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Skip to case workspace" })).toHaveAttribute("href", "#case-workspace");
+    expect(screen.getByText("REF-2024-0047-SYN")).toBeInTheDocument();
     expect(screen.getByText("CFN-DEMO-001")).toBeInTheDocument();
-    expect(screen.getByText("1.0.0")).toBeInTheDocument();
-    expect(screen.getByText("Current section").nextElementSibling).toHaveTextContent("Review");
+    expect(screen.getByText("Current section").nextElementSibling).toHaveTextContent("Analysis");
     expect(screen.getByLabelText(/Case status: Draft/i)).toBeInTheDocument();
     expect(screen.getByText("Analysis status").nextElementSibling).toHaveTextContent("Not started");
     expect(screen.queryByText("Mode", { selector: "dt" })).not.toBeInTheDocument();
     expect(screen.queryByText("Provider", { selector: "dt" })).not.toBeInTheDocument();
     expect(screen.queryByText("Model", { selector: "dt" })).not.toBeInTheDocument();
 
-    const nav = screen.getByRole("navigation", { name: "Case steps" });
-    expect(nav.closest("aside")).toBeNull();
-    expect(within(nav).getByRole("list")).toHaveClass(
-      "grid-cols-2",
-      "min-[520px]:grid-cols-4",
+    const tracker = screen.getByRole("region", { name: "Six-stage case progress" });
+    expect(within(tracker).getAllByRole("listitem")).toHaveLength(6);
+    expect(
+      within(tracker)
+        .getAllByRole("listitem")
+        .map((item) => item.textContent?.replace(/\s+/g, " ").trim()),
+    ).toEqual([
+      "1PurposeIn progress",
+      "2DocumentsNot started",
+      "3AnalysisNot started",
+      "4PlanningNot started",
+      "5ReviewNot started",
+      "6ExportNot started",
+    ]);
+    expect(within(tracker).getByRole("listitem", { current: "step" })).toHaveTextContent(
+      "Analysis",
     );
+
+    const nav = screen.getByRole("navigation", { name: "Case workspace" });
+    expect(nav.closest("aside")).not.toBeNull();
     expect(
       nav.compareDocumentPosition(screen.getByRole("main")) & Node.DOCUMENT_POSITION_FOLLOWING,
     ).toBeTruthy();
     const links = within(nav).getAllByRole("link");
-    expect(links.map((link) => link.textContent?.replace(/\s+/g, " ").trim())).toEqual([
-      "Purpose In progress",
-      "Documents Not started",
-      "Review Not started",
-      "Export Not started",
-    ]);
     expect(links.map((link) => link.getAttribute("href"))).toEqual(
-      STEP_NAVIGATION.map((step) => step.href),
+      WORKSPACE_NAVIGATION.flatMap((item) => item.href ?? []),
     );
-    expect(within(nav).getByRole("link", { name: /Review/ })).toHaveAttribute("aria-current", "step");
+    expect(within(nav).getByRole("link", { name: "Structured Analysis" })).toHaveAttribute(
+      "aria-current",
+      "page",
+    );
+    for (const item of WORKSPACE_NAVIGATION.filter((entry) => entry.href === null)) {
+      expect(within(nav).getByText(item.label).closest("[aria-disabled='true']")).not.toBeNull();
+    }
   });
 
   it("derives journey progress from canonical case state instead of the current URL", () => {
@@ -258,14 +299,88 @@ describe("TASK-017 case shell", () => {
     const checkpoint = checkpointState();
 
     expect(deriveCurrentStep("/case/demo/intake")).toBe("documents");
+    expect(deriveCurrentStep("/case/demo/review")).toBe("analysis");
+    expect(deriveCurrentStep("/case/demo/review#nexus")).toBe("review");
     expect(deriveStepProgress("purpose", initial)).toBe("active");
     expect(deriveStepProgress("documents", initial)).toBe("pending");
+    expect(deriveStepProgress("analysis", initial)).toBe("pending");
+    expect(deriveStepProgress("planning", initial)).toBe("pending");
     expect(deriveStepProgress("purpose", purposeReady)).toBe("completed");
     expect(deriveStepProgress("documents", purposeReady)).toBe("active");
     expect(deriveStepProgress("purpose", checkpoint)).toBe("completed");
     expect(deriveStepProgress("documents", checkpoint)).toBe("completed");
+    expect(deriveStepProgress("analysis", checkpoint)).toBe("completed");
     expect(deriveStepProgress("review", checkpoint)).toBe("warning");
     expect(deriveStepProgress("export", checkpoint)).toBe("pending");
+  });
+
+  it("keeps Documents complete and makes Analysis ready after document preparation", () => {
+    const state = readyPreAnalysisState();
+
+    expect(deriveStepProgress("documents", state)).toBe("completed");
+    expect(deriveStepProgress("analysis", state)).toBe("active");
+  });
+
+  it("keeps processed documents active until masking preparation is complete", () => {
+    const ready = readyPreAnalysisState();
+    const state: CaseState = {
+      ...ready,
+      masking: createInitialCaseState(NOW).masking,
+    };
+
+    expect(deriveStepProgress("documents", state)).toBe("active");
+    expect(deriveStepProgress("analysis", state)).toBe("pending");
+  });
+
+  it("keeps Analysis pending when document preparation has failed", () => {
+    const ready = readyPreAnalysisState();
+    const state: CaseState = {
+      ...ready,
+      processing: ready.processing.map((stage) =>
+        stage.name === "text_extraction"
+          ? {
+              ...stage,
+              status: "failed",
+              completedAt: undefined,
+              errorCode: "SOURCE_UNAVAILABLE",
+              retryable: true,
+            }
+          : stage,
+      ),
+    };
+
+    expect(deriveStepProgress("documents", state)).toBe("failed");
+    expect(deriveStepProgress("analysis", state)).toBe("pending");
+  });
+
+  it("shows only Analysis active while a ready analysis is pending", () => {
+    const ready = readyPreAnalysisState();
+    const state: CaseState = {
+      ...ready,
+      processing: ready.processing.map((stage) =>
+        stage.name === "candidate_extraction"
+          ? {
+              ...stage,
+              status: "active",
+              completedAt: undefined,
+            }
+          : stage,
+      ),
+    };
+
+    expect(deriveStepProgress("documents", state)).toBe("completed");
+    expect(deriveStepProgress("analysis", state)).toBe("active");
+  });
+
+  it("completes Analysis for a current successful run with zero candidates", () => {
+    const checkpoint = checkpointState();
+    const state: CaseState = {
+      ...checkpoint,
+      candidates: [],
+    };
+
+    expect(deriveStepProgress("documents", state)).toBe("completed");
+    expect(deriveStepProgress("analysis", state)).toBe("completed");
   });
 
   it("distinguishes running, failed, succeeded, and replay analysis states", () => {
@@ -440,10 +555,11 @@ describe("TASK-017 case shell", () => {
     );
     expect(screen.getByRole("link", { name: /Documents/ })).toHaveAttribute(
       "aria-current",
-      "step",
+      "page",
     );
-    for (const step of STEP_NAVIGATION) {
-      expect(screen.getByRole("link", { name: new RegExp(step.label) })).toBeInTheDocument();
+    expect(screen.getByRole("region", { name: "Six-stage case progress" })).toBeInTheDocument();
+    for (const item of WORKSPACE_NAVIGATION.filter((entry) => entry.href !== null)) {
+      expect(screen.getByRole("link", { name: item.label })).toBeInTheDocument();
     }
   });
 });

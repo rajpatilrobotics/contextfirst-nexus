@@ -1,28 +1,181 @@
 "use client";
 
-import type { ReactNode } from "react";
-import { useMemo, useState } from "react";
+import type { ComponentType, ReactNode } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
-import { RotateCcw } from "lucide-react";
+import {
+  AlertOctagon,
+  CheckSquare,
+  Clock3,
+  FileText,
+  HandHelping,
+  HelpCircle,
+  Home,
+  MessageSquare,
+  Network,
+  NotebookPen,
+  RotateCcw,
+  Search,
+  Send,
+  ShieldCheck,
+} from "lucide-react";
 import { Button } from "../ui";
 import { CaseStatusBadge, NavigationProgressStatus } from "../status";
+import { deriveAnalysisPrerequisites } from "../../features/documents/analysis-prerequisites";
+import { analysisRunInputMatchesState } from "../../lib/analysis/freshness";
 import type { AnalysisRun, CaseCommand, CaseState, StageStatus } from "../../lib/contracts";
-import {
-  deriveCaseStatus,
-} from "../../lib/state";
+import { deriveCaseStatus } from "../../lib/state";
 import { CaseStateProvider, useCaseState } from "./case-state-context";
 
 export const SYNTHETIC_BANNER_TEXT =
-  "Fictional hackathon demo case. Do not upload or enter real case data.";
+  "Bundled fictional M. Chen judge fixture. Do not upload or enter real case data.";
 
 export const STEP_NAVIGATION = [
-  { id: "purpose", label: "Purpose", href: "/case/demo/purpose" },
-  { id: "documents", label: "Documents", href: "/case/demo/intake" },
-  { id: "review", label: "Review", href: "/case/demo/review" },
-  { id: "export", label: "Export", href: "/case/demo/export" },
+  { id: "purpose", label: "Purpose", index: 1 },
+  { id: "documents", label: "Documents", index: 2 },
+  { id: "analysis", label: "Analysis", index: 3 },
+  { id: "planning", label: "Planning", index: 4 },
+  { id: "review", label: "Review", index: 5 },
+  { id: "export", label: "Export", index: 6 },
 ] as const;
 
 type StepId = (typeof STEP_NAVIGATION)[number]["id"];
+type NavigationIcon = ComponentType<{ "aria-hidden"?: boolean | "true"; size?: number }>;
+
+type WorkspaceNavigationItem = {
+  group: "Intake" | "Analysis" | "Planning" | "Review" | "Export";
+  href: string | null;
+  icon: NavigationIcon;
+  id:
+    | "purpose"
+    | "documents"
+    | "structured-analysis"
+    | "urgent-needs"
+    | "evidence-gaps"
+    | "interview"
+    | "services"
+    | "tasks"
+    | "notes"
+    | "integrity-map"
+    | "timeline"
+    | "export";
+  label: string;
+  stage: StepId;
+};
+
+export const WORKSPACE_NAVIGATION: readonly WorkspaceNavigationItem[] = [
+  {
+    group: "Intake",
+    href: "/case/demo/purpose",
+    icon: FileText,
+    id: "purpose",
+    label: "Purpose Brief",
+    stage: "purpose",
+  },
+  {
+    group: "Intake",
+    href: "/case/demo/intake",
+    icon: FileText,
+    id: "documents",
+    label: "Documents & Source Health",
+    stage: "documents",
+  },
+  {
+    group: "Analysis",
+    href: "/case/demo/review#review-workspace",
+    icon: Search,
+    id: "structured-analysis",
+    label: "Structured Analysis",
+    stage: "analysis",
+  },
+  {
+    group: "Analysis",
+    href: null,
+    icon: AlertOctagon,
+    id: "urgent-needs",
+    label: "Urgent Needs",
+    stage: "analysis",
+  },
+  {
+    group: "Analysis",
+    href: "/case/demo/review#context-gaps-heading",
+    icon: HelpCircle,
+    id: "evidence-gaps",
+    label: "Evidence Gaps",
+    stage: "analysis",
+  },
+  {
+    group: "Planning",
+    href: null,
+    icon: MessageSquare,
+    id: "interview",
+    label: "Interview Planner",
+    stage: "planning",
+  },
+  {
+    group: "Planning",
+    href: null,
+    icon: HandHelping,
+    id: "services",
+    label: "Services & Referrals",
+    stage: "planning",
+  },
+  {
+    group: "Planning",
+    href: null,
+    icon: CheckSquare,
+    id: "tasks",
+    label: "Case Tasks",
+    stage: "planning",
+  },
+  {
+    group: "Planning",
+    href: null,
+    icon: NotebookPen,
+    id: "notes",
+    label: "Notes & Journal",
+    stage: "planning",
+  },
+  {
+    group: "Review",
+    href: "/case/demo/review#nexus",
+    icon: Network,
+    id: "integrity-map",
+    label: "Evidence Integrity Map",
+    stage: "review",
+  },
+  {
+    group: "Review",
+    href: "/case/demo/review#timeline",
+    icon: Clock3,
+    id: "timeline",
+    label: "Timeline",
+    stage: "review",
+  },
+  {
+    group: "Export",
+    href: "/case/demo/export",
+    icon: Send,
+    id: "export",
+    label: "Export Gate",
+    stage: "export",
+  },
+] as const;
+
+const NAVIGATION_GROUPS = ["Intake", "Analysis", "Planning", "Review", "Export"] as const;
+const DOCUMENT_PREPARATION_STAGES = new Set([
+  "intake_validation",
+  "text_extraction",
+  "coverage_calculation",
+  "identifier_masking",
+]);
+const DOCUMENT_PREREQUISITE_IDS = new Set([
+  "sources",
+  "coverage",
+  "candidate-sources",
+  "masking",
+  "leak-scan",
+]);
 
 function nowIso() {
   return new Date().toISOString();
@@ -41,14 +194,39 @@ function commandMeta(state: CaseState): CaseCommand["meta"] {
 
 export function deriveCurrentStep(pathname: string | null | undefined): StepId {
   const path = pathname ?? "";
-  return STEP_NAVIGATION.find((step) => path.startsWith(step.href))?.id ?? "purpose";
+  if (path.includes("/intake")) return "documents";
+  if (path.includes("/review")) {
+    if (path.includes("#nexus") || path.includes("#timeline")) return "review";
+    return "analysis";
+  }
+  if (path.includes("/export")) return "export";
+  return "purpose";
 }
 
 export function deriveStepProgress(stepId: StepId, state: CaseState): StageStatus {
   const purposeComplete = state.purposeBrief?.status === "complete";
   const activeRun = state.analysisRuns.find((run) => run.id === state.activeAnalysisRunId) ?? null;
-  const analysisSucceeded = activeRun?.status === "succeeded" && state.candidates.length > 0;
-  const processingFailed = state.processing.some((stage) => stage.status === "failed");
+  const prerequisites = deriveAnalysisPrerequisites(state);
+  const documentPreparation = state.processing.filter((stage) =>
+    DOCUMENT_PREPARATION_STAGES.has(stage.name),
+  );
+  const documentPreparationStarted =
+    state.documents.length > 0 || documentPreparation.length > 0;
+  const documentPreparationFailed = documentPreparation.some(
+    (stage) => stage.status === "failed",
+  );
+  const documentsReady = prerequisites.items
+    .filter((item) => DOCUMENT_PREREQUISITE_IDS.has(item.id))
+    .every((item) => item.satisfied);
+  const analysisPending =
+    Boolean(state.pendingLiveAnalysis) ||
+    state.processing.some(
+      (stage) => stage.name === "candidate_extraction" && stage.status === "active",
+    );
+  const analysisSucceeded =
+    !analysisPending &&
+    activeRun?.status === "succeeded" &&
+    analysisRunInputMatchesState(state, activeRun);
   const analysisFailed = activeRun?.status === "failed";
   const reviewPending = state.candidates.some(
     (candidate) =>
@@ -67,9 +245,18 @@ export function deriveStepProgress(stepId: StepId, state: CaseState): StageStatu
 
   if (stepId === "purpose") return purposeComplete ? "completed" : "active";
   if (stepId === "documents") {
-    if (processingFailed || analysisFailed) return "failed";
+    if (documentPreparationFailed) return "failed";
+    if (documentsReady) return "completed";
+    return purposeComplete || documentPreparationStarted ? "active" : "pending";
+  }
+  if (stepId === "analysis") {
+    if (analysisPending) return documentsReady ? "active" : "pending";
+    if (analysisFailed) return "failed";
     if (analysisSucceeded) return "completed";
-    return purposeComplete ? "active" : "pending";
+    return prerequisites.ready ? "active" : "pending";
+  }
+  if (stepId === "planning") {
+    return "pending";
   }
   if (stepId === "review") {
     if (reviewComplete) return "completed";
@@ -95,14 +282,12 @@ export function describeRunProvenance(run: AnalysisRun | null, pending = false) 
       checkpointLabel: null,
     };
   }
-
   if (run.status === "failed") {
     return {
       analysisStatusLabel: "Analysis failed",
       checkpointLabel: null,
     };
   }
-
   if (run.mode === "deterministic_replay") {
     return {
       analysisStatusLabel: run.checkpointProvenance
@@ -113,7 +298,6 @@ export function describeRunProvenance(run: AnalysisRun | null, pending = false) 
         : null,
     };
   }
-
   return {
     analysisStatusLabel: "Analysis complete",
     checkpointLabel: null,
@@ -146,8 +330,19 @@ function CaseShellContent({
   const router = useRouter();
   const { state, dispatchCaseCommand } = useCaseState();
   const [resetMessage, setResetMessage] = useState<string | null>(null);
+  const [currentHash, setCurrentHash] = useState("");
 
-  const currentStep = deriveCurrentStep(currentPath ?? pathname);
+  useEffect(() => {
+    if (currentPath || typeof window === "undefined") return;
+    const syncHash = () => setCurrentHash(window.location.hash);
+    syncHash();
+    window.addEventListener("hashchange", syncHash);
+    return () => window.removeEventListener("hashchange", syncHash);
+  }, [currentPath, pathname]);
+
+  const activePath = currentPath ?? `${pathname ?? ""}${currentHash}`;
+  const currentStep = deriveCurrentStep(activePath);
+  const activeDestination = deriveActiveDestination(activePath);
   const caseStatus = deriveCaseStatus(state);
   const activeRun = useMemo(
     () => state.analysisRuns.find((run) => run.id === state.activeAnalysisRunId) ?? null,
@@ -179,48 +374,74 @@ function CaseShellContent({
       >
         Skip to case workspace
       </a>
-      <div className="sticky top-0 z-40 border-b border-[var(--color-border)] bg-[var(--color-surface)] shadow-sm">
-        <div
-          className="border-b border-[var(--color-warning)] bg-[var(--color-warning-subtle)] px-4 py-2 text-center text-xs font-semibold text-[var(--color-warning)] sm:text-sm"
-          role="note"
-        >
-          {SYNTHETIC_BANNER_TEXT}
-        </div>
-        <header className="mx-auto flex w-full max-w-7xl flex-wrap items-center gap-x-4 gap-y-2 px-4 py-3 lg:px-6">
-          <div className="min-w-0 flex-1">
-            <p className="cfn-type-label text-[var(--color-ink-muted)]">
-              Step {STEP_NAVIGATION.findIndex((step) => step.id === currentStep) + 1} of {STEP_NAVIGATION.length}
-            </p>
-            <h1 className="truncate text-lg font-semibold">ContextFirst Nexus</h1>
-          </div>
-          <dl className="order-3 flex w-full flex-wrap items-center gap-x-4 gap-y-2 text-xs sm:order-none sm:w-auto sm:text-sm">
-            <div className="flex items-center gap-1.5">
-              <dt className="sr-only">Case ID</dt>
-              <dd className="cfn-type-code">{state.caseId}</dd>
+      <div
+        className="border-b border-[color-mix(in_oklab,var(--amber)_42%,transparent)] bg-[color-mix(in_oklab,var(--amber)_11%,transparent)] px-4 py-1.5 text-center text-xs font-semibold text-[var(--color-ink)]"
+        role="note"
+      >
+        {SYNTHETIC_BANNER_TEXT}
+      </div>
+      <header className="sticky top-0 z-40 border-b border-[var(--color-border)] bg-[color-mix(in_oklab,var(--color-surface)_94%,transparent)] shadow-sm backdrop-blur">
+        <div className="mx-auto flex w-full max-w-[1600px] flex-wrap items-center gap-3 px-4 py-3 lg:px-6">
+          <a
+            className="mr-auto inline-flex items-baseline gap-2 text-[var(--color-ink)] no-underline"
+            href="/"
+          >
+            <span
+              aria-hidden="true"
+              className="h-2.5 w-2.5 -translate-y-px rounded-full bg-[var(--amber)]"
+            />
+            <span className="font-serif text-base font-semibold">
+              ContextFirst <em className="font-normal text-[var(--color-ink-muted)]">Nexus</em>
+            </span>
+          </a>
+          <dl className="order-3 flex w-full flex-wrap items-center gap-x-4 gap-y-2 text-xs sm:order-none sm:w-auto">
+            <div>
+              <dt className="sr-only">Display case reference</dt>
+              <dd className="font-mono">REF-2024-0047-SYN</dd>
             </div>
-            <div className="flex items-center gap-1.5">
-              <dt className="sr-only">Fixture version</dt>
-              <dd>{state.fixtureVersion}</dd>
+            <div>
+              <dt className="sr-only">Canonical case ID</dt>
+              <dd className="text-[var(--color-ink-muted)]">{state.caseId}</dd>
             </div>
-            <div className="flex items-center gap-1.5 font-semibold">
+            <div>
+              <dt className="sr-only">Assigned practitioner</dt>
+              <dd>M. Chen</dd>
+            </div>
+            <div>
               <dt className="sr-only">Current section</dt>
-              <dd>{STEP_NAVIGATION.find((step) => step.id === currentStep)?.label}</dd>
+              <dd className="font-semibold">
+                {STEP_NAVIGATION.find((step) => step.id === currentStep)?.label}
+              </dd>
             </div>
-            <div className="flex items-center gap-1.5">
+            <div>
               <dt className="sr-only">Case status</dt>
               <dd><CaseStatusBadge value={caseStatus} /></dd>
             </div>
-            <div className="flex items-center gap-1.5 text-[var(--color-ink-muted)]">
+            <div className="text-[var(--color-ink-muted)]">
               <dt className="sr-only">Analysis status</dt>
               <dd>{provenance.analysisStatusLabel}</dd>
             </div>
             {provenance.checkpointLabel ? (
-              <div className="flex items-center gap-1.5 text-[var(--color-ink-muted)]">
+              <div className="text-[var(--color-ink-muted)]">
                 <dt className="sr-only">Checkpoint provenance</dt>
                 <dd>{provenance.checkpointLabel}</dd>
               </div>
             ) : null}
           </dl>
+          <a
+            className="inline-flex min-h-11 items-center gap-1.5 rounded-[var(--radius-control)] border border-[var(--color-border)] px-3 text-xs font-semibold text-[var(--color-ink)] no-underline hover:bg-[var(--color-surface-subtle)]"
+            href="/dashboard"
+          >
+            <Home aria-hidden="true" size={15} />
+            Dashboard
+          </a>
+          <a
+            className="inline-flex min-h-11 items-center gap-1.5 rounded-[var(--radius-control)] border border-[var(--color-border)] px-3 text-xs font-semibold text-[var(--color-ink)] no-underline hover:bg-[var(--color-surface-subtle)]"
+            href="/trust"
+          >
+            <ShieldCheck aria-hidden="true" size={15} />
+            Trust
+          </a>
           <Button aria-describedby="reset-case-note" onClick={handleReset} variant="secondary">
             <RotateCcw aria-hidden="true" size={16} />
             Reset Case
@@ -233,39 +454,102 @@ function CaseShellContent({
               {resetMessage}
             </p>
           ) : null}
-        </header>
+        </div>
 
-        <nav aria-label="Case steps" className="border-t border-[var(--color-border)] bg-[var(--color-surface)]">
-          <ol className="mx-auto grid w-full max-w-7xl grid-cols-2 gap-1 px-3 py-1 min-[520px]:grid-cols-4 lg:px-5">
+        <section
+          aria-label="Six-stage case progress"
+          className="border-t border-[var(--color-border)]"
+        >
+          <ol className="mx-auto grid w-full max-w-[1600px] grid-cols-2 gap-1 px-3 py-2 min-[560px]:grid-cols-3 lg:grid-cols-6 lg:px-5">
             {STEP_NAVIGATION.map((step) => {
               const progress = deriveStepProgress(step.id, state);
+              const isCurrent = step.id === currentStep;
               return (
-                <li className="min-w-0" key={step.id}>
-                  <a
-                    aria-current={step.id === currentStep ? "step" : undefined}
-                    className={`grid min-h-14 min-w-0 grid-cols-[auto_1fr] items-center gap-x-2 rounded-[var(--radius-control)] border-b-2 px-2 py-2 text-sm no-underline hover:bg-[var(--color-surface-subtle)] sm:px-3 ${
-                      progress === "active" || progress === "warning" || progress === "failed"
-                        ? "border-[var(--color-brand)] bg-[var(--color-surface-subtle)]"
-                        : "border-transparent"
-                    }`}
-                    href={step.href}
-                  >
-                    <span className="font-semibold text-[var(--color-ink)]">
-                      {step.label}<span aria-hidden="true"> </span>
+                <li
+                  aria-current={isCurrent ? "step" : undefined}
+                  className={`min-w-0 rounded-[var(--radius-control)] border px-2 py-2 ${
+                    isCurrent
+                      ? "border-[var(--amber)] bg-[color-mix(in_oklab,var(--amber)_10%,transparent)]"
+                      : "border-transparent"
+                  }`}
+                  key={step.id}
+                >
+                  <div className="flex items-center gap-2">
+                    <span
+                      className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full border font-mono text-[10px] ${
+                        isCurrent
+                          ? "border-[var(--amber)]"
+                          : "border-[var(--color-border-strong)]"
+                      }`}
+                    >
+                      {step.index}
                     </span>
+                    <span className="truncate font-mono text-[10px] uppercase tracking-[0.12em]">
+                      {step.label}
+                    </span>
+                  </div>
+                  <div className="mt-1 pl-8">
                     <NavigationProgressStatus value={progress} />
-                  </a>
+                  </div>
                 </li>
               );
             })}
           </ol>
-        </nav>
-      </div>
+        </section>
+      </header>
 
-      <div className="mx-auto w-full max-w-7xl px-4 py-5 lg:px-6">
+      <div className="mx-auto grid w-full max-w-[1600px] lg:grid-cols-[250px_minmax(0,1fr)]">
+        <aside className="border-b border-[var(--color-border)] bg-[color-mix(in_oklab,var(--color-surface)_58%,transparent)] lg:min-h-[calc(100vh-170px)] lg:border-b-0 lg:border-r">
+          <nav aria-label="Case workspace" className="grid gap-4 p-3 sm:grid-cols-2 lg:block">
+            {NAVIGATION_GROUPS.map((group) => (
+              <section className="mb-4" key={group}>
+                <h2 className="mb-1 px-2 font-mono text-[10px] uppercase tracking-[0.18em] text-[var(--color-ink-muted)]">
+                  {group}
+                </h2>
+                <ul className="space-y-0.5">
+                  {WORKSPACE_NAVIGATION.filter((item) => item.group === group).map((item) => {
+                    const Icon = item.icon;
+                    const active = item.id === activeDestination;
+                    return (
+                      <li key={item.id}>
+                        {item.href ? (
+                          <a
+                            aria-current={active ? "page" : undefined}
+                            className={`flex min-h-10 items-center gap-2 rounded-[var(--radius-control)] px-2 py-1.5 text-sm no-underline ${
+                              active
+                                ? "bg-[var(--color-brand)] font-semibold !text-white"
+                                : "text-[var(--color-ink)] hover:bg-[var(--color-surface-subtle)]"
+                            }`}
+                            href={item.href}
+                          >
+                            <Icon aria-hidden="true" size={16} />
+                            <span>{item.label}</span>
+                          </a>
+                        ) : (
+                          <span
+                            aria-disabled="true"
+                            className="flex min-h-10 items-center gap-2 rounded-[var(--radius-control)] px-2 py-1.5 text-sm text-[var(--color-ink-muted)]"
+                            title="This destination will be connected in a later integration slice."
+                          >
+                            <Icon aria-hidden="true" size={16} />
+                            <span>{item.label}</span>
+                            <span className="ml-auto rounded-full border border-[var(--color-border)] px-1.5 py-0.5 font-mono text-[9px] uppercase tracking-[0.1em]">
+                              Later
+                            </span>
+                          </span>
+                        )}
+                      </li>
+                    );
+                  })}
+                </ul>
+              </section>
+            ))}
+          </nav>
+        </aside>
+
         <main
           aria-labelledby="case-workspace-heading"
-          className="min-h-[520px]"
+          className="min-h-[520px] min-w-0 px-4 py-5 lg:px-6"
           id="case-workspace"
         >
           <h2 className="sr-only" id="case-workspace-heading">
@@ -276,4 +560,14 @@ function CaseShellContent({
       </div>
     </div>
   );
+}
+
+function deriveActiveDestination(path: string): WorkspaceNavigationItem["id"] {
+  if (path.includes("/intake")) return "documents";
+  if (path.includes("/export")) return "export";
+  if (path.includes("#context-gaps-heading")) return "evidence-gaps";
+  if (path.includes("#nexus")) return "integrity-map";
+  if (path.includes("#timeline")) return "timeline";
+  if (path.includes("/review")) return "structured-analysis";
+  return "purpose";
 }

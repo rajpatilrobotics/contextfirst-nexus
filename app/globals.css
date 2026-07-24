@@ -1,32 +1,42 @@
 @import "tailwindcss";
 
 :root {
-  --font-sans: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-  --font-display: ui-serif, Georgia, Cambria, "Times New Roman", serif;
-  --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  --font-sans: var(--font-cfn-sans), "IBM Plex Sans", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --font-display: var(--font-cfn-display), "Libre Baskerville", ui-serif, Georgia, Cambria, "Times New Roman", serif;
+  --font-mono: var(--font-cfn-mono), "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
 
-  --color-canvas: #F6F3EC;
-  --color-surface: #FFFFFF;
-  --color-surface-subtle: #F0F3EF;
-  --color-ink: #16251D;
-  --color-ink-muted: #5F6E65;
-  --color-border: #D8DED9;
-  --color-border-strong: #9AA99F;
-  --color-control-border: #89988F;
-  --color-brand: #21664F;
-  --color-brand-hover: #174C3B;
-  --color-brand-subtle: #E9F4EE;
-  --color-link: #1E624C;
-  --color-supported: #176B50;
-  --color-supported-subtle: #EAF7F1;
-  --color-warning: #8A4B08;
-  --color-warning-subtle: #FFF8E7;
-  --color-conflict: #9A3412;
-  --color-conflict-subtle: #FFF3ED;
-  --color-danger: #B42318;
-  --color-danger-subtle: #FEF3F2;
-  --color-neutral: #475569;
-  --color-neutral-subtle: #F1F5F9;
+  /* Lovable editorial law-library palette, mapped onto the existing semantic tokens. */
+  --paper: oklch(0.965 0.006 85);
+  --parchment: oklch(0.98 0.005 85);
+  --ink: oklch(0.22 0.05 265);
+  --slate-ink: oklch(0.38 0.03 265);
+  --rule: oklch(0.85 0.012 85);
+  --amber: oklch(0.68 0.115 65);
+  --sage: oklch(0.62 0.075 145);
+  --rust: oklch(0.52 0.14 40);
+
+  --color-canvas: var(--paper);
+  --color-surface: var(--parchment);
+  --color-surface-subtle: oklch(0.92 0.008 85);
+  --color-ink: var(--ink);
+  --color-ink-muted: var(--slate-ink);
+  --color-border: var(--rule);
+  --color-border-strong: oklch(0.68 0.02 265);
+  --color-control-border: oklch(0.62 0.025 265);
+  --color-brand: var(--ink);
+  --color-brand-hover: oklch(0.29 0.055 265);
+  --color-brand-subtle: oklch(0.9 0.02 65);
+  --color-link: oklch(0.34 0.07 265);
+  --color-supported: oklch(0.42 0.09 145);
+  --color-supported-subtle: oklch(0.93 0.025 145);
+  --color-warning: oklch(0.46 0.1 65);
+  --color-warning-subtle: oklch(0.94 0.035 75);
+  --color-conflict: var(--rust);
+  --color-conflict-subtle: oklch(0.94 0.025 40);
+  --color-danger: oklch(0.48 0.16 30);
+  --color-danger-subtle: oklch(0.95 0.025 30);
+  --color-neutral: var(--slate-ink);
+  --color-neutral-subtle: oklch(0.93 0.008 265);
 
   --space-1: 4px;
   --space-2: 8px;
@@ -39,8 +49,8 @@
 
   --radius-control: 8px;
   --radius-card: 12px;
-  --radius-dialog: 14px;
-  --shadow-elevated: 0 18px 45px rgb(22 37 29 / 14%);
+  --radius-dialog: 16px;
+  --shadow-elevated: 0 20px 60px -30px color-mix(in oklab, var(--ink) 45%, transparent);
 
   background: var(--color-canvas);
   color: var(--color-ink);
@@ -62,6 +72,14 @@ body {
   text-rendering: optimizeLegibility;
 }
 
+h1,
+h2,
+h3,
+.font-serif {
+  font-family: var(--font-display);
+  letter-spacing: -0.01em;
+}
+
 button,
 input,
 select,
@@ -76,13 +94,28 @@ a {
 }
 
 ::selection {
-  background: var(--color-brand-subtle);
+  background: color-mix(in oklab, var(--amber) 40%, transparent);
 }
 
 :focus-visible {
-  outline: 2px solid var(--color-brand);
+  outline: 2px solid var(--amber);
   outline-offset: 2px;
-  box-shadow: 0 0 0 4px var(--color-brand-subtle);
+  box-shadow: 0 0 0 4px color-mix(in oklab, var(--amber) 18%, transparent);
+}
+
+.cfn-editorial-grid {
+  background-image:
+    linear-gradient(to right, color-mix(in oklab, var(--rule) 55%, transparent) 1px, transparent 1px),
+    linear-gradient(to bottom, color-mix(in oklab, var(--rule) 55%, transparent) 1px, transparent 1px);
+  background-size: 56px 56px;
+  mask-image: radial-gradient(ellipse at center, black 38%, transparent 78%);
+}
+
+.cfn-rule-line {
+  background-image: linear-gradient(to right, var(--rule) 50%, transparent 50%);
+  background-position: 0 100%;
+  background-repeat: repeat-x;
+  background-size: 6px 1px;
 }
 
 .cfn-type-display {

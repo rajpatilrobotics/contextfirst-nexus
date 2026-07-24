@@ -2,6 +2,7 @@ export {
   CaseShell,
   SYNTHETIC_BANNER_TEXT,
   STEP_NAVIGATION,
+  WORKSPACE_NAVIGATION,
   deriveCurrentStep,
   deriveStepProgress,
   describeRunProvenance,
