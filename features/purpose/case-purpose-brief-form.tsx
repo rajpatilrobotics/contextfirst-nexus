@@ -115,15 +115,15 @@ export function CasePurposeBriefForm({
     if (RequiredExcludedDecisions.some((decision) => !excludedDecisions.has(decision))) {
       next.excludedDecisions = "Confirm every decision that remains outside system support.";
     }
-    if (!authorityAttested) next.authorityAttested = "Confirm the fictional demo-data authority basis.";
+    if (!authorityAttested) next.authorityAttested = "Confirm the fictional or hackathon test-data workflow.";
     if (!authorityNotVerified) next.authorityNotVerified = "Acknowledge that the system cannot verify authority.";
-    if (!syntheticAttested) next.syntheticAttested = "Attest that this is the bundled fictional demo packet.";
-    if (!syntheticAcknowledged) next.syntheticAcknowledged = "Acknowledge the demo-only data boundary.";
+    if (!syntheticAttested) next.syntheticAttested = "Attest that the selected PDFs contain no real or private case data.";
+    if (!syntheticAcknowledged) next.syntheticAcknowledged = "Acknowledge the fictional and hackathon test-data-only boundary.";
     if (!prohibitedAcknowledged) next.prohibitedAcknowledged = "Acknowledge the prohibited-decision boundary.";
     if (!cooperationAcknowledged) next.cooperationAcknowledged = "Confirm cooperation neutrality.";
     if (!analysisOption) next.analysisService = "Analysis service unavailable";
     if (analysisOption && !analysisAcknowledged) {
-      next.analysisAcknowledgement = "Acknowledge how this prepared local analysis works.";
+      next.analysisAcknowledgement = "Acknowledge how local analysis works.";
     }
     return next;
   }
@@ -259,7 +259,8 @@ export function CasePurposeBriefForm({
       <Alert title="Authority and prototype boundary" tone="warning">
         <p>
           This role chooser is not authentication. The system records your attestation but cannot verify
-          your authority. Only bundled fictional adult fixture CFN-DEMO-001 is permitted.
+          your authority. Use only fictional or hackathon test PDFs that contain no real or private case
+          data. PDF text is extracted in this browser and is not transmitted to an AI provider.
         </p>
       </Alert>
 
@@ -322,14 +323,14 @@ export function CasePurposeBriefForm({
 
       <fieldset className="grid gap-x-5 gap-y-2 rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface)] p-4 sm:grid-cols-2">
         <legend className="cfn-type-heading-3 px-1">4. Demo safety confirmations</legend>
-        <p className="cfn-type-body-small text-[var(--color-ink-muted)] sm:col-span-2">Authority and consent verification are not applicable to this fictional demo packet.</p>
-        <Checkbox checked={authorityAttested} id="authority-attested" label="I attest that I am using this fictional demo packet for the stated authorized workflow." onChange={(event) => setAuthorityAttested(event.currentTarget.checked)} />
+        <p className="cfn-type-body-small text-[var(--color-ink-muted)] sm:col-span-2">This hackathon prototype accepts fictional test material only. Do not select PDFs containing real or private data.</p>
+        <Checkbox checked={authorityAttested} id="authority-attested" label="I attest that I am using only fictional or hackathon test PDFs for the stated workflow." onChange={(event) => setAuthorityAttested(event.currentTarget.checked)} />
         {errors.authorityAttested ? <FieldError id="authority-attested-error">{errors.authorityAttested}</FieldError> : null}
         <Checkbox checked={authorityNotVerified} id="authority-not-verified" label="I understand that the system cannot verify my authority." onChange={(event) => setAuthorityNotVerified(event.currentTarget.checked)} />
         {errors.authorityNotVerified ? <FieldError id="authority-not-verified-error">{errors.authorityNotVerified}</FieldError> : null}
-        <Checkbox checked={syntheticAttested} id="synthetic-attested" label="I attest that the material is the bundled fictional demo packet, not real or private case data." onChange={(event) => setSyntheticAttested(event.currentTarget.checked)} />
+        <Checkbox checked={syntheticAttested} id="synthetic-attested" label="I attest that the selected PDFs contain no real or private case data." onChange={(event) => setSyntheticAttested(event.currentTarget.checked)} />
         {errors.syntheticAttested ? <FieldError id="synthetic-attested-error">{errors.syntheticAttested}</FieldError> : null}
-        <Checkbox checked={syntheticAcknowledged} id="synthetic-acknowledged" label="I acknowledge the demo-only data boundary." onChange={(event) => setSyntheticAcknowledged(event.currentTarget.checked)} />
+        <Checkbox checked={syntheticAcknowledged} id="synthetic-acknowledged" label="I acknowledge the fictional and hackathon test-data-only boundary." onChange={(event) => setSyntheticAcknowledged(event.currentTarget.checked)} />
         {errors.syntheticAcknowledged ? <FieldError id="synthetic-acknowledged-error">{errors.syntheticAcknowledged}</FieldError> : null}
         <Checkbox checked={prohibitedAcknowledged} id="prohibited-acknowledged" label="I acknowledge that the system does not make the excluded consequential decisions." onChange={(event) => setProhibitedAcknowledged(event.currentTarget.checked)} />
         {errors.prohibitedAcknowledged ? <FieldError id="prohibited-acknowledged-error">{errors.prohibitedAcknowledged}</FieldError> : null}
@@ -348,7 +349,7 @@ export function CasePurposeBriefForm({
 
       <div className="sticky bottom-3 z-10 flex flex-col items-start justify-between gap-3 rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface)] p-3 shadow-[var(--shadow-elevated)] sm:flex-row sm:items-center">
         <p className="cfn-type-body-small text-[var(--color-ink-muted)]">
-          Save this step first. You will then continue to Documents to select the demo PDFs.
+          Save this step first. You will then continue to Documents to select fictional test PDFs.
         </p>
         <Button className="shrink-0" disabled={disabled} type="submit" variant="primary">Save Case Purpose Brief</Button>
       </div>

@@ -87,6 +87,13 @@ export function ReviewQueue({
 }) {
   const [filter, setFilter] = useState<QueueFilter>("pending");
   const [focusMessage, setFocusMessage] = useState("");
+  const isBrowserLocalSourceReview =
+    state.documents.some((document) => document.dataOrigin === "browser_local") ||
+    state.analysisRuns.some(
+      (run) =>
+        run.id === state.activeAnalysisRunId &&
+        run.provider.adapterVersion === "local-source-extraction-v1",
+    );
   const candidates = useMemo(
     () => filterCanonicalReviewQueue(state.candidates, filter, earlyBlockerIds),
     [earlyBlockerIds, filter, state.candidates],
@@ -147,7 +154,9 @@ export function ReviewQueue({
 
       {filter === "export_blocker" ? (
         <Alert title="Early export remediation" tone="warning">
-          This prepared review checkpoint exposes only the exact unresolved blocker IDs supplied by the trusted fixture. Resolved blockers leave this filter immediately.
+          {isBrowserLocalSourceReview
+            ? "Bundled fixture blocker IDs are not applied to browser-local source extraction. Resolve required items in the main review list."
+            : "This prepared review checkpoint exposes only the exact unresolved blocker IDs supplied by the trusted fixture. Resolved blockers leave this filter immediately."}
         </Alert>
       ) : null}
 

@@ -160,6 +160,17 @@ export function SourceDrawer({ state, selection, mode, onClose, onCommand }: Sou
     () => state.documents.find((item) => item.id === citation?.documentId) ?? null,
     [citation?.documentId, state.documents],
   );
+  const sourceRun = useMemo(
+    () => state.analysisRuns.find((item) => item.id === citation?.analysisRunId) ?? null,
+    [citation?.analysisRunId, state.analysisRuns],
+  );
+  const isBrowserLocalSource = Boolean(
+    sourceDocument?.dataOrigin === "browser_local" ||
+    sourceRun?.provider.adapterVersion === "local-source-extraction-v1",
+  );
+  const originalSourceLabel = isBrowserLocalSource
+    ? "Original browser-local source"
+    : "Original demo source";
 
   const ambiguityOptions = useMemo(() => {
     if (!citation || citation.validationStatus !== "ambiguous_match" || !citation.quotedText.trim()) return [];
@@ -238,7 +249,9 @@ export function SourceDrawer({ state, selection, mode, onClose, onCommand }: Sou
       type: "reveal_source",
       meta: commandMeta(state, "reveal-source"),
       citationId: citation.id,
-      reasonCode: "explicit_synthetic_source_review",
+      reasonCode: isBrowserLocalSource
+        ? "explicit_local_source_review"
+        : "explicit_synthetic_source_review",
     });
     if (result && !result.ok) {
       setCommandError(result.reason ?? "The reveal action was not accepted.");
@@ -337,16 +350,20 @@ export function SourceDrawer({ state, selection, mode, onClose, onCommand }: Sou
           </Alert>
           {!revealed ? (
             showRevealWarning ? (
-              <Alert title="Reveal original demo source?" tone="warning">
-                <p className="mb-3">This intentional review action shows browser-local unmasked demo text. It is not persisted or sent to an external service.</p>
-                <Button onClick={revealSource} variant="danger">Reveal original demo source</Button>
+              <Alert title={`Reveal ${originalSourceLabel.toLowerCase()}?`} tone="warning">
+                <p className="mb-3">
+                  {isBrowserLocalSource
+                    ? "This intentional review action shows unmasked text from the selected browser-local PDF. It is not persisted or transmitted to an AI provider."
+                    : "This intentional review action shows browser-local unmasked demo text. It is not persisted or sent to an external service."}
+                </p>
+                <Button onClick={revealSource} variant="danger">Reveal {originalSourceLabel.toLowerCase()}</Button>
               </Alert>
             ) : (
               <Button onClick={() => setShowRevealWarning(true)} variant="secondary">Review reveal warning</Button>
             )
           ) : (
-            <section aria-label="Original demo source" className="grid gap-2">
-              <h3 className="cfn-type-label">Original demo source — intentionally revealed</h3>
+            <section aria-label={originalSourceLabel} className="grid gap-2">
+              <h3 className="cfn-type-label">{originalSourceLabel} — intentionally revealed</h3>
               <p className="whitespace-pre-wrap break-words rounded-[var(--radius-control)] border border-[var(--color-warning)] bg-[var(--color-warning-subtle)] p-3 text-sm leading-6">{segment.rawText}</p>
             </section>
           )}

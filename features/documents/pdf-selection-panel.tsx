@@ -6,7 +6,6 @@ import {
   FileCheck2,
   FileText,
   LoaderCircle,
-  Replace,
   Trash2,
   Upload,
 } from "lucide-react";
@@ -18,9 +17,10 @@ import {
 } from "react";
 import { Alert, Button, Card } from "../../components/ui";
 import {
-  validateCfnDemoPdfSelection,
-  type CfnDemoPdfSelectionIssue,
-  type CfnDemoPdfSelectionValidation,
+  detectExactCfnDemoPdfPacket,
+  validateLocalPdfSelection,
+  type LocalPdfSelectionIssue,
+  type LocalPdfSelectionValidation,
 } from "../../lib/documents";
 
 export const PDF_SELECTION_STAGES = [
@@ -35,6 +35,13 @@ export type PdfSelectionStage = (typeof PDF_SELECTION_STAGES)[number];
 export type ReadyPdfBatch = {
   files: readonly File[];
   totalBytes: number;
+  mode: PdfSelectionMode;
+};
+
+export type PdfSelectionMode = "local_preview" | "prepared_demo";
+
+export type PdfSelectionValidation = LocalPdfSelectionValidation & {
+  mode?: PdfSelectionMode;
 };
 
 export type PdfBatchReadyHandler = (
@@ -43,10 +50,11 @@ export type PdfBatchReadyHandler = (
 
 export type PdfSelectionValidator = (
   files: readonly File[],
-) => Promise<CfnDemoPdfSelectionValidation>;
+) => Promise<PdfSelectionValidation>;
 
 export type PdfSelectionProcessor = (
   files: readonly File[],
+  mode: PdfSelectionMode,
 ) => Promise<void>;
 
 type SelectedPdf = {
@@ -81,17 +89,30 @@ function displayFileName(name: string) {
     .trim();
 }
 
-function issueMessage(issue: CfnDemoPdfSelectionIssue) {
-  const messages: Record<CfnDemoPdfSelectionIssue["code"], string> = {
-    wrong_file_count: "Select the complete seven-file demo set.",
-    duplicate_file_name: "Remove the duplicate file and select the set again.",
-    unknown_file_name: "This file is not part of the hackathon demo set.",
-    invalid_file_type: "Choose the original PDF version of this demo file.",
+function issueMessage(issue: LocalPdfSelectionIssue) {
+  const messages: Record<LocalPdfSelectionIssue["code"], string> = {
+    empty_selection: "Choose at least one PDF.",
+    too_many_files: "Choose no more than 25 PDFs at once.",
+    duplicate_file_name: "Remove the duplicate file name and try again.",
+    invalid_file_extension: "Choose a file with a .pdf extension.",
+    invalid_file_type: "Choose a PDF file.",
     invalid_pdf_header: "This file does not contain a valid PDF header.",
-    invalid_file_size: "This demo file does not match the expected file size.",
-    digest_mismatch: "This demo file did not pass integrity verification.",
+    file_too_large: "This PDF is larger than the 20 MB browser limit.",
+    total_size_exceeded: "The selected PDFs exceed the 100 MB browser limit.",
   };
   return messages[issue.code];
+}
+
+async function validatePdfSelection(
+  files: readonly File[],
+): Promise<PdfSelectionValidation> {
+  const localValidation = await validateLocalPdfSelection(files);
+  if (localValidation.status !== "verified") return localValidation;
+  const demoPacket = await detectExactCfnDemoPdfPacket(files);
+  return {
+    ...localValidation,
+    mode: demoPacket.isExactMatch ? "prepared_demo" : "local_preview",
+  };
 }
 
 function StageTrail({ current }: { current: PdfSelectionStage }) {
@@ -124,7 +145,7 @@ function StageTrail({ current }: { current: PdfSelectionStage }) {
                     : "text-[var(--color-ink-muted)]"
               }`}
             >
-              {complete ? (
+              {complete || (active && stage === "ready") ? (
                 <Check aria-hidden="true" className="shrink-0" size={14} />
               ) : active && stage === "processing" ? (
                 <LoaderCircle
@@ -150,7 +171,7 @@ export function PdfSelectionPanel({
   onReady,
   processFiles,
   replaceAllowed = true,
-  validateSelection = validateCfnDemoPdfSelection,
+  validateSelection = validatePdfSelection,
 }: {
   onClear?: () => void;
   onReset?: () => void;
@@ -176,8 +197,12 @@ export function PdfSelectionPanel({
   }
 
   async function selectFiles(fileList: FileList | readonly File[]) {
-    const files = Array.from(fileList);
-    if (files.length === 0) return;
+    const incomingFiles = Array.from(fileList);
+    if (incomingFiles.length === 0) return;
+    const files = [
+      ...documents.map((document) => document.file),
+      ...incomingFiles,
+    ];
     onReset?.();
 
     const selected = files.map((file, index) => ({
@@ -207,23 +232,14 @@ export function PdfSelectionPanel({
         }),
       );
       setSelectionError(
-        validation.issues.some((issue) => issue.code === "wrong_file_count")
-          ? "Select all seven demo PDFs together, then try again."
-          : "The selected set did not pass browser verification. Review the highlighted files and replace the set.",
+        "Some selected files could not be checked. Review the highlighted items, then remove or replace them.",
       );
       setAnnouncement("The selected PDF set did not pass verification.");
       return;
     }
 
     const verifiedNames = new Set(
-      validation.files
-        .filter(
-          (file) =>
-            file.selectionStatus === "selected" &&
-            file.verificationStatus === "verified" &&
-            file.readinessStatus === "ready",
-        )
-        .map((file) => file.fileName as string),
+      validation.files.map((file) => file.fileName),
     );
     setDocuments((current) =>
       current.map((document) =>
@@ -232,7 +248,7 @@ export function PdfSelectionPanel({
           : document,
       ),
     );
-    setAnnouncement(`${validation.files.length} demo PDFs verified.`);
+    setAnnouncement(`${validation.files.length} PDFs passed the local file check.`);
 
     await Promise.resolve();
     setDocuments((current) =>
@@ -247,8 +263,9 @@ export function PdfSelectionPanel({
     );
 
     const readyFiles = validation.files.map((file) => file.file);
+    const mode = validation.mode ?? "local_preview";
     try {
-      await processFiles(readyFiles);
+      await processFiles(readyFiles, mode);
       setDocuments((current) =>
         current.map((document) =>
           document.stage === "processing"
@@ -259,6 +276,7 @@ export function PdfSelectionPanel({
       await onReady?.({
         files: readyFiles,
         totalBytes: readyFiles.reduce((total, file) => total + file.size, 0),
+        mode,
       });
       setAnnouncement(`${readyFiles.length} of ${files.length} files are ready.`);
     } catch {
@@ -281,9 +299,11 @@ export function PdfSelectionPanel({
   }
 
   function handleInputChange(event: ChangeEvent<HTMLInputElement>) {
-    if (event.currentTarget.files) {
-      void selectFiles(event.currentTarget.files);
-    }
+    const files = event.currentTarget.files
+      ? Array.from(event.currentTarget.files)
+      : [];
+    event.currentTarget.value = "";
+    if (files.length > 0) void selectFiles(files);
   }
 
   function handleDrop(event: DragEvent<HTMLElement>) {
@@ -308,10 +328,10 @@ export function PdfSelectionPanel({
               <p className="cfn-type-label">Step 1</p>
             </div>
             <h2 className="cfn-type-heading-2" id="pdf-intake-heading">
-              Choose and verify PDFs
+              Add PDFs
             </h2>
             <p className="max-w-2xl text-sm text-[var(--color-ink-muted)]">
-              Choose all seven demo PDFs together. They stay in this browser.
+              Add one or more PDFs. They are read only in this browser and are not uploaded.
             </p>
           </div>
           {documents.length > 0 ? (
@@ -340,17 +360,11 @@ export function PdfSelectionPanel({
             <span className="grid h-10 w-10 place-items-center rounded-full bg-[var(--color-surface)] text-[var(--color-brand)] shadow-sm">
               <Upload aria-hidden="true" size={19} />
             </span>
-            <p className="text-sm font-semibold">Drop all seven PDFs here</p>
-            <Button
-              onClick={() => inputRef.current?.click()}
-              variant="primary"
-            >
-              Choose PDF files
-            </Button>
+            <p className="text-sm font-semibold">Drop PDFs here</p>
             <input
               accept="application/pdf,.pdf"
               aria-label="Choose PDF files"
-              className="sr-only"
+              className="cfn-control-target max-w-full cursor-pointer rounded-[var(--radius-control)] border border-[var(--color-brand)] bg-[var(--color-surface)] text-sm text-[var(--color-ink-muted)] shadow-sm file:mr-3 file:cursor-pointer file:border-0 file:bg-[var(--color-brand)] file:px-4 file:py-2 file:font-semibold file:text-white hover:file:bg-[var(--color-brand-hover)]"
               multiple
               onChange={handleInputChange}
               ref={inputRef}
@@ -382,10 +396,9 @@ export function PdfSelectionPanel({
                     : `${documents.length} PDFs selected`}
                 </p>
                 {replaceAllowed ? (
-                  <Button onClick={() => inputRef.current?.click()}>
-                    <Replace aria-hidden="true" size={16} />
-                    Replace selection
-                  </Button>
+                  <p className="text-xs text-[var(--color-ink-muted)]">
+                    Use the chooser above to add more PDFs.
+                  </p>
                 ) : null}
               </div>
             </div>

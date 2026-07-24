@@ -10,10 +10,6 @@ export const PROCESSING_STAGE_ORDER = [
   "text_extraction",
   "coverage_calculation",
   "identifier_masking",
-  "candidate_extraction",
-  "citation_validation",
-  "timeline_nexus_assembly",
-  "safety_export_gate_checks",
 ] as const satisfies readonly ProcessingStage["name"][];
 
 const STAGE_LABELS: Record<ProcessingStage["name"], string> = {
@@ -26,13 +22,6 @@ const STAGE_LABELS: Record<ProcessingStage["name"], string> = {
   timeline_nexus_assembly: "Timeline and Nexus assembly",
   safety_export_gate_checks: "Safety and export-gate checks",
 };
-
-const FIXTURE_STAGES = new Set<ProcessingStage["name"]>([
-  "intake_validation",
-  "text_extraction",
-  "coverage_calculation",
-  "identifier_masking",
-]);
 
 function stageIcon(status: ProcessingStage["status"]) {
   if (status === "completed") return <Check aria-hidden="true" size={18} />;
@@ -56,12 +45,14 @@ export function ProcessingStageList({
   return (
     <Card className="grid gap-4">
       <div>
-        <h2 className="cfn-type-heading-2">Processing progress</h2>
+        <h2 className="cfn-type-heading-2">Local document preparation</h2>
         <p className="cfn-type-body-small text-[var(--color-ink-muted)]">
-          Completed safe work remains visible if a later stage fails. No blank stage means success.
+          These four checks prepare the selected PDFs in this browser. Candidate extraction,
+          citation validation, timeline assembly, and safety checks start only after you choose
+          Start analysis.
         </p>
       </div>
-      <ol aria-label="Eight processing stages" className="grid gap-2" aria-live="polite">
+      <ol aria-label="Local document preparation stages" className="grid gap-2" aria-live="polite">
         {PROCESSING_STAGE_ORDER.map((name) => {
           const stage = stageByName.get(name) ?? {
             name,
@@ -69,11 +60,7 @@ export function ProcessingStageList({
             affectedDocumentIds: [],
             retryable: false,
           };
-          const canRetry =
-            stage.status === "failed" &&
-            stage.retryable &&
-            FIXTURE_STAGES.has(stage.name) &&
-            onRetry;
+          const canRetry = stage.status === "failed" && stage.retryable && onRetry;
 
           return (
             <li
@@ -92,7 +79,8 @@ export function ProcessingStageList({
                   ) : null}
                   {stage.errorCode ? (
                     <p className="cfn-type-body-small text-[var(--color-danger)]" role="alert">
-                      Safe code: {stage.errorCode}. Review the affected record and retry only this stage when allowed.
+                      Safe code: {stage.errorCode}. Review the affected record and retry only this
+                      stage when allowed.
                     </p>
                   ) : null}
                 </div>

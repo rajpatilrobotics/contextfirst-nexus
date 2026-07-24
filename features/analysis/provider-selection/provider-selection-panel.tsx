@@ -78,18 +78,20 @@ export function AnalysisDisclosurePanel({
     >
       <legend className="cfn-type-heading-3 px-1">How analysis works</legend>
       <p>
-        {REPLAY_VISIBLE_LABEL}. Analysis uses frozen fictional demo output stored with this app.
+        {REPLAY_VISIBLE_LABEL}. The bundled demo packet uses prepared output; other fictional or
+        hackathon test PDFs use browser-local source extraction only.
       </p>
       <p className="cfn-type-body-small text-[var(--color-ink-muted)]">
-        No case content is sent to an external service. Saving the Purpose Brief does not
-        start analysis; Start analysis remains a separate action after the document safety checks.
+        No PDF or extracted content is sent to an external service or AI provider. Saving the Purpose
+        Brief does not start analysis; Start analysis remains a separate action after the document
+        safety checks.
       </p>
       <Checkbox
         aria-describedby={error ? "analysis-disclosure-error" : undefined}
         checked={acknowledged}
         disabled={disabled}
         id="analysis-disclosure-acknowledgement"
-        label="I understand that this analysis uses frozen local demo output, is not live AI, and sends nothing to an external service."
+        label="I understand that analysis uses prepared demo replay or browser-local source extraction, is not live AI, and has no provider transmission."
         onChange={(event) => onAcknowledgementChange(event.currentTarget.checked)}
       />
       {error ? <FieldError id="analysis-disclosure-error">{error}</FieldError> : null}

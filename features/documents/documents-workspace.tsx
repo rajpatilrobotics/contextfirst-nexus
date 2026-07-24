@@ -11,8 +11,10 @@ import {
 } from "../../lib/contracts";
 import {
   CfnDemoPdfSourceService,
+  processLocalPdfSources,
   processCfnDemoPdfSources,
   type CfnDemoDocumentServiceResult,
+  type LocalPdfDocumentServiceResult,
 } from "../../lib/documents";
 import { cfnDemoFixture } from "../../lib/fixtures";
 import { useCaseState } from "../../components/shell";
@@ -32,6 +34,7 @@ import { DocumentCards } from "./document-cards";
 import { MaskingReviewPanel } from "./masking-review-panel";
 import {
   PdfSelectionPanel,
+  type PdfSelectionMode,
   type PdfSelectionValidator,
 } from "./pdf-selection-panel";
 import { ProcessingStageList } from "./processing-stage-list";
@@ -41,6 +44,9 @@ type ProcessSources = () => Promise<CfnDemoDocumentServiceResult>;
 type ProcessSelectedSources = (
   files: readonly File[],
 ) => Promise<CfnDemoDocumentServiceResult>;
+type ProcessLocalSources = (
+  files: readonly File[],
+) => Promise<LocalPdfDocumentServiceResult>;
 type RunAnalysis = (options: RunControllerOptions) => Promise<RunControllerResult>;
 type MaskReviewStatus = Extract<
   CaseCommand,
@@ -57,6 +63,8 @@ type SafeProcessingFailure = {
   documentId?: string;
   pageId?: string;
 };
+
+type IntakeMode = "none" | PdfSelectionMode;
 
 function commandMeta(caseRevision: number, purpose: string): CaseCommand["meta"] {
   const createdAt = new Date().toISOString();
@@ -149,11 +157,13 @@ async function processSelectedPdfSources(files: readonly File[]) {
 }
 
 export function DocumentsWorkspace({
+  processLocalSources = processLocalPdfSources,
   processSources = processCfnDemoPdfSources,
   processSelectedSources = processSelectedPdfSources,
   runAnalysis = runSelectedAnalysis,
   validateSelection,
 }: {
+  processLocalSources?: ProcessLocalSources;
   processSources?: ProcessSources;
   processSelectedSources?: ProcessSelectedSources;
   runAnalysis?: RunAnalysis;
@@ -172,6 +182,7 @@ export function DocumentsWorkspace({
   });
   const [intakeReady, setIntakeReady] = useState(false);
   const [readyFiles, setReadyFiles] = useState<readonly File[]>([]);
+  const [intakeMode, setIntakeMode] = useState<IntakeMode>("none");
 
   useEffect(() => {
     if (
@@ -183,8 +194,30 @@ export function DocumentsWorkspace({
   }, [selectedSegmentId, state.segments]);
 
   useEffect(() => {
-    if (state.documents.length === 7) setIntakeReady(true);
-  }, [state.documents.length]);
+    const requiredLocalStages = [
+      "intake_validation",
+      "text_extraction",
+      "coverage_calculation",
+      "identifier_masking",
+    ] as const;
+    const processingSucceeded =
+      state.documents.length > 0 &&
+      requiredLocalStages.every((name) =>
+        state.processing.some(
+          (stage) =>
+            stage.name === name &&
+            (stage.status === "completed" || stage.status === "warning"),
+        ),
+      ) && state.selectedSegmentIds.length > 0;
+    if (processingSucceeded) {
+      setIntakeReady(true);
+      setIntakeMode(
+        state.documents.some((document) => document.dataOrigin === "browser_local")
+          ? "local_preview"
+          : "prepared_demo",
+      );
+    }
+  }, [state.documents, state.processing]);
 
   const selectedSegment = state.segments.find(
     (segment) => segment.id === selectedSegmentId,
@@ -196,17 +229,19 @@ export function DocumentsWorkspace({
   const documentsProcessed = Boolean(
     prerequisites.items.find((item) => item.id === "sources")?.satisfied,
   );
-  const processingFailed =
-    state.processing.some((stage) => stage.status === "failed") ||
-    state.documents.some((document) => document.processingStatus === "failed");
+  const processingFailed = state.processing.some(
+    (stage) => stage.status === "failed",
+  );
   const checksComplete =
     documentsProcessed &&
     state.masking.reviewStatus === "approved" &&
     state.masking.leakScanStatus === "passed" &&
     !state.coverage.hasConsequentialOpenIssue;
-  const activeStep = !intakeReady
-    ? 1
-    : !documentsProcessed
+  const activeStep = processingFailed
+    ? 2
+    : !intakeReady
+      ? 1
+      : !documentsProcessed
       ? 2
       : !checksComplete
         ? 3
@@ -301,12 +336,60 @@ export function DocumentsWorkspace({
     }
   }
 
-  async function processSelectedFiles(files: readonly File[]) {
-    if (!purposeComplete || actionsDisabled) {
+  async function processSelectedFiles(
+    files: readonly File[],
+    mode: PdfSelectionMode,
+  ) {
+    if (actionsDisabled) {
       throw new Error("document_intake_not_ready");
     }
     setNotice(null);
     setProcessing(true);
+
+    if (mode === "local_preview") {
+      try {
+        const localResult = await processLocalSources(files);
+        if (localResult.segments.length === 0) {
+          throw new Error("no_readable_pdf_text");
+        }
+        const completion = dispatchCaseCommand({
+          type: "complete_local_document_processing",
+          meta: commandMeta(state.caseRevision, "COMPLETE-LOCAL"),
+          result: localResult,
+        });
+        if (!completion.ok) throw new Error(completion.reason);
+        const suggestionRefresh = dispatchCaseCommand({
+          type: "refresh_mask_suggestions",
+          meta: commandMeta(completion.state.caseRevision, "REFRESH-LOCAL-MASKS"),
+          sensitiveTerms: [],
+        });
+        if (!suggestionRefresh.ok) throw new Error(suggestionRefresh.reason);
+        setIntakeMode("local_preview");
+        setIntakeReady(true);
+        const attentionCount = localResult.coverage.issues.length;
+        setNotice({
+          tone: attentionCount > 0 ? "warning" : "neutral",
+          title: "PDF text prepared locally",
+          message:
+            attentionCount > 0
+              ? `${localResult.documents.length} PDFs were read in this browser. Review ${attentionCount} ${attentionCount === 1 ? "page limitation" : "page limitations"} before analysis.`
+              : `${localResult.documents.length} PDFs were read in this browser and are ready for the required checks.`,
+        });
+        return;
+      } catch (error) {
+        setNotice({
+          tone: "danger",
+          title: "The PDFs could not be prepared",
+          message:
+            error instanceof Error && error.message === "no_readable_pdf_text"
+              ? "No embedded text was found. This build does not OCR scanned image-only pages; choose a text-based PDF."
+              : "The browser could not read the selected PDF text. Replace only the affected file and try again.",
+        });
+        throw error;
+      } finally {
+        setProcessing(false);
+      }
+    }
 
     const startResult = dispatchCaseCommand({
       type: "begin_fixture_processing",
@@ -317,8 +400,12 @@ export function DocumentsWorkspace({
       throw new Error("document_processing_start_rejected");
     }
 
+    let canonicalResultRecorded = false;
     try {
       const localResult = await processSelectedSources(files);
+      const failedStage = localResult.processing.find(
+        (stage) => stage.status === "failed",
+      );
       const completion = dispatchCaseCommand({
         type: "complete_fixture_processing",
         meta: commandMeta(startResult.state.caseRevision, "COMPLETE-SELECTED"),
@@ -326,6 +413,13 @@ export function DocumentsWorkspace({
       });
       if (!completion.ok) {
         throw new Error("document_processing_result_rejected");
+      }
+      canonicalResultRecorded = true;
+      if (failedStage) {
+        throw {
+          code: failedStage.errorCode ?? "INTERNAL_SAFE_FAILURE",
+          stage: failedStage.name,
+        };
       }
 
       const suggestionRefresh = dispatchCaseCommand({
@@ -341,16 +435,19 @@ export function DocumentsWorkspace({
         tone: "neutral",
         title: "Browser-local processing complete",
         message:
-          "The seven selected demo PDFs are ready. Review coverage and every retained mask before analysis.",
+          "The exact demo files were verified in this browser. Review coverage and every retained mask before analysis.",
       });
+      setIntakeMode("prepared_demo");
     } catch (error) {
       const failure = safeProcessingFailure(error);
-      dispatchCaseCommand({
-        type: "fail_fixture_processing",
-        meta: commandMeta(startResult.state.caseRevision, `FAIL-SELECTED-${failure.stage}`),
-        stageName: failure.stage,
-        safeErrorCode: failure.code,
-      });
+      if (!canonicalResultRecorded) {
+        dispatchCaseCommand({
+          type: "fail_fixture_processing",
+          meta: commandMeta(startResult.state.caseRevision, `FAIL-SELECTED-${failure.stage}`),
+          stageName: failure.stage,
+          safeErrorCode: failure.code,
+        });
+      }
       throw error;
     } finally {
       setProcessing(false);
@@ -367,6 +464,7 @@ export function DocumentsWorkspace({
       return;
     }
     setReadyFiles([]);
+    setIntakeMode("none");
     setIntakeReady(false);
     setNotice(null);
     setAnalysisResult({ status: "idle" });
@@ -419,6 +517,15 @@ export function DocumentsWorkspace({
       });
       return;
     }
+    if (result.state.masking.leakScanStatus !== "passed") {
+      setNotice({
+        tone: "warning",
+        title: "Privacy scan found a remaining detail",
+        message:
+          "The reviewed masks were applied, but the deterministic scan still found a supported identifier. Add or correct a mask before analysis.",
+      });
+      return;
+    }
     setNotice({
       tone: "neutral",
       title: "Masking review approved",
@@ -446,7 +553,11 @@ export function DocumentsWorkspace({
       type: "reveal_source",
       meta: commandMeta(state.caseRevision, "REVEAL-SOURCE"),
       citationId: segmentId,
-      reasonCode: "explicit_synthetic_source_review",
+      reasonCode: state.documents.some(
+        (document) => document.dataOrigin === "browser_local",
+      )
+        ? "explicit_local_source_review"
+        : "explicit_synthetic_source_review",
     });
     if (!result.ok) showCommandFailure("Source reveal was not recorded");
     return result.ok;
@@ -477,7 +588,7 @@ export function DocumentsWorkspace({
         <p className="cfn-type-label text-[var(--color-brand)]">Step 2 of 4</p>
         <h1 className="cfn-type-heading-1">Prepare documents</h1>
         <p className="max-w-3xl text-sm text-[var(--color-ink-muted)]">
-          Add the demo PDFs, complete the required privacy check, then start analysis.
+          Add one or more PDFs. The browser checks readability first; analysis begins only when you explicitly start it.
         </p>
       </header>
 
@@ -523,25 +634,28 @@ export function DocumentsWorkspace({
       {!purposeComplete ? (
         <Alert title="Purpose is required" tone="warning">
           <p>
-            Complete the qualified-practitioner purpose and analysis disclosure on the{" "}
+            You can add and check PDFs now. Complete the qualified-practitioner purpose and
+            analysis disclosure on the{" "}
             <Link className="font-semibold underline" href="/case/demo/purpose">Purpose step</Link>{" "}
-            before local processing.
+            before starting analysis.
           </p>
         </Alert>
       ) : null}
 
       <PdfSelectionPanel
         onClear={resetDocumentIntake}
-        onReady={({ files }) => {
+        onReady={({ files, mode }) => {
           setReadyFiles(files);
           setIntakeReady(true);
+          setIntakeMode(mode);
         }}
         onReset={() => {
           setReadyFiles([]);
           setIntakeReady(false);
+          setIntakeMode("none");
         }}
         processFiles={processSelectedFiles}
-        replaceAllowed={!intakeReady}
+        replaceAllowed={intakeMode !== "prepared_demo"}
         validateSelection={validateSelection}
       />
 
@@ -556,7 +670,7 @@ export function DocumentsWorkspace({
             <div>
               <p className="cfn-type-label text-[var(--color-brand)]">Step 2</p>
               <h2 className="cfn-type-heading-2" id="local-processing-heading">
-                Processed locally
+                {intakeMode === "local_preview" ? "Documents processed locally" : "Demo packet processed locally"}
               </h2>
               <p className="text-sm text-[var(--color-ink-muted)]">
                 The selected PDFs were read in this browser. No upload was sent to a server.
@@ -577,7 +691,11 @@ export function DocumentsWorkspace({
               </summary>
               <div className="mt-3">
                 <ProcessingStageList
-                  disabled={actionsDisabled || readyFiles.length === 0}
+                  disabled={
+                    actionsDisabled ||
+                    readyFiles.length === 0 ||
+                    intakeMode === "local_preview"
+                  }
                   onRetry={(stage) => void processFixture(stage)}
                   stages={state.processing}
                 />
@@ -642,7 +760,7 @@ export function DocumentsWorkspace({
                 <div>
                   <h3 className="cfn-type-heading-3" id="source-review-heading">Source review</h3>
                   <p className="cfn-type-body-small text-[var(--color-ink-muted)]">
-                    Redacted text is shown first. Original demo text is revealed only after confirmation.
+                    Redacted text is shown first. Original source text is revealed only after confirmation.
                   </p>
                 </div>
                 {state.segments.length === 0 ? (

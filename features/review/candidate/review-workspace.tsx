@@ -138,6 +138,10 @@ export function ReviewWorkspace() {
     () => state.analysisRuns.find((run) => run.id === state.activeAnalysisRunId) ?? null,
     [state.activeAnalysisRunId, state.analysisRuns],
   );
+  const isBrowserLocalSourceReview = Boolean(
+    activeRun?.provider.adapterVersion === "local-source-extraction-v1" ||
+    state.documents.some((document) => document.dataOrigin === "browser_local"),
+  );
   const reviewWorkspaceReady = Boolean(
     activeRun?.status === "succeeded" && state.candidates.length,
   );
@@ -161,6 +165,9 @@ export function ReviewWorkspace() {
   const hasCoverageWarning = state.coverage.issues.some(
     (issue) => issue.resolutionStatus !== "resolved",
   );
+  const unresolvedCoverageIssueCount = state.coverage.issues.filter(
+    (issue) => issue.resolutionStatus !== "resolved",
+  ).length;
   const pendingReviewCandidates = reviewCandidates.filter(
     (candidate) =>
       candidate.inclusionStatus === "active" &&
@@ -279,7 +286,13 @@ export function ReviewWorkspace() {
                 <ExternalLink aria-hidden="true" size={16} />
               </a>
             </div>
-            {activeRun.checkpointProvenance ? (
+            {isBrowserLocalSourceReview ? (
+              <Alert title="Browser-local source extraction, not live AI" tone="neutral">
+                Review items come only from readable text extracted in this browser. No PDF or
+                extracted content was transmitted to an AI provider, and no substantive inference
+                was generated.
+              </Alert>
+            ) : activeRun.checkpointProvenance ? (
               <CheckpointProvenance fixtureReviewerDecisionCount={fixtureReviewerDecisionCount} />
             ) : (
               <Alert title={activeRun.mode === "live" ? "Live provider run" : "Bundled deterministic replay, not live AI"} tone="neutral">
@@ -293,7 +306,9 @@ export function ReviewWorkspace() {
               </Alert>
             ) : hasCoverageWarning ? (
               <Alert title="Coverage warning" tone="warning">
-                D04 includes an unavailable page. It remains visible as a limitation and does not supply missing content.
+                {isBrowserLocalSourceReview
+                  ? `${unresolvedCoverageIssueCount} browser-local source coverage ${unresolvedCoverageIssueCount === 1 ? "issue remains" : "issues remain"} visible. Missing or unreadable content was not filled or inferred.`
+                  : `${unresolvedCoverageIssueCount} prepared-packet coverage ${unresolvedCoverageIssueCount === 1 ? "issue remains" : "issues remain"} visible. Missing content is not supplied or inferred.`}
               </Alert>
             ) : (
               <Alert title="Review records loaded" tone="neutral">
@@ -402,14 +417,24 @@ export function ReviewWorkspace() {
               <WorkspaceNavigation />
               <section aria-label="Source-linked chronology" id="timeline">
                 <Timeline
-                  dataState={hasCoverageWarning ? { kind: "partial", message: "D04 page 3 is unavailable and remains visible as a coverage limitation." } : { kind: "ready" }}
+                  dataState={hasCoverageWarning ? {
+                    kind: "partial",
+                    message: isBrowserLocalSourceReview
+                      ? "One or more selected files have source-coverage limitations. Missing or unreadable content was not filled or inferred."
+                      : "One or more prepared-packet pages are unavailable and remain visible as coverage limitations. Missing content is not inferred.",
+                  } : { kind: "ready" }}
                   onOpenSource={setSourceSelection}
                   state={state}
                 />
               </section>
 
               <NexusMatrix
-                dataState={state.coverage.hasConsequentialOpenIssue ? { kind: "blocked", message: "Consequential coverage must be reviewed before affected Nexus relationships can be relied on." } : hasCoverageWarning ? { kind: "partial", message: "The packet includes an unavailable page and provenance limitations. No missing content is inferred." } : { kind: "ready" }}
+                dataState={state.coverage.hasConsequentialOpenIssue ? { kind: "blocked", message: "Consequential coverage must be reviewed before affected Nexus relationships can be relied on." } : hasCoverageWarning ? {
+                  kind: "partial",
+                  message: isBrowserLocalSourceReview
+                    ? "The selected files include coverage or provenance limitations. No missing content is inferred."
+                    : "The packet includes an unavailable page and provenance limitations. No missing content is inferred.",
+                } : { kind: "ready" }}
                 onCommand={dispatchCaseCommand}
                 onOpenSource={setSourceSelection}
                 state={state}
@@ -438,7 +463,7 @@ export function ReviewWorkspace() {
 
           <p className="flex items-start gap-2 text-sm text-[var(--color-ink-muted)]">
             <ShieldCheck aria-hidden="true" className="mt-0.5 shrink-0" size={17} />
-            Fictional adult demo case only. The system suggests and organizes; a qualified practitioner makes every consequential review decision.
+            Fictional or hackathon test PDFs only—never real or private data. The system suggests and organizes; a qualified practitioner makes every consequential review decision.
           </p>
         </div>
       </div>

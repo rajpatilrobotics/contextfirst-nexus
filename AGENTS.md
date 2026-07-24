@@ -6,6 +6,65 @@ This file gives every Codex task the same safe working rules for ContextFirst Ne
 
 The repository is a responsible-AI hackathon prototype for source-grounded case preparation. It is not a general document chatbot, a legal decision-maker, or a production case system.
 
+## 1A. Current hackathon integration fast-track
+
+This section applies specifically to the Lovable UI integration and hackathon-completion work described in `docs/PROJECT_HANDOFF.md`. For that work, it overrides the slower procedural requirements in Sections 2, 6, 7, 9, and 11 when they conflict. The product, safety, privacy, credential, and truthful-claims rules in this file remain mandatory.
+
+The goal is to produce a strong, working judge demo quickly. Do not turn this integration into a production rewrite.
+
+### Working approach
+
+- Keep this `contextfirst-nexus` Next.js repository as the canonical application and runtime.
+- Use the approved Lovable repository only as the presentation and interaction reference.
+- Port or recreate the Lovable UI inside the existing app. Do not replace Next.js routing, canonical contracts, commands, or case state with Lovable's prototype router, fixtures, or local mock state.
+- Reuse existing components, domain functions, dependencies, and styles wherever practical.
+- Do not start from scratch, perform broad refactors, or introduce a new architecture.
+- Do not create another repository, branch, worktree, task packet, or dependency installation unless the user explicitly requests it.
+- Preserve all existing uncommitted user work. Never discard or overwrite it.
+
+### Planning and approvals
+
+- At the start of the integration, read this file, `docs/PROJECT_HANDOFF.md`, `plan.md`, Git status, and only the source files relevant to the next slice.
+- Do not reread every historical project document or inspect every route before making progress. Open additional authoritative documents only when the current slice needs them or a real conflict appears.
+- Create one concise integration plan and obtain one approval for the proposed phase.
+- After a phase is approved, implement its in-scope details without repeatedly stopping for approval.
+- Ask again only for a material scope, architecture, dependency, provider, security, data-flow, destructive, Git publishing, or deployment decision.
+- Keep `plan.md` short and update it only at meaningful checkpoints.
+
+### Implementation priority
+
+Build the judge-visible path in small vertical slices:
+
+1. Landing and Case Dashboard.
+2. The primary M. Chen case workspace shell and navigation.
+3. Purpose Brief and Documents / Source Health.
+4. Structured Analysis connected to canonical review state.
+5. Evidence Gap to Interview Question or Case Task.
+6. Evidence Integrity Map and Timeline.
+7. Export Gate, minimum-necessary handoff, and Audit Trail.
+
+- Deeply support `REF-2024-0047-SYN` / the canonical M. Chen fixture first.
+- Keep secondary dashboard cases honest, clearly read-only summaries until they have separate case-scoped fixtures.
+- Keep all twelve workspace destinations; lighter support screens may remain simple but complete.
+- Prefer one working end-to-end interaction over several disconnected polished mockups.
+- Do not add production authentication, tenancy, a new database, admin tooling, arbitrary uploads, heavy infrastructure, or unrelated features unless the approved judge path truly requires them.
+- Do not spend time on speculative abstractions, exhaustive cleanup, or pixel-perfect treatment of low-priority screens.
+
+### Verification for speed
+
+- During a slice, run the TypeScript check and the smallest focused test that covers changed behavior.
+- Run a production build at a meaningful phase boundary, not after every small edit.
+- Run the broader required suite only before the final deployment or when a shared contract change creates meaningful regression risk.
+- Do not add large test suites for static presentation changes. Add or update focused tests for connected state, consequential actions, export gating, or safety boundaries.
+- If the same blocker survives two focused repair attempts, report it with the smallest next option instead of spending hours exploring unrelated code.
+- Never skip verification entirely, hide a failure, fake functionality, or claim that a prototype-only behavior is working.
+
+### Communication and handoff
+
+- Keep progress updates and handoffs concise: outcome, files changed, focused checks, blocker, and next slice.
+- Do not create extra design documents, architecture documents, reports, or migration scaffolding unless they directly unblock implementation.
+- Do not commit, push, deploy, delete, or change the existing Vercel production target without explicit user approval.
+
 ## 2. Read before changing anything
 
 Every implementation task must read, in this order:

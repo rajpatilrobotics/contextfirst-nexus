@@ -3,6 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { CaseStateProvider, useCaseState } from "../../../../components/shell";
 import { ReviewWorkspace } from "../../../../features/review/candidate";
+import type { CaseState } from "../../../../lib/contracts";
 import { commandMeta, checkpointState } from "./review-test-state";
 
 const ORIGINAL_URL = window.location.href;
@@ -61,6 +62,41 @@ function renderWorkspace() {
       <ReviewWorkspace />
     </CaseStateProvider>,
   );
+}
+
+function browserLocalReviewState(): CaseState {
+  const state = checkpointState();
+  const coverageIssue = state.coverage.issues[0];
+  if (!coverageIssue) throw new Error("Expected the fixture coverage issue.");
+  return {
+    ...state,
+    documents: state.documents.map((document) => ({
+      ...document,
+      dataOrigin: "browser_local" as const,
+    })),
+    analysisRuns: state.analysisRuns.map((run) =>
+      run.id === state.activeAnalysisRunId
+        ? {
+            ...run,
+            checkpointProvenance: null,
+            provider: {
+              ...run.provider,
+              adapterVersion: "local-source-extraction-v1",
+              providerTransmission: false,
+            },
+          }
+        : run,
+    ),
+    coverage: {
+      ...state.coverage,
+      hasConsequentialOpenIssue: false,
+      issues: [{
+        ...coverageIssue,
+        activeConsequence: "non_consequential",
+        resolutionStatus: "open",
+      }],
+    },
+  };
 }
 
 function renderHydratingWorkspace() {
@@ -264,5 +300,25 @@ describe("TASK-032 Review workspace remediation focus bridge", () => {
     const taskCard = document.getElementById("candidate-CAND-TASK-0402");
     expect(taskCard).not.toBeNull();
     expect(within(taskCard!).getByText(/Last review: accept by Fixture reviewer/i)).toBeInTheDocument();
+  });
+
+  it("labels browser-local source extraction without bundled replay or D04 coverage copy", () => {
+    setReviewUrl();
+    render(
+      <CaseStateProvider initialState={browserLocalReviewState()}>
+        <ReviewWorkspace />
+      </CaseStateProvider>,
+    );
+
+    expect(
+      screen.getByRole("region", { name: "Browser-local source extraction, not live AI" }),
+    ).toHaveTextContent(/No PDF or extracted content was transmitted to an AI provider/i);
+    expect(screen.getByRole("region", { name: "Coverage warning" })).toHaveTextContent(
+      /1 browser-local source coverage issue remains visible/i,
+    );
+    expect(screen.getByText(/selected files have source-coverage limitations/i)).toBeInTheDocument();
+    expect(screen.queryByText(/D04 includes an unavailable page/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/D04 page 3 is unavailable/i)).not.toBeInTheDocument();
+    expect(screen.queryByText("Bundled deterministic replay, not live AI")).not.toBeInTheDocument();
   });
 });

@@ -33,13 +33,32 @@ export function deriveAnalysisPrerequisites(state: CaseState): {
     const status = stageByName.get(name)?.status;
     return status === "completed" || status === "warning";
   });
+  const readableSegments = state.segments.filter(
+    (segment) =>
+      segment.extractionQuality !== "unavailable" &&
+      segment.rawText.trim().length > 0 &&
+      segment.redactedText.trim().length > 0,
+  );
+  const selectedSegmentIds = new Set(state.selectedSegmentIds);
+  const candidateEligibleSegments = readableSegments.filter(
+    (segment) =>
+      selectedSegmentIds.has(segment.id) &&
+      segment.supportEligibility === "candidate_eligible",
+  );
+  const instructionOnlyReadableInput =
+    readableSegments.length > 0 &&
+    readableSegments.every(
+      (segment) => segment.supportEligibility === "evidence_only",
+    );
   const sourcesProcessed =
-    state.documents.length === 7 &&
-    state.coverage.processedDocuments === 7 &&
-    state.selectedSegmentIds.length > 0 &&
+    state.documents.length > 0 &&
+    state.coverage.expectedDocuments === state.documents.length &&
+    state.coverage.processedDocuments > 0 &&
+    readableSegments.length > 0 &&
     fixtureStagesComplete;
   const coverageReady =
-    state.coverage.expectedDocuments === 7 &&
+    state.coverage.expectedDocuments === state.documents.length &&
+    state.coverage.expectedDocuments > 0 &&
     !state.coverage.hasConsequentialOpenIssue;
   const maskingApproved = state.masking.reviewStatus === "approved";
   const leakScanPassed = state.masking.leakScanStatus === "passed";
@@ -61,8 +80,8 @@ export function deriveAnalysisPrerequisites(state: CaseState): {
       label: "Selected documents processed locally",
       satisfied: sourcesProcessed,
       detail: sourcesProcessed
-        ? "Seven selected documents and their approved redacted segments are represented."
-        : "Select and process the seven demo PDFs, then resolve any failed local stage.",
+        ? `${state.coverage.processedDocuments} selected ${state.coverage.processedDocuments === 1 ? "document is" : "documents are"} represented by readable source segments.`
+        : "Select one or more PDFs and resolve any unreadable or failed local pages.",
     },
     {
       id: "coverage",
@@ -71,6 +90,17 @@ export function deriveAnalysisPrerequisites(state: CaseState): {
       detail: coverageReady
         ? "No consequential or unknown open coverage issue blocks analysis."
         : "A consequential or unknown open coverage issue remains, or coverage has not been calculated.",
+    },
+    {
+      id: "candidate-sources",
+      label: "Reviewable source text available",
+      satisfied: candidateEligibleSegments.length > 0,
+      detail:
+        candidateEligibleSegments.length > 0
+          ? `${candidateEligibleSegments.length} readable ${candidateEligibleSegments.length === 1 ? "segment is" : "segments are"} eligible for neutral human-review items.`
+          : instructionOnlyReadableInput
+            ? "Readable text was found, but it contains only instruction-like content. It remains evidence-only and cannot generate review candidates; add a PDF with ordinary source text."
+            : "At least one selected readable source segment must be eligible for human review.",
     },
     {
       id: "masking",
@@ -86,7 +116,9 @@ export function deriveAnalysisPrerequisites(state: CaseState): {
       satisfied: leakScanPassed,
       detail: leakScanPassed
         ? "The approved redacted document projection passed."
-        : "Complete masking review to run the deterministic leak scan.",
+        : state.masking.leakScanStatus === "failed"
+          ? "The deterministic scan found a remaining supported identifier. Add or correct a mask, then approve the privacy check again."
+          : "Complete masking review to run the deterministic leak scan.",
     },
     {
       id: "analysis-mode",

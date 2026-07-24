@@ -31,13 +31,13 @@ async function completePurpose(page: Page) {
   }
 
   const acknowledgementNames = [
-    /attest that I am using this fictional demo packet/i,
+    /using only fictional or hackathon test PDFs/i,
     /system cannot verify my authority/i,
-    /material is the bundled fictional demo packet/i,
-    /acknowledge the demo-only data boundary/i,
+    /selected PDFs contain no real or private case data/i,
+    /fictional and hackathon test-data-only boundary/i,
     /does not make the excluded consequential decisions/i,
     /cooperation with authorities is not a condition/i,
-    /frozen local demo output/i,
+    /prepared demo replay or browser-local source extraction/i,
   ];
   for (const name of acknowledgementNames) {
     await page.getByRole("checkbox", { name }).check();
@@ -77,7 +77,7 @@ test.describe("TASK-039 simplified replay-only analysis", () => {
     const disclosure = page.getByRole("group", { name: "How analysis works" });
     await expect(disclosure).toBeVisible();
     await expect(disclosure.getByText(/Bundled deterministic replay, not live AI/i)).toBeVisible();
-    await expect(page.getByText(/No case content is sent to an external service/i)).toBeVisible();
+    await expect(page.getByText(/No PDF or extracted content is sent to an external service or AI provider/i)).toBeVisible();
     await expect(page.getByRole("radio")).toHaveCount(0);
     await expect(page.getByText(/OpenAI|Google Gemini|Mistral Small|gpt-5\.6-sol|prepared-replay-v1/i)).toHaveCount(0);
     await expect(page.getByRole("button", { name: "Start analysis" })).toHaveCount(0);

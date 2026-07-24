@@ -6,8 +6,10 @@ export {
   PDF_SELECTION_STAGES,
   PdfSelectionPanel,
   type PdfBatchReadyHandler,
+  type PdfSelectionMode,
   type PdfSelectionProcessor,
   type PdfSelectionStage,
+  type PdfSelectionValidation,
   type PdfSelectionValidator,
   type ReadyPdfBatch,
 } from "./pdf-selection-panel";

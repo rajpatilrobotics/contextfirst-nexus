@@ -28,13 +28,13 @@ async function completeForm(user: ReturnType<typeof userEvent.setup>) {
   for (const decision of RequiredExcludedDecisions) {
     await user.click(screen.getByRole("checkbox", { name: new RegExp(decision === "credibility" ? "Credibility" : decision.replaceAll("_", ".*"), "i") }));
   }
-  await user.click(screen.getByRole("checkbox", { name: /attest that I am using this fictional demo packet/i }));
+  await user.click(screen.getByRole("checkbox", { name: /using only fictional or hackathon test PDFs/i }));
   await user.click(screen.getByRole("checkbox", { name: /system cannot verify my authority/i }));
-  await user.click(screen.getByRole("checkbox", { name: /material is the bundled fictional demo packet/i }));
-  await user.click(screen.getByRole("checkbox", { name: /acknowledge the demo-only data boundary/i }));
+  await user.click(screen.getByRole("checkbox", { name: /selected PDFs contain no real or private case data/i }));
+  await user.click(screen.getByRole("checkbox", { name: /fictional and hackathon test-data-only boundary/i }));
   await user.click(screen.getByRole("checkbox", { name: /does not make the excluded consequential decisions/i }));
   await user.click(screen.getByRole("checkbox", { name: /cooperation with authorities is not a condition/i }));
-  await user.click(screen.getByRole("checkbox", { name: /frozen local demo output/i }));
+  await user.click(screen.getByRole("checkbox", { name: /prepared demo replay or browser-local source extraction/i }));
 }
 
 describe("TASK-039 CasePurposeBriefForm", () => {
@@ -44,9 +44,13 @@ describe("TASK-039 CasePurposeBriefForm", () => {
     await user.click(screen.getByRole("button", { name: "Save Case Purpose Brief" }));
     const summary = screen.getByRole("alert", { name: "Review the Purpose Brief" });
     expect(summary).toHaveFocus();
-    expect(summary).toHaveTextContent("Acknowledge how this prepared local analysis works.");
+    expect(summary).toHaveTextContent("Acknowledge how local analysis works.");
     expect(summary).not.toHaveTextContent(/choose one available live release|selected release/i);
     expect(screen.queryByRole("radio")).not.toBeInTheDocument();
+    expect(screen.getByText(/Use only fictional or hackathon test PDFs/i)).toHaveTextContent(
+      /not transmitted to an AI provider/i,
+    );
+    expect(screen.queryByText(/Only bundled fictional adult fixture/i)).not.toBeInTheDocument();
     await user.click(screen.getByRole("link", { name: "Choose the practitioner role." }));
     expect(screen.getByLabelText("Practitioner role")).toHaveFocus();
   });
@@ -128,7 +132,7 @@ describe("TASK-039 CasePurposeBriefForm", () => {
         onSave={vi.fn()}
       />,
     );
-    expect(screen.getByRole("checkbox", { name: /frozen local demo output/i })).not.toBeChecked();
+    expect(screen.getByRole("checkbox", { name: /prepared demo replay or browser-local source extraction/i })).not.toBeChecked();
     expect(screen.queryByText(/OpenAI|gpt-5\.6-sol|openai-quality-v1/i)).not.toBeInTheDocument();
   });
 });

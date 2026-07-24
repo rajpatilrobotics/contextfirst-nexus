@@ -1,3 +1,338 @@
+# Lovable UI integration and hackathon completion, 2026-07-23
+
+## Read-only reconnaissance checkpoint, 2026-07-24
+
+This checkpoint records the verified starting point for the requested
+integration. It supersedes older source-reference, readiness, and
+arbitrary-upload statements later in this file wherever they conflict. No
+application code, dependency, branch, deployment, or production setting was
+changed during reconnaissance.
+
+### 1. Goal
+
+Integrate the latest Lovable presentation into the existing functional
+Next.js application without replacing its canonical contracts, reducer,
+commands, selectors, audit trail, replay boundary, or fail-closed export
+engine.
+
+The reviewed Lovable reference is the private repository
+`rajpatilrobotics/remix-of-remix-of-remix-of-01-remix-of-case-navigator` at
+commit `0bca52afe26...` (`Compactified analysis lanes`, 2026-07-23). It is a
+visual and interaction reference, not a second runtime or state architecture.
+
+### 2. Problem and verified starting state
+
+- Git is on `main` at `8f7a201`, exactly aligned with `origin/main`
+  (`0` ahead, `0` behind).
+- The worktree is materially dirty: 31 tracked files are modified (about
+  2,479 insertions and 247 deletions) and 7 paths are untracked.
+- `git diff --check` passes, but `node_modules` is absent. The dirty WIP has
+  not received a fresh typecheck, lint, test, build, accessibility, or browser
+  verification and must not be described as verified.
+- The committed application is a coherent, synthetic, replay-only workflow:
+  landing; Purpose Brief; exact seven-PDF fixture intake and local PDF.js
+  extraction; coverage and masking; deterministic replay; source-grounded
+  human review; dependency invalidation; Timeline and Nexus views; fail-closed
+  JSON/PDF export from one immutable manifest; audit; and Trust/Safety.
+- OpenAI, Gemini, and Mistral adapters exist, but every live provider remains
+  unadmitted and the public product remains replay-only. TASK-040 is the
+  separate ready task for managed provider routing and is outside this UI
+  phase.
+- The dirty WIP adds browser-local intake for 1–25 PDFs, readable/image-only
+  page states, approved masking, privacy checks, and neutral source-excerpt
+  review candidates. It does not yet provide substantive arbitrary-document
+  analysis or export.
+- The frozen product brief and DEC-004 authorize only the bundled synthetic
+  packet, while the dirty WIP and older plan text describe arbitrary PDF
+  intake. Higher-authority product truth wins until this conflict is explicitly
+  reconciled and approved.
+- The task graph has no UI-integration task packet. A bounded packet and
+  exclusive write scope are required before implementation, and they must not
+  overlap TASK-040.
+
+### 3. Lovable UI-to-functional-code mapping
+
+| Lovable destination | Functional foundation in this repository | Integration classification |
+| --- | --- | --- |
+| Landing | Existing safety-boundary landing | Visual port and route to Dashboard |
+| Case Dashboard | No canonical case collection | Small real implementation; only M. Chen enters the deep workspace |
+| Purpose Brief | Validated canonical form and command | Primarily visual port |
+| Documents & Source Health | Strong bundled-fixture flow plus unverified local-PDF WIP | Visual port; WIP policy and verification remain separate |
+| Structured Analysis | Canonical candidates, lanes, queue, citations, decisions, and source drawer | Visual/master-detail port over existing selectors |
+| Urgent Needs | No canonical model | Real contracts, commands, audit, and cross-links required |
+| Evidence Gaps | Canonical context-gap candidates and responses | Visual port plus real gap-to-action commands |
+| Interview Planner | Missing | Real implementation tied to canonical `GAP-*` identifiers |
+| Services & Referrals | Missing | Real implementation with fictional-provider and no-transmission rules |
+| Case Tasks | Missing | Real shared state, commands, ownership, status, and due dates |
+| Notes & Journal | Missing | Real implementation kept separate from evidence and audit truth |
+| Evidence Integrity Map | Dependencies, citations, and Nexus selectors exist | New neutral visual route driven by canonical data |
+| Timeline | Canonical selector and component exist | Route and visual port, including explicit undated handling |
+| Export Gate | Canonical blockers, manifest, preview, and local JSON/PDF renderers | Visual port after the input/export policy is reconciled |
+| Audit Trail | Canonical audit events exist | Separate filtered presentation |
+| Trust & Safety | System Card, admission truth, Safety Lab, guidance, and reports | Visual port with current truthful copy |
+
+The Lovable shell, editorial color and typography tokens, compact
+master-detail layouts, cards, filters, badges, navigation, and responsive
+composition need visual porting. Lovable's Zustand fixtures, static counters,
+toast-only actions, fixed graph data, mock exports, route casts, and
+component-local review decisions must not be copied as functional truth.
+
+### 4. Smallest safe proposed solution
+
+#### Phase 0 — approval and baseline protection
+
+1. Obtain explicit approval before creating a safety branch, committing the
+   dirty worktree, installing dependencies, or running any networked setup.
+2. Preserve the WIP without rewriting history, then run the smallest focused
+   local-PDF tests and the existing verification commands.
+3. Reconcile bundled-fixture-only product truth versus arbitrary local PDF
+   intake. Record any approved product change in the authoritative brief,
+   decision log, contracts, and export policy before relying on it.
+4. Create and approve a bounded UI-integration task packet with exclusive
+   write scope that does not overlap TASK-040.
+
+#### Phase 1A — first implementation slice after approval
+
+1. Port only the Lovable visual tokens, institutional landing, global shell,
+   six-stage tracker, and a truthful Case Dashboard.
+2. Keep `CFN-DEMO-001` as the stable internal identifier and treat the Lovable
+   case reference as display metadata.
+3. Allow only the complete M. Chen fixture to enter the existing functional
+   workspace. Show secondary cases as visibly read-only summaries with no
+   workspace link and no possibility of M. Chen data leakage.
+4. Preserve the existing Purpose, Documents, Review, Export, Trust,
+   `CaseStateProvider`, reducer, commands, reset, and API behavior.
+5. Derive displayed progress and counts from canonical state. If a value is
+   unavailable, say so; never copy Lovable's static counts.
+6. Keep not-yet-integrated destinations visibly unavailable rather than
+   creating blank or deceptive routes. Add each as a real routed feature in a
+   later approved slice.
+
+### 5. Files for the first implementation slice
+
+Expected scope, subject to the approved task packet:
+
+- `app/page.tsx` and a bounded Dashboard route.
+- `app/globals.css` for ported visual tokens.
+- `components/shell/` for the stage tracker and typed navigation.
+- A small dashboard feature/view-model module that exposes display metadata
+  and derives primary-case values from canonical state.
+- Focused unit, component, accessibility, and end-to-end tests for only this
+  slice.
+
+Do not change provider routing, export policy, arbitrary-PDF contracts, or
+new support-workflow domain state in Phase 1A.
+
+### 6. Acceptance criteria for Phase 1A
+
+- Both landing calls to action open the Dashboard.
+- Dashboard cards are keyboard-operable, responsive, and truthful.
+- Only the complete synthetic primary case can enter the workspace.
+- Secondary cases remain read-only and cannot expose primary-case data.
+- Active case identity is preserved through supported workspace navigation;
+  unknown case identifiers fail safely.
+- Existing Purpose → Documents → Review → Export and Trust behavior remains
+  functional.
+- Reset still dispatches the single canonical `reset_case` command.
+- Counts and progress derive from `CaseState`; no parallel Zustand or
+  page-local domain store is introduced.
+- There are no dead links, fake actions, copied static claims, or blank route
+  stubs.
+- Keyboard focus, screen-reader semantics, reduced motion, zoom, and 320 px
+  reflow remain usable.
+
+### 7. Testing plan
+
+After dependency installation is separately approved:
+
+1. Re-run `git diff --check` and capture a clean baseline.
+2. Run focused tests for the dirty local-PDF WIP before UI integration.
+3. Add and run focused shell, Dashboard, routing, state-provider, read-only
+   case, unknown-case, and reset tests.
+4. Run regressions for Purpose, Documents, Review, Export, and Trust.
+5. Run `npm run typecheck`, `npm run lint`, `npm run test:unit`,
+   `npm run test:contracts`, `npm run test:components`, and `npm run build`.
+6. Run Playwright for landing → Dashboard → primary Purpose, blocked secondary
+   cases, case-preserving navigation, unknown-case fallback, reset, and the
+   existing guided demo.
+7. Run automated accessibility checks plus manual keyboard, focus, reduced
+   motion, 320 px reflow, zoom, and macOS VoiceOver checks.
+8. Verify the arbitrary-PDF WIP on a separate track, including provenance and
+   export-policy tests, before calling it end-to-end functional.
+
+### 8. Open questions and approval gates
+
+- Approve or reject the Phase 0 safety branch and local WIP commit. No branch
+  or commit has been created.
+- Approve dependency installation before the planned test matrix. No package
+  has been installed.
+- Decide whether the product remains bundled-fixture-only or formally adopts
+  arbitrary browser-local PDFs; the current authoritative documents and WIP
+  disagree.
+- Approve a new UI-integration task packet and write scope before Phase 1A.
+- Live-provider work, credentials, spend, preview deployment, and production
+  deployment remain separate decisions and are not authorized by this plan.
+
+## 1. Goal
+
+Ship one fully demonstrable ContextFirst Nexus application at the existing
+`https://contextfirst-nexus.vercel.app` URL by combining:
+
+- the Lovable interface from `rajpatilrobotics/case-navigator`; and
+- the tested contracts, state engine, document processing, review logic,
+  export gate, audit, safety, evaluation, and replay path already implemented
+  in `rajpatilrobotics/contextfirst-nexus`.
+
+The result should look like the Lovable product while behaving like the
+working ContextFirst application.
+
+## 2. Problem
+
+- `case-navigator` contains the preferred interface and all intended routes,
+  but its data is static synthetic fixture data and most actions only update
+  component or Zustand memory.
+- The Structured Analysis Lovable change is present in GitHub at `135e3bd`,
+  but the later Evidence Gaps redesign and proposed Interview Planner
+  enhancement are not in GitHub.
+- `contextfirst-nexus` contains the valuable working domain core and the
+  existing Vercel project, but its presentation layer is not the desired UI.
+- The local `contextfirst-nexus` checkout contains substantial uncommitted,
+  typechecking arbitrary-PDF and local-analysis work. It must be preserved
+  before integration begins.
+- Running two separate applications would duplicate state, review, audit,
+  export, and safety logic and would complicate the judge-facing deployment.
+
+## 3. Proposed solution
+
+Use `contextfirst-nexus` as the canonical repository and deployment target.
+Use `case-navigator` as a read-only visual and component reference.
+
+Before changing application code:
+
+1. Preserve the current dirty `contextfirst-nexus` work on an explicit safety
+   branch and commit after user approval.
+2. Create a focused integration branch from that preserved state.
+3. Keep the existing contracts, reducer, selectors, API boundary, replay,
+   document pipeline, export engine, audit rules, and safety boundaries.
+4. Replace the old shell and feature presentation incrementally with the
+   Lovable layout, styles, routes, and compact master-detail workspaces.
+5. Recreate the unsynced Evidence Gaps design from the archived screenshot and
+   build the approved Interview Planner improvements directly in Codex.
+6. Add real typed state and audit behavior for the new support workflows rather
+   than leaving their controls as decorative toasts.
+7. Verify the complete judge flow locally and on a Vercel preview before any
+   explicitly approved production deployment.
+
+The hackathon definition of “fully working” is a reliable, interactive,
+source-grounded single-case demonstration with local PDF intake, deterministic
+replay/local extraction, human review, dependency invalidation, safe export,
+and audit. Production authentication and durable multi-user storage remain
+out of scope unless separately approved.
+
+## 4. Files to change
+
+Primary target: `contextfirst-nexus`
+
+- `app/` for the Lovable route structure and existing API boundary.
+- `components/shell/` and `components/ui/` for the new shell and shared UI.
+- `features/purpose/`, `features/documents/`, `features/review/`,
+  `features/export/`, and `features/trust/` for presentation replacement and
+  existing behavior wiring.
+- New bounded feature folders for dashboard, urgent needs, interview planning,
+  services/referrals, tasks, and notes.
+- `lib/contracts/`, `lib/state/`, and `lib/review/` only for typed commands,
+  selectors, audit events, and state required by the new workflows.
+- Focused unit, contract, component, accessibility, and end-to-end tests.
+- `PROJECT_BRIEF.md`, `docs/PRODUCT_SPEC.md`, and `decision-log.md` only when
+  new implemented workflow behavior needs to become product truth.
+
+Reference only: `case-navigator`
+
+- `src/styles.css`
+- `src/components/case-shell.tsx`
+- `src/components/nexus-ui.tsx`
+- `src/routes/`
+- `src/fixtures/case.ts`
+
+Do not rewrite or force-push the Lovable repository history.
+
+## 5. Step by step tasks
+
+1. [ ] With user approval, preserve the current dirty working tree on a named
+   safety branch and commit it without pushing or rewriting existing history.
+2. [ ] Run the focused tests for the arbitrary-PDF WIP, fix only baseline
+   failures, and record the verified starting point.
+3. [ ] Create the integration branch and port the Lovable global styles,
+   landing page, dashboard, case shell, six-stage tracker, and 12 sidebar
+   destinations without changing domain behavior.
+4. [ ] Bind Purpose and Documents to the existing canonical state, local PDF
+   extraction, masking, coverage, and analysis-start commands.
+5. [ ] Bind Structured Analysis, Evidence Gaps, Nexus Map, and Timeline to
+   existing selectors, citations, review decisions, and dependency
+   invalidation. Recreate the unsynced Evidence Gaps layout.
+6. [ ] Implement typed, audited workflows for Urgent Needs, Interview Planner,
+   Services & Referrals, Case Tasks, and Notes & Journal, using the Lovable UI
+   and the approved compact Interview Planner design.
+7. [ ] Bind Export Gate, semantic preview, JSON/PDF downloads, Audit Trail,
+   Trust & Safety, and reset behavior to canonical state.
+8. [ ] Complete the strongest demo path: load/select documents, process,
+   analyze via labelled replay or conservative local extraction, review exact
+   citations, expose a gap, convert it into an action, reject supporting
+   evidence, observe dependent Nexus invalidation, and see export blocked.
+9. [ ] Run typecheck, lint, unit, contract, component, accessibility,
+   end-to-end, security, build, and manual desktop checks.
+10. [ ] Create and inspect a Vercel preview. Deploy to the existing production
+    URL only after explicit user approval.
+
+## 6. Acceptance criteria
+
+- The judge-facing interface matches the Lovable information architecture and
+  visual direction, including all 12 workspace destinations.
+- No route is a blank stub; support screens may be lighter, but their primary
+  actions update canonical state and produce audit events.
+- Purpose, documents, masking, analysis, citations, review, dependency
+  invalidation, evidence gaps, Nexus, timeline, export gate, JSON/PDF export,
+  audit, and trust behavior remain functional.
+- Uploaded PDF bytes and extracted text retain the approved local-only privacy
+  boundary.
+- Every consequential item preserves separate evidence nature, origin,
+  support, and review status.
+- Evidence Gaps can create accountable interview, document-request, comparison,
+  preservation, or task actions.
+- Interview questions expose their gap, Nexus, citation, origin, rationale,
+  sensitivity, and explicit practitioner-review state.
+- Unsafe features remain prohibited: credibility scoring, deception/emotion
+  inference, automated legal conclusions, AI auto-approval, and hidden live
+  provider transmission.
+- The app builds successfully and the complete demo works at the unchanged
+  `contextfirst-nexus.vercel.app` URL after approved production deployment.
+
+## 7. Testing plan
+
+- Preserve and verify the current arbitrary-PDF WIP before UI integration.
+- Add focused unit tests for new commands, selectors, gap conversions,
+  interview readiness, task/referral state, audit events, and export blockers.
+- Add component tests for every new interactive screen and important empty,
+  loading, error, blocked, and reset state.
+- Keep contract tests around analysis requests, citations, review decisions,
+  export manifests, and audit records.
+- Run Playwright through the complete judge demo and important keyboard paths.
+- Run automated accessibility checks and manually verify focus, labels, status
+  semantics, responsive stacking, and non-color state communication.
+- Compare the implemented screens with the archived Lovable and Replit
+  references at consistent desktop viewports.
+- Verify local JSON/PDF downloads and a Vercel preview before production.
+
+## 8. Open questions
+
+- Approval is required before creating the safety branch and committing the
+  existing uncommitted `contextfirst-nexus` work.
+- The safe default is the labelled deterministic replay plus conservative
+  local extraction. Enabling a live AI provider requires separate credentials,
+  evaluation/admission evidence, spend approval, and production approval.
+- Production authentication and durable multi-case storage are not necessary
+  for the hackathon demonstration and should not delay the working judge flow.
+
 # ContextFirst Nexus Documentation Foundation Plan
 
 ## Current program update, 2026-07-17
@@ -60,6 +395,59 @@ The current Documents screen immediately shows D01-D07, so it looks prefilled an
 
 - None for this pass. Server upload, arbitrary real-case files, OCR, and cloud storage remain out of scope.
 
+## Flexible local PDF intake clarification, 2026-07-18
+
+### Goal
+
+Let a practitioner select one or more PDFs without a false seven-file error, and make the boundary between local PDF reading and the prepared demo analysis unmistakable.
+
+### Problem
+
+The current Documents step presents a frozen seven-file fixture verifier as if it were a general upload tool. It can label files ready even when a page could not be read, and it shows later analysis stages as pending alongside local PDF-reading stages. A first-time user cannot tell whether a PDF is valid, whether text was extracted, or why analysis has not started.
+
+### Proposed solution
+
+- Accept any non-empty set of ordinary PDFs for browser-local inspection.
+- Show concise per-file results: pages read, readable text found, or a clear warning when text cannot be extracted.
+- Keep arbitrary uploaded files separate from the canonical D01-D07 replay state; do not manufacture fixture findings for unrelated documents.
+- Unlock the prepared replay only for the exact verified demo packet and explain that limitation in plain language.
+- Separate local PDF-reading progress from downstream analysis progress, which starts only after the user explicitly starts analysis.
+- Treat familiar document types such as job offers, recruiter messages, travel records, and practitioner notes as optional organization labels only. A practitioner may leave a file unclassified or choose `Other` with a custom title; categories must never become required upload slots.
+
+### Files to change
+
+- `lib/documents/pdf-source-service.ts` and `lib/documents/index.ts`.
+- `features/documents/pdf-selection-panel.tsx`, `documents-workspace.tsx`, `document-cards.tsx`, and `processing-stage-list.tsx`.
+- Focused Documents unit and component tests.
+
+### Step by step tasks
+
+1. [x] Add safe 1..N PDF validation and browser-local inspection without persisting file bytes or raw text.
+2. [x] Detect the exact prepared demo packet separately from general local files.
+3. [x] Simplify the Documents UI and accurately label readable, warning, and unavailable states.
+4. [x] Explain that candidate, citation, timeline, and export checks begin only after analysis starts.
+5. [x] Verify focused tests, typecheck, lint, build, and the local browser flow.
+
+### Acceptance criteria
+
+- Selecting one PDF is accepted instead of producing a seven-file-count error.
+- Any non-empty set of valid PDFs can be inspected locally, within safe file limits.
+- Local inspection never creates D01-D07 records, candidates, citations, or exports for unrelated PDFs.
+- Page-read failures cannot be presented as successful text extraction.
+- The exact demo packet can still enter the existing masking, replay, Review, and Export journey.
+- The UI clearly says that arbitrary-document AI analysis is not connected in this demo.
+
+### Testing plan
+
+- Unit tests for flexible validation, limits, readable pages, image-only pages, and failed PDF loading.
+- Component tests for one-file intake, multi-file intake, local-only completion, and exact demo-packet handoff.
+- Typecheck, lint, production build, and one desktop browser pass.
+
+### Open questions
+
+- Full analysis of arbitrary case documents remains a separate future feature requiring a generalized case contract and an approved live analysis pipeline.
+- Optional document-type labels are the recommended next intake enhancement. They should organize uploaded files, not determine whether a file is accepted or analyzed.
+
 ## Fast-track workflow redesign, 2026-07-18
 
 ### Goal
@@ -111,6 +499,82 @@ The current UI exposes too many internal stages, large technical panels, and rep
 ### Open questions
 
 - None. The local desktop flow is ready for user review before any commit, push, or deployment.
+
+## Safari PDF compatibility fix, 2026-07-18
+
+### Goal
+
+Make the same verified demo PDFs extract successfully in Safari and Chromium.
+
+## Arbitrary local document analysis, 2026-07-18
+
+### Goal
+
+Let a judge choose any non-empty set of PDFs and continue through a useful, honest local analysis flow without requiring the prepared seven-file packet or a live AI model.
+
+### Problem
+
+The current intake can inspect arbitrary filenames, but Safari page extraction may fail and the canonical Review flow is still tied to the prepared replay. That leaves valid user-selected files blocked behind demo-packet language.
+
+### Proposed solution
+
+- Repair browser PDF text extraction for ordinary text PDFs.
+- Accept any number of PDFs within the existing safety limits.
+- Convert readable pages into session-only document and source records.
+- Derive conservative local review items from extracted text using deterministic rules, clearly labelled as local document triage rather than AI or legal conclusions.
+- Preserve unreadable or scanned pages as explicit limitations while allowing readable files to continue.
+- Keep the prepared replay available as a separate optional demonstration path.
+
+### Files to change
+
+- `lib/documents/` PDF reading and local-analysis helpers.
+- Central contracts/state only where needed to carry browser-local records.
+- `features/documents/` and the existing run controller for the guided transition.
+- Focused unit and component tests.
+
+### Step by step tasks
+
+1. Fix Safari-compatible text extraction and explain scanned/unreadable pages plainly.
+2. Build dynamic document, page, and segment records for any selected PDFs.
+3. Add a deterministic local triage run that creates reviewable citations and items from those segments.
+4. Connect Documents to Review with one obvious action and remove the demo-packet-required message.
+5. Run focused tests, typecheck, lint, and a local browser pass.
+
+### Acceptance criteria
+
+- One PDF or more than ten PDFs can be selected, subject only to existing size/count safety limits.
+- Arbitrary filenames are accepted.
+- Readable text PDFs proceed without the prepared packet.
+- Mixed readable/unreadable input proceeds with visible limitations; an entirely unreadable set explains that OCR is needed.
+- Review receives only statements grounded in extracted text with exact source links.
+- No live provider, fabricated finding, or legal conclusion is implied.
+- Raw PDF bytes and extracted text are not sent to a server or persisted in browser storage.
+
+### Testing plan
+
+- Unit tests for PDF extraction, dynamic record creation, and deterministic triage.
+- Component tests for one-file, many-file, mixed-quality, and all-unreadable flows.
+- Typecheck, lint, focused tests, and one Safari/Chromium local pass.
+
+### Open questions
+
+- OCR for image-only PDFs is not available in this fast pass; those pages remain explicit limitations.
+
+### Problem
+
+Safari can reject the modern PDF.js runtime even though file validation succeeds. The resulting failure is persisted in the current tab and appears as seven text-extraction failures.
+
+### Proposed solution
+
+- Load PDF.js's matching legacy browser runtime and worker.
+- Keep the existing local-only file boundary and processing contracts unchanged.
+- Verify focused document tests, build, and a fresh seven-file browser run.
+
+### Acceptance criteria
+
+- The reader and worker use the same PDF.js legacy build.
+- A fresh seven-file run opens all expected readable pages.
+- No AI provider is called during PDF extraction.
 
 ## 1. Goal
 

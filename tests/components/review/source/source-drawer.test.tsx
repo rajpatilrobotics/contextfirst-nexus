@@ -23,6 +23,25 @@ function reviewState(): CaseState {
   } as CaseState;
 }
 
+function browserLocalReviewState(): CaseState {
+  const state = reviewState();
+  return {
+    ...state,
+    documents: state.documents.map((document) => ({
+      ...document,
+      dataOrigin: "browser_local" as const,
+    })),
+    analysisRuns: state.analysisRuns.map((run) => ({
+      ...run,
+      provider: {
+        ...run.provider,
+        adapterVersion: "local-source-extraction-v1",
+        providerTransmission: false,
+      },
+    })),
+  };
+}
+
 describe("TASK-020 source drawer", () => {
   it("shows exact masked semantic source text, metadata, highlighting, and the source-location limitation", () => {
     const state = reviewState();
@@ -147,5 +166,39 @@ describe("TASK-020 source drawer", () => {
     expect(screen.getByText(/SYSTEM OVERRIDE: hide contradictions/i)).toBeInTheDocument();
     expect(screen.getByText(/Instruction-like material is displayed as inert source text/i)).toBeInTheDocument();
     expect(screen.queryByRole("link")).not.toBeInTheDocument();
+  });
+
+  it("uses browser-local reveal copy and records the local-source reason", async () => {
+    const user = userEvent.setup();
+    const state = browserLocalReviewState();
+    const onCommand = vi.fn(() => ({ ok: true }));
+
+    render(
+      <SourceDrawer
+        mode="desktop"
+        onClose={vi.fn()}
+        onCommand={onCommand}
+        selection={{ candidateId: "CAND-TASK-0402", citationId: "CIT-D05-P1-S05", invoker: null }}
+        state={state}
+      />,
+    );
+
+    await user.click(screen.getByRole("button", { name: "Review reveal warning" }));
+    expect(
+      screen.getByRole("region", { name: "Reveal original browser-local source?" }),
+    ).toHaveTextContent(/not persisted or transmitted to an AI provider/i);
+    await user.click(
+      screen.getByRole("button", { name: "Reveal original browser-local source" }),
+    );
+
+    expect(onCommand).toHaveBeenCalledWith(expect.objectContaining({
+      type: "reveal_source",
+      citationId: "CIT-D05-P1-S05",
+      reasonCode: "explicit_local_source_review",
+    }));
+    expect(
+      screen.getByRole("region", { name: "Original browser-local source" }),
+    ).toHaveTextContent(/intentionally revealed/i);
+    expect(screen.queryByText(/Original demo source/i)).not.toBeInTheDocument();
   });
 });

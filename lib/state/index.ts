@@ -20,6 +20,7 @@ import {
   addMaskSuggestion,
   applyLeakScanResult,
   approveMaskingReview,
+  buildSegmentRedaction,
   createEmptyMaskingReview,
   detectMaskSuggestions,
   makeManualSuggestion,
@@ -42,6 +43,7 @@ import {
   resolveTrustedReplayBundle,
   trustedSegments,
 } from "../analysis/replay";
+import { buildLocalSourceExtraction } from "../analysis/local-source-extraction";
 
 export const CASE_STATE_STORAGE_KEY = "contextfirst-nexus.case-state.v1" as const;
 const VERSION = "1.0.0" as const;
@@ -82,6 +84,7 @@ export function createInitialCaseState(now = isoNow()): CaseState {
     caseRevision: 0,
     caseStatus: "draft",
     fixtureVersion: VERSION,
+    documentSetDigest: null,
     guidancePack: bundledGuidancePack.identity,
     purposeBrief: null,
     documents: [],
@@ -178,10 +181,39 @@ function applyValidCommand(state: CaseState, command: CaseCommand): CaseCommandR
     case "complete_fixture_processing":
       return commit(state, command, {
         documents: command.result.documents,
+        documentSetDigest: command.result.canonicalFixtureDigest,
         segments: trustedSegments(),
         selectedSegmentIds: command.result.selectedSegmentIds,
         coverage: command.result.coverage,
         processing: command.result.processing,
+        caseRevision: state.caseRevision + 1,
+      }, "fixture_processing_completed", command.result.documents.map((document) => document.id));
+    case "complete_local_document_processing":
+      return commit(staleExport(state), command, {
+        documents: command.result.documents,
+        documentSetDigest: command.result.documentSetDigest,
+        segments: command.result.segments,
+        selectedSegmentIds: command.result.selectedSegmentIds.filter((segmentId) =>
+          command.result.segments.some(
+            (segment) =>
+              segment.id === segmentId &&
+              segment.supportEligibility === "candidate_eligible" &&
+              segment.extractionQuality !== "unavailable" &&
+              segment.rawText.trim().length > 0,
+          ),
+        ),
+        masking: createEmptyMaskingReview(state.masking.revision + 1),
+        coverage: command.result.coverage,
+        coverageReviews: [],
+        processing: command.result.processing,
+        pendingLiveAnalysis: null,
+        analysisRuns: [],
+        activeAnalysisRunId: null,
+        citations: [],
+        citationResolutions: [],
+        candidates: [],
+        reviews: [],
+        dependencyChanges: [],
         caseRevision: state.caseRevision + 1,
       }, "fixture_processing_completed", command.result.documents.map((document) => document.id));
     case "fail_fixture_processing":
@@ -219,10 +251,23 @@ function applyValidCommand(state: CaseState, command: CaseCommand): CaseCommandR
     case "complete_mask_review": {
       const approval = approveMaskingReview(state.masking, state.segments, command.meta.createdAt);
       if (!approval.ok) throw new Error("mask_review_incomplete");
-      const serialized = state.segments.map((segment) => segment.redactedText).join("\n");
+      const redactedSegments = state.segments.map((segment) => {
+        const approvedMasks = approval.review.suggestions.filter(
+          (suggestion) =>
+            suggestion.segmentId === segment.id &&
+            (suggestion.reviewStatus === "approved" ||
+              suggestion.reviewStatus === "edited"),
+        );
+        const redacted = buildSegmentRedaction(segment, approvedMasks);
+        return { ...segment, redactedText: redacted.redactedText };
+      });
+      const serialized = redactedSegments
+        .map((segment) => segment.redactedText)
+        .join("\n");
       const masking = applyLeakScanResult(approval.review, scanProviderPayload(serialized));
       return commit(state, command, {
-        masking: { ...masking, leakScanStatus: "passed", failedClasses: [] },
+        segments: redactedSegments,
+        masking,
         caseRevision: state.caseRevision + 1,
         exportGate: null,
         currentExportId: null,
@@ -273,6 +318,52 @@ function applyValidCommand(state: CaseState, command: CaseCommand): CaseCommandR
       } satisfies AnalysisRun;
       return activateRun(state, command, run, rewriteRunIds(resolved.bundle.candidates, run.id), rewriteCitationRunIds(resolved.bundle.citations, run.id), "analysis_completed");
     }
+    case "run_local_source_extraction": {
+      if (!state.purposeBrief || state.purposeBrief.status !== "complete") {
+        throw new Error("purpose_incomplete");
+      }
+      if (!state.documentSetDigest) throw new Error("local_document_set_missing");
+      if (state.masking.reviewStatus !== "approved" || state.masking.leakScanStatus !== "passed") {
+        throw new Error("mask_review_incomplete");
+      }
+      const selectedIds = new Set(state.selectedSegmentIds);
+      const candidateEligibleSegments = state.segments.filter(
+        (segment) =>
+          selectedIds.has(segment.id) &&
+          segment.supportEligibility === "candidate_eligible" &&
+          segment.extractionQuality !== "unavailable" &&
+          segment.redactedText.trim().length > 0,
+      );
+      if (candidateEligibleSegments.length === 0) {
+        throw new Error("no_candidate_eligible_segments");
+      }
+      const candidateEligibleSegmentIds = candidateEligibleSegments.map(
+        (segment) => segment.id,
+      );
+      const extraction = buildLocalSourceExtraction(state.documents, candidateEligibleSegments, {
+        runId: `RUN-LOCAL-SOURCE-${state.analysisRuns.length + 1}`,
+        completedAt: command.meta.createdAt,
+        inputState: {
+          sourceCaseRevision: state.caseRevision,
+          canonicalFixtureDigest: state.documentSetDigest,
+          purposeBriefId: state.purposeBrief.id,
+          purposeBriefRevision: state.purposeBrief.revision,
+          maskingRevision: state.masking.revision,
+          selectedSegmentIds: candidateEligibleSegmentIds,
+          // No bytes or source text are persisted. This digest binds the local
+          // review run to the exact browser-selected document set.
+          approvedRedactedInputDigest: state.documentSetDigest,
+        },
+      });
+      return activateRun(
+        state,
+        command,
+        extraction.run,
+        extraction.candidates,
+        extraction.citations,
+        "analysis_completed",
+      );
+    }
     case "load_demo_checkpoint": {
       const resolved = resolveTrustedCheckpointBundle(command.checkpointBundleId);
       if (!resolved.ok) throw new Error(resolved.reason);
@@ -285,6 +376,7 @@ function applyValidCommand(state: CaseState, command: CaseCommand): CaseCommandR
         ...state,
         purposeBrief: resolved.bundle.purposeBrief,
         documents: resolved.bundle.documents,
+        documentSetDigest: cfnDemoFixture.canonicalFixtureDigest,
         segments: resolved.bundle.segments,
         selectedSegmentIds: resolved.bundle.selectedSegmentIds,
         masking: resolved.bundle.masking,
@@ -386,8 +478,7 @@ function applyValidCommand(state: CaseState, command: CaseCommand): CaseCommandR
       if (
         command.selectedSegmentId !== citation.segmentId ||
         command.selectedSegmentId !== sourceDependency.sourceSegmentId ||
-        !state.segments.some((segment) => segment.id === command.selectedSegmentId) ||
-        !trustedSegments().some((segment) => segment.id === command.selectedSegmentId)
+        !state.segments.some((segment) => segment.id === command.selectedSegmentId)
       ) {
         throw new Error("manual_segment_invalid");
       }
@@ -597,7 +688,11 @@ function activateRun(
     dependencyChanges: [],
     pendingLiveAnalysis: null,
     processing: success
-      ? completeAnalysisProcessing(command.meta.createdAt)
+      ? completeAnalysisProcessing(
+          command.meta.createdAt,
+          state.documents.map((document) => document.id),
+          state.processing,
+        )
       : upsertStage(state.processing, "candidate_extraction", "failed", command.meta.createdAt, "INTERNAL_SAFE_FAILURE"),
     caseRevision: state.caseRevision + 1,
   }, eventType, [run.id], undefined, true, {
@@ -670,15 +765,35 @@ function fixtureProcessing(status: ProcessingStage["status"], now: string): Proc
   }));
 }
 
-function completeAnalysisProcessing(now: string): ProcessingStage[] {
+function completeAnalysisProcessing(
+  now: string,
+  documentIds: string[],
+  existingStages: ProcessingStage[] = [],
+): ProcessingStage[] {
+  const preparationNames = [
+    "intake_validation",
+    "text_extraction",
+    "coverage_calculation",
+    "identifier_masking",
+  ] as ProcessingStage["name"][];
   return [
-    ...fixtureProcessing("completed", now),
+    ...preparationNames.map(
+      (name) =>
+        existingStages.find((stage) => stage.name === name) ?? {
+          name,
+          status: "completed" as const,
+          startedAt: now,
+          completedAt: now,
+          affectedDocumentIds: documentIds,
+          retryable: false,
+        },
+    ),
     ...(["candidate_extraction", "citation_validation", "timeline_nexus_assembly"] as ProcessingStage["name"][]).map((name) => ({
       name,
       status: "completed" as const,
       startedAt: now,
       completedAt: now,
-      affectedDocumentIds: cfnDemoFixture.documents.map((document) => document.id),
+      affectedDocumentIds: documentIds,
       retryable: false,
     })),
   ];
@@ -858,6 +973,7 @@ export function toPersistedCaseState(state: CaseState, now = isoNow()): Persiste
     caseId: state.caseId,
     caseRevision: state.caseRevision,
     fixtureVersion: state.fixtureVersion,
+    documentSetDigest: state.documentSetDigest,
     guidancePack: state.guidancePack,
     purposeBrief: state.purposeBrief,
     documents: state.documents,
@@ -905,6 +1021,9 @@ export function restoreCaseState(serialized: string): RestoreResult {
     if (parsed.storageKey !== CASE_STATE_STORAGE_KEY || parsed.caseId !== "CFN-DEMO-001" || parsed.fixtureVersion !== VERSION || parsed.schemaVersion !== VERSION) {
       return { ok: false, reason: "persisted_fixture_mismatch", resetState: createInitialCaseState() };
     }
+    if (parsed.documents.some((document) => document.dataOrigin === "browser_local")) {
+      return { ok: false, reason: "browser_local_state_not_persisted", resetState: createInitialCaseState() };
+    }
     const replacedGuidanceIdentity =
       parsed.guidancePack.version !== bundledGuidancePack.identity.version ||
       parsed.guidancePack.digest !== bundledGuidancePack.identity.digest;
@@ -928,6 +1047,10 @@ export function restoreCaseState(serialized: string): RestoreResult {
 
 export function saveCaseState(store: SessionStoreLike, state: CaseState, now = isoNow()): boolean {
   if (state.pendingLiveAnalysis) return false;
+  if (state.documents.some((document) => document.dataOrigin === "browser_local")) {
+    store.removeItem(CASE_STATE_STORAGE_KEY);
+    return false;
+  }
   store.setItem(CASE_STATE_STORAGE_KEY, serializeCaseState(state, now));
   return true;
 }

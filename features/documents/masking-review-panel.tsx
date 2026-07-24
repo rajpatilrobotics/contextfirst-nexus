@@ -268,8 +268,9 @@ export function MaskingReviewPanel({
   const rejectedCount = review.suggestions.filter(
     (suggestion) => suggestion.reviewStatus === "rejected",
   ).length;
+  const hasProcessedSegments = segmentIds.length > 0;
   const readyToComplete =
-    review.suggestions.length > 0 && pendingCount === 0 && rejectedCount === 0;
+    hasProcessedSegments && pendingCount === 0 && rejectedCount === 0;
 
   return (
     <Card className="grid gap-4 border-0 p-0 shadow-none">
@@ -287,8 +288,15 @@ export function MaskingReviewPanel({
       </dl>
 
       {review.suggestions.length === 0 ? (
-        <Alert title="Mask suggestions not processed" tone="warning">
-          <p>Process the bundled PDFs locally before completing human masking review.</p>
+        <Alert
+          title={hasProcessedSegments ? "No automatic mask suggestions" : "Mask suggestions not processed"}
+          tone={hasProcessedSegments ? "neutral" : "warning"}
+        >
+          <p>
+            {hasProcessedSegments
+              ? "No supported personal-detail pattern was detected. You can still add a range-based mask; approving this check will run the deterministic leak scan."
+              : "Process the PDFs locally before completing human masking review."}
+          </p>
         </Alert>
       ) : (
         <ul aria-label="Mask suggestions" className="grid gap-3">
@@ -323,6 +331,14 @@ export function MaskingReviewPanel({
         <Alert title="Mask review remains blocked" tone="warning">
           <p>
             Resolve {pendingCount} pending and {rejectedCount} rejected required suggestion(s), or remove a confirmed false positive. The deterministic leak scan runs only on completion.
+          </p>
+        </Alert>
+      ) : null}
+
+      {review.leakScanStatus === "failed" ? (
+        <Alert title="Privacy scan found a remaining detail" tone="warning">
+          <p>
+            Analysis remains blocked. Add or correct a mask for the remaining supported identifier, then approve the privacy check again.
           </p>
         </Alert>
       ) : null}

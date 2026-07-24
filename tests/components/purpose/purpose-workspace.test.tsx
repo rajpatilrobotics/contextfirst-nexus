@@ -58,7 +58,10 @@ describe("TASK-018 PurposeWorkspace", () => {
     );
 
     expect(await screen.findByRole("group", { name: "How analysis works" })).toBeInTheDocument();
-    expect(screen.getByRole("checkbox", { name: /frozen local demo output/i })).not.toBeChecked();
+    expect(screen.getByRole("checkbox", { name: /prepared demo replay or browser-local source extraction/i })).not.toBeChecked();
+    expect(screen.getByRole("region", { name: "Test workspace summary" })).toHaveTextContent(
+      /No real or private data/i,
+    );
     expect(screen.queryByRole("radio")).not.toBeInTheDocument();
     expect(screen.queryByText(/OpenAI|Gemini|Mistral|gpt-5\.6-sol|prepared-replay-v1/i)).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Start analysis" })).not.toBeInTheDocument();

@@ -105,4 +105,23 @@ describe("TASK-021 review queue", () => {
     expect(screen.getByText(/No edited items/i)).toBeInTheDocument();
     expect(screen.getByText(/explicit empty result/i)).toBeInTheDocument();
   });
+
+  it("does not describe browser-local extraction as a prepared fixture checkpoint", async () => {
+    const user = userEvent.setup();
+    const checkpoint = checkpointState();
+    const state = {
+      ...checkpoint,
+      documents: checkpoint.documents.map((document) => ({
+        ...document,
+        dataOrigin: "browser_local" as const,
+      })),
+    };
+    render(<ReviewQueue earlyBlockerIds={blockers} state={state} />);
+
+    await user.click(screen.getByRole("button", { name: "Export blocker (2)" }));
+    expect(screen.getByRole("region", { name: "Early export remediation" })).toHaveTextContent(
+      /Bundled fixture blocker IDs are not applied to browser-local source extraction/i,
+    );
+    expect(screen.queryByText(/prepared review checkpoint exposes/i)).not.toBeInTheDocument();
+  });
 });

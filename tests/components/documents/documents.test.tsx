@@ -12,6 +12,7 @@ import {
   DocumentsWorkspace,
   PROCESSING_STAGE_ORDER,
   ProcessingStageList,
+  type PdfSelectionValidation,
 } from "../../../features/documents";
 import {
   runSelectedAnalysis,
@@ -21,7 +22,7 @@ import type { CaseState, ProcessingStage } from "../../../lib/contracts";
 import {
   CfnDemoPdfSourceService,
   type CfnDemoDocumentServiceResult,
-  type CfnDemoPdfSelectionValidation,
+  type LocalPdfDocumentServiceResult,
   type PdfDocumentLike,
   type PdfJsRuntimeLike,
 } from "../../../lib/documents";
@@ -47,23 +48,18 @@ function selectedDemoFiles() {
 
 async function verifiedSelection(
   files: readonly File[],
-): Promise<CfnDemoPdfSelectionValidation> {
+): Promise<PdfSelectionValidation> {
   return {
     status: "verified",
-    packetStatus: "success",
-    files: files.map((file, index) => ({
-      documentId: `D0${index + 1}`,
+    files: files.map((file) => ({
       fileName: file.name,
       byteLength: file.size,
-      sha256: "verified-in-service-tests",
-      selectionStatus: "selected",
-      verificationStatus: "verified",
-      readinessStatus: "ready",
       file,
     })),
+    totalBytes: files.reduce((total, file) => total + file.size, 0),
     issues: [],
-    error: null,
-  } as CfnDemoPdfSelectionValidation;
+    mode: "prepared_demo",
+  };
 }
 
 function pageText(pageId: string) {
@@ -177,11 +173,16 @@ function StateProbe() {
 
 function renderWorkspace({
   initialState = purposeReadyState(),
+  processLocalSources,
   processSources = vi.fn(async () => processedFixture),
   processSelectedSources = vi.fn(async () => processedFixture),
   runAnalysis,
+  validateSelection = verifiedSelection,
 }: {
   initialState?: CaseState;
+  processLocalSources?: (
+    files: readonly File[],
+  ) => Promise<LocalPdfDocumentServiceResult>;
   processSources?: () => Promise<CfnDemoDocumentServiceResult>;
   processSelectedSources?: (
     files: readonly File[],
@@ -189,14 +190,18 @@ function renderWorkspace({
   runAnalysis?: (
     options: RunControllerOptions,
   ) => ReturnType<typeof runSelectedAnalysis>;
+  validateSelection?: (
+    files: readonly File[],
+  ) => Promise<PdfSelectionValidation>;
 } = {}) {
   return render(
     <CaseStateProvider initialState={initialState}>
       <DocumentsWorkspace
+        processLocalSources={processLocalSources}
         processSources={processSources}
         processSelectedSources={processSelectedSources}
         runAnalysis={runAnalysis}
-        validateSelection={verifiedSelection}
+        validateSelection={validateSelection}
       />
       <StateProbe />
     </CaseStateProvider>,
@@ -241,7 +246,9 @@ describe("TASK-019 intake, coverage, and containment", () => {
     const picker = screen.getByLabelText("Choose PDF files", { selector: "input" });
     expect(document.getElementById("documents")).toHaveAttribute("tabindex", "-1");
     expect(picker).toHaveAttribute("multiple");
-    expect(screen.getByRole("heading", { name: "Choose and verify PDFs" })).toBeInTheDocument();
+    expect(picker).toBeVisible();
+    expect(picker).not.toHaveClass("sr-only");
+    expect(screen.getByRole("heading", { name: "Add PDFs" })).toBeInTheDocument();
     const progress = screen.getByRole("navigation", {
       name: "Document preparation progress",
     });
@@ -260,9 +267,11 @@ describe("TASK-019 intake, coverage, and containment", () => {
       expect(document.getElementById(targetId)).toHaveAttribute("tabindex", "-1");
     }
 
-    expect(screen.getByRole("heading", { name: "Documents ready" })).toBeInTheDocument();
     expect(
-      screen.getByText(/7 PDFs processed in this browser/i),
+      screen.getByRole("heading", { name: "Documents processed with limitations" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(/7 PDFs opened successfully.*1 expected limitation/i),
     ).toBeInTheDocument();
     expect(screen.queryByRole("textbox", { name: /case|narrative|identifier/i })).not.toBeInTheDocument();
     expect(document.body).not.toHaveTextContent(/synthetic/i);
@@ -284,26 +293,32 @@ describe("TASK-019 intake, coverage, and containment", () => {
     const d04Row = document.querySelector('[data-document-id="D04"]');
     expect(d04Row).not.toBeNull();
     expect(within(d04Row as HTMLElement).getByText(/4 pages/)).toBeInTheDocument();
-    await user.click(within(d04Row as HTMLElement).getByText("Page issue"));
+    await user.click(
+      within(d04Row as HTMLElement).getByText("Expected page unavailable"),
+    );
     expect(
-      within(d04Row as HTMLElement).getByText("Unavailable, missing page"),
+      within(d04Row as HTMLElement).getByText(
+        "Expected page unavailable — recorded as a limitation",
+      ),
     ).toBeInTheDocument();
 
     await user.click(screen.getByText("View technical processing details"));
-    const stages = screen.getByRole("list", { name: "Eight processing stages" });
-    expect(within(stages).getAllByRole("listitem")).toHaveLength(8);
+    const stages = screen.getByRole("list", {
+      name: "Local document preparation stages",
+    });
+    expect(within(stages).getAllByRole("listitem")).toHaveLength(4);
     for (const name of [
       "Intake validation",
       "Text extraction",
       "Coverage calculation",
       "Identifier masking",
-      "Candidate extraction",
-      "Citation validation",
-      "Timeline and Nexus assembly",
-      "Safety and export-gate checks",
     ]) {
       expect(within(stages).getByText(name)).toBeInTheDocument();
     }
+    expect(
+      screen.getByText(/Candidate extraction, citation validation, timeline assembly/i),
+    ).toBeInTheDocument();
+    expect(within(stages).queryByText("Candidate extraction")).not.toBeInTheDocument();
     await user.click(screen.getByText(/^Coverage check/));
     const coverageCard = screen
       .getByRole("heading", { name: "Coverage manifest" })
@@ -351,6 +366,109 @@ describe("TASK-019 intake, coverage, and containment", () => {
     for (const identifier of cfnDemoFixture.seededIdentifiers.slice(0, 7)) {
       expect(persisted).not.toContain(identifier);
     }
+  });
+
+  it("checks selected PDFs before Purpose is complete and gates only analysis", async () => {
+    const user = userEvent.setup();
+    renderWorkspace({ initialState: createInitialCaseState(NOW) });
+
+    expect(
+      screen.getByRole("region", { name: "Purpose is required" }),
+    ).toHaveTextContent(/add and check PDFs now/i);
+
+    await processLocalFixture(user);
+
+    expect(
+      screen.getByRole("heading", { name: "Documents processed with limitations" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByText(/verified PDFs could not be processed/i),
+    ).not.toBeInTheDocument();
+    expect(screen.getByText(/before starting analysis/i)).toBeInTheDocument();
+  });
+
+  it("turns one ordinary PDF into local source records ready for human review", async () => {
+    const user = userEvent.setup();
+    const file = new File(["%PDF-1.7 one page"], "case-note.pdf", {
+      type: "application/pdf",
+    });
+    const sourceDocument = processedFixture.documents[0];
+    const sourceSegments = processedFixture.segments.filter(
+      (segment) => segment.documentId === sourceDocument.id,
+    );
+    const processLocalSources = vi.fn(
+      async (): Promise<LocalPdfDocumentServiceResult> => ({
+        caseId: "CFN-DEMO-001",
+        fixtureVersion: "1.0.0",
+        documentSetDigest: "a".repeat(64),
+        documents: [
+          {
+            ...sourceDocument,
+            fileName: file.name,
+            displayName: "Case note",
+            sourceType: "other",
+            dataOrigin: "browser_local",
+            syntheticLabelPresent: false,
+          },
+        ],
+        segments: sourceSegments,
+        coverage: {
+          expectedDocuments: 1,
+          processedDocuments: 1,
+          expectedPages: sourceDocument.pages.length,
+          availablePages: sourceDocument.pages.filter(
+            (page) => page.availability === "available",
+          ).length,
+          issues: [],
+          hasConsequentialOpenIssue: false,
+        },
+        processing: [
+          "intake_validation",
+          "text_extraction",
+          "coverage_calculation",
+          "identifier_masking",
+        ].map((name) => ({
+          name: name as ProcessingStage["name"],
+          status: "completed" as const,
+          affectedDocumentIds: [sourceDocument.id],
+          retryable: false,
+        })),
+        selectedSegmentIds: sourceSegments.map((segment) => segment.id),
+      }),
+    );
+    const validateSelection = vi.fn(
+      async (files: readonly File[]): Promise<PdfSelectionValidation> => ({
+        status: "verified",
+        files: files.map((selected) => ({
+          fileName: selected.name,
+          byteLength: selected.size,
+          file: selected,
+        })),
+        totalBytes: files.reduce((total, selected) => total + selected.size, 0),
+        issues: [],
+        mode: "local_preview",
+      }),
+    );
+
+    renderWorkspace({
+      processLocalSources,
+      validateSelection,
+    });
+
+    await user.upload(
+      screen.getByLabelText("Choose PDF files", { selector: "input" }),
+      file,
+    );
+
+    expect(
+      await screen.findByRole("heading", { name: "PDF text prepared locally" }),
+    ).toBeInTheDocument();
+    expect(screen.getByText("Case note")).toBeInTheDocument();
+    expect(screen.getByText(/Uploaded PDF/)).toBeInTheDocument();
+    expect(screen.queryByText(/select all seven/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Analysis is not connected/i)).not.toBeInTheDocument();
+    expect(screen.getByText(/Coverage check/)).toBeInTheDocument();
+    expect(processLocalSources).toHaveBeenCalledWith([file]);
   });
 
   it("keeps completed work visible and offers only the failed local stage retry", async () => {
@@ -461,7 +579,9 @@ describe("TASK-019 masking and controller-backed analysis", () => {
       initialState: { ...checkpoint, activeAnalysisRunId: null },
     });
 
-    await screen.findByRole("heading", { name: "Documents ready" });
+    await screen.findByRole("heading", {
+      name: "Documents processed with limitations",
+    });
     expect(checkpoint.candidates.length).toBeGreaterThan(0);
     expect(screen.queryByRole("link", { name: "Continue to Review" })).not.toBeInTheDocument();
   });

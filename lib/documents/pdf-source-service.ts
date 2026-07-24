@@ -2,6 +2,7 @@ import {
   CoverageIssueSchema,
   CoverageSummarySchema,
   DocumentRecordSchema,
+  ProcessingStageSchema,
   SourceSegmentSchema,
   type CoverageSummary,
   type DocumentRecord,
@@ -12,9 +13,17 @@ import {
 import { cfnDemoFixture } from "../fixtures";
 
 const CASE_ID = "CFN-DEMO-001" as const;
-const WORKER_SRC = "/vendor/pdfjs/pdf.worker.min.mjs" as const;
+// Use a new physical filename when the worker build changes. Safari can keep a
+// module worker alive across reloads even when only its query string changes.
+const WORKER_SRC = "/vendor/pdfjs/pdf.worker.legacy-6.1.200.min.mjs" as const;
 const FIXTURE_BASE_PATH = "/fixtures/cfn-demo-001/" as const;
 const FIXTURE_VERSION = "1.0.0" as const;
+
+export const LOCAL_PDF_SELECTION_LIMITS = Object.freeze({
+  maxFiles: 25,
+  maxBytesPerFile: 20 * 1024 * 1024,
+  maxTotalBytes: 100 * 1024 * 1024,
+});
 
 export const CFN_DEMO_PDF_ALLOWLIST = [
   {
@@ -107,6 +116,99 @@ export type CfnDemoPdfSelectionValidation =
       error: { code: "packet_validation_failed" };
     };
 
+export type LocalPdfSelectionIssueCode =
+  | "empty_selection"
+  | "too_many_files"
+  | "duplicate_file_name"
+  | "invalid_file_extension"
+  | "invalid_file_type"
+  | "invalid_pdf_header"
+  | "file_too_large"
+  | "total_size_exceeded";
+
+export type LocalPdfSelectionIssue = {
+  code: LocalPdfSelectionIssueCode;
+  fileName?: string;
+};
+
+export type ValidatedLocalPdfFile = {
+  fileName: string;
+  byteLength: number;
+  file: File;
+};
+
+export type LocalPdfSelectionValidation =
+  | {
+      status: "verified";
+      files: ValidatedLocalPdfFile[];
+      totalBytes: number;
+      issues: [];
+    }
+  | {
+      status: "rejected";
+      files: [];
+      totalBytes: number;
+      issues: LocalPdfSelectionIssue[];
+    };
+
+export type CfnDemoPdfPacketDetection =
+  | {
+      isExactMatch: true;
+      files: VerifiedCfnDemoPdfFile[];
+    }
+  | {
+      isExactMatch: false;
+      files: [];
+    };
+
+export type LocalPdfInspection = {
+  fileName: string;
+  byteLength: number;
+  pageCount: number;
+  readablePageCount: number;
+  imageOnlyPageCount: number;
+  failedPageCount: number;
+  status: "ready" | "warning" | "failed";
+};
+
+/** @deprecated Use LocalPdfInspection. */
+export type LocalPdfInspectionFile = LocalPdfInspection;
+
+export type LocalPdfInspectionResult =
+  | {
+      status: "completed";
+      fileCount: number;
+      totalBytes: number;
+      files: LocalPdfInspection[];
+      issues: [];
+    }
+  | {
+      status: "rejected";
+      fileCount: number;
+      totalBytes: number;
+      files: [];
+      issues: LocalPdfSelectionIssue[];
+    };
+
+export type LocalDocumentRecord = Omit<
+  DocumentRecord,
+  "sourceType" | "dataOrigin"
+> & {
+  sourceType: DocumentRecord["sourceType"] | "other";
+  dataOrigin: "browser_local";
+};
+
+export type LocalPdfDocumentServiceResult = {
+  caseId: typeof CASE_ID;
+  fixtureVersion: typeof FIXTURE_VERSION;
+  documentSetDigest: string;
+  documents: LocalDocumentRecord[];
+  segments: SourceSegment[];
+  coverage: CoverageSummary;
+  processing: ProcessingStage[];
+  selectedSegmentIds: string[];
+};
+
 export type DocumentSafeError = {
   code: SafeErrorCode;
   stage: "intake_validation" | "text_extraction" | "coverage_calculation";
@@ -123,6 +225,15 @@ type PdfTextItem = {
 
 export type PdfPageLike = {
   getTextContent: () => Promise<{ items: PdfTextItem[] }>;
+  streamTextContent?: () => {
+    getReader: () => {
+      read: () => Promise<{
+        done: boolean;
+        value?: { items?: PdfTextItem[] };
+      }>;
+      releaseLock?: () => void;
+    };
+  };
   cleanup?: () => void;
 };
 
@@ -140,7 +251,15 @@ export type PdfLoadingTaskLike = {
 
 export type PdfDocumentSource =
   | { url: string }
-  | { data: Uint8Array };
+  | {
+      data: Uint8Array;
+      disableFontFace?: boolean;
+      useSystemFonts?: boolean;
+      useWasm?: boolean;
+      useWorkerFetch?: boolean;
+      isOffscreenCanvasSupported?: boolean;
+      isImageDecoderSupported?: boolean;
+    };
 
 export type PdfJsRuntimeLike = {
   GlobalWorkerOptions?: { workerSrc?: string };
@@ -184,6 +303,59 @@ function completeStage(name: ProcessingStage["name"], affectedDocumentIds: strin
   };
 }
 
+function verifiedDemoPacketResult(): CfnDemoDocumentServiceResult {
+  return {
+    caseId: CASE_ID,
+    fixtureVersion: FIXTURE_VERSION,
+    canonicalFixtureDigest: cfnDemoFixture.canonicalFixtureDigest,
+    documents: cfnDemoFixture.documents.map((document) =>
+      DocumentRecordSchema.parse(document),
+    ),
+    segments: cfnDemoFixture.segments.map((segment) =>
+      buildSegment(segment, new Map()),
+    ),
+    coverage: CoverageSummarySchema.parse(cfnDemoFixture.coverage),
+    processing: cfnDemoFixture.processing.map((stage) =>
+      ProcessingStageSchema.parse(stage),
+    ),
+    selectedSegmentIds: [...cfnDemoFixture.selectedSegmentIds],
+  };
+}
+
+function failedStage(
+  name: ProcessingStage["name"],
+  affectedDocumentIds: string[],
+  errorCode: SafeErrorCode,
+): ProcessingStage {
+  const timestamp = nowIso();
+  return {
+    name,
+    status: "failed",
+    startedAt: timestamp,
+    completedAt: timestamp,
+    errorCode,
+    affectedDocumentIds,
+    retryable: true,
+  };
+}
+
+function warningStage(
+  name: ProcessingStage["name"],
+  affectedDocumentIds: string[],
+  errorCode: SafeErrorCode,
+): ProcessingStage {
+  const timestamp = nowIso();
+  return {
+    name,
+    status: "warning",
+    startedAt: timestamp,
+    completedAt: timestamp,
+    errorCode,
+    affectedDocumentIds,
+    retryable: true,
+  };
+}
+
 export function toSafeDocumentError(
   code: SafeErrorCode,
   stage: DocumentSafeError["stage"],
@@ -198,12 +370,40 @@ export async function loadBrowserPdfJsRuntime(): Promise<PdfJsRuntimeLike> {
     throw toSafeDocumentError("INVALID_REQUEST", "intake_validation");
   }
 
-  const pdfJsModule = "pdfjs-dist/build/pdf.mjs";
-  const pdfjs = (await import(/* @vite-ignore */ pdfJsModule)) as PdfJsRuntimeLike;
+  // The legacy build keeps the same PDF.js API while including the browser
+  // compatibility layer needed by Safari.
+  const pdfjs = (await import(
+    "pdfjs-dist/legacy/build/pdf.mjs"
+  )) as PdfJsRuntimeLike;
   if (pdfjs.GlobalWorkerOptions) {
     pdfjs.GlobalWorkerOptions.workerSrc = WORKER_SRC;
   }
   return pdfjs;
+}
+
+/**
+ * PDF.js 6's getTextContent() uses async iteration internally. Safari 26.5
+ * does not expose that iterator on ReadableStream yet, while getReader() is
+ * supported. Reading the same stream explicitly keeps extraction local and
+ * works in Safari without a browser-specific packet fallback.
+ */
+async function readPdfTextItems(page: PdfPageLike): Promise<PdfTextItem[]> {
+  if (!page.streamTextContent) {
+    return (await page.getTextContent()).items;
+  }
+
+  const reader = page.streamTextContent().getReader();
+  const items: PdfTextItem[] = [];
+  try {
+    while (true) {
+      const chunk = await reader.read();
+      if (chunk.done) break;
+      items.push(...(chunk.value?.items ?? []));
+    }
+  } finally {
+    reader.releaseLock?.();
+  }
+  return items;
 }
 
 function fixturePathFor(document: FixtureDocument) {
@@ -225,6 +425,78 @@ async function sha256File(bytes: ArrayBuffer) {
 function hasPdfHeader(bytes: ArrayBuffer) {
   const header = new Uint8Array(bytes, 0, Math.min(bytes.byteLength, 5));
   return header.length === 5 && String.fromCharCode(...header) === "%PDF-";
+}
+
+async function readPdfHeader(file: File) {
+  if (typeof file.slice === "function") {
+    return file.slice(0, 5).arrayBuffer();
+  }
+  return (await file.arrayBuffer()).slice(0, 5);
+}
+
+/**
+ * Validates ordinary browser-local PDF intake without assigning fixture IDs or
+ * retaining file bytes. Empty MIME values are allowed because some browsers do
+ * not supply one; when present, the MIME value must be application/pdf.
+ */
+export async function validateLocalPdfSelection(
+  selectedFiles: readonly File[],
+): Promise<LocalPdfSelectionValidation> {
+  const issues: LocalPdfSelectionIssue[] = [];
+  const totalBytes = selectedFiles.reduce((total, file) => total + file.size, 0);
+
+  if (selectedFiles.length === 0) {
+    issues.push({ code: "empty_selection" });
+  }
+  if (selectedFiles.length > LOCAL_PDF_SELECTION_LIMITS.maxFiles) {
+    issues.push({ code: "too_many_files" });
+  }
+  if (totalBytes > LOCAL_PDF_SELECTION_LIMITS.maxTotalBytes) {
+    issues.push({ code: "total_size_exceeded" });
+  }
+
+  const names = new Set<string>();
+  for (const file of selectedFiles) {
+    const normalizedName = file.name.trim().toLocaleLowerCase("en-US");
+    if (names.has(normalizedName)) {
+      issues.push({ code: "duplicate_file_name", fileName: file.name });
+      continue;
+    }
+    names.add(normalizedName);
+
+    if (!file.name.toLocaleLowerCase("en-US").endsWith(".pdf")) {
+      issues.push({ code: "invalid_file_extension", fileName: file.name });
+    }
+    if (file.type !== "" && file.type.toLocaleLowerCase("en-US") !== "application/pdf") {
+      issues.push({ code: "invalid_file_type", fileName: file.name });
+    }
+    if (file.size > LOCAL_PDF_SELECTION_LIMITS.maxBytesPerFile) {
+      issues.push({ code: "file_too_large", fileName: file.name });
+    }
+
+    try {
+      if (!hasPdfHeader(await readPdfHeader(file))) {
+        issues.push({ code: "invalid_pdf_header", fileName: file.name });
+      }
+    } catch {
+      issues.push({ code: "invalid_pdf_header", fileName: file.name });
+    }
+  }
+
+  if (issues.length > 0) {
+    return { status: "rejected", files: [], totalBytes, issues };
+  }
+
+  return {
+    status: "verified",
+    files: selectedFiles.map((file) => ({
+      fileName: file.name,
+      byteLength: file.size,
+      file,
+    })),
+    totalBytes,
+    issues: [],
+  };
 }
 
 /**
@@ -311,6 +583,388 @@ export async function validateCfnDemoPdfSelection(
     files: verifiedFiles,
     issues: [],
     error: null,
+  };
+}
+
+/** Detects the frozen seven-file packet without weakening its strict validator. */
+export async function detectExactCfnDemoPdfPacket(
+  selectedFiles: readonly File[],
+): Promise<CfnDemoPdfPacketDetection> {
+  const validation = await validateCfnDemoPdfSelection(selectedFiles);
+  return validation.status === "verified"
+    ? { isExactMatch: true, files: validation.files }
+    : { isExactMatch: false, files: [] };
+}
+
+/** Returns true only for the strictly verified, frozen seven-file demo packet. */
+export async function isExactCfnDemoPdfSelection(
+  selectedFiles: readonly File[],
+): Promise<boolean> {
+  return (await validateCfnDemoPdfSelection(selectedFiles)).status === "verified";
+}
+
+/**
+ * Reads ordinary PDFs entirely in the browser and returns metadata-only counts.
+ * Extracted text and input bytes are intentionally absent from the result.
+ */
+export async function inspectLocalPdfFiles(
+  selectedFiles: readonly File[],
+  runtimeLoader: () => Promise<PdfJsRuntimeLike> = loadBrowserPdfJsRuntime,
+): Promise<LocalPdfInspectionResult> {
+  const validation = await validateLocalPdfSelection(selectedFiles);
+  if (validation.status !== "verified") {
+    return {
+      status: "rejected",
+      fileCount: selectedFiles.length,
+      totalBytes: validation.totalBytes,
+      files: [],
+      issues: validation.issues,
+    };
+  }
+
+  const runtime = await runtimeLoader();
+  if (runtime.GlobalWorkerOptions) {
+    runtime.GlobalWorkerOptions.workerSrc = WORKER_SRC;
+  }
+
+  const inspectedFiles: LocalPdfInspection[] = [];
+  for (const selected of validation.files) {
+    let loadingTask: PdfLoadingTaskLike | undefined;
+    let pdf: PdfDocumentLike | undefined;
+    let readablePageCount = 0;
+    let imageOnlyPageCount = 0;
+    let failedPageCount = 0;
+
+    try {
+      loadingTask = runtime.getDocument({
+        data: new Uint8Array(await selected.file.arrayBuffer()),
+      });
+      pdf = await loadingTask.promise;
+      for (let pageNumber = 1; pageNumber <= pdf.numPages; pageNumber += 1) {
+        let page: PdfPageLike | undefined;
+        try {
+          page = await pdf.getPage(pageNumber);
+          const text = (await readPdfTextItems(page))
+            .map((item) => item.str ?? "")
+            .join(" ")
+            .replace(/\s+/g, " ")
+            .trim();
+          if (text.length > 0) readablePageCount += 1;
+          else imageOnlyPageCount += 1;
+        } catch {
+          failedPageCount += 1;
+        } finally {
+          page?.cleanup?.();
+        }
+      }
+
+      inspectedFiles.push({
+        fileName: selected.fileName,
+        byteLength: selected.byteLength,
+        pageCount: pdf.numPages,
+        readablePageCount,
+        imageOnlyPageCount,
+        failedPageCount,
+        status:
+          failedPageCount > 0 || imageOnlyPageCount > 0 ? "warning" : "ready",
+      });
+    } catch {
+      inspectedFiles.push({
+        fileName: selected.fileName,
+        byteLength: selected.byteLength,
+        pageCount: 0,
+        readablePageCount: 0,
+        imageOnlyPageCount: 0,
+        failedPageCount: 0,
+        status: "failed",
+      });
+    } finally {
+      pdf?.cleanup?.();
+      await pdf?.destroy?.();
+      await loadingTask?.destroy?.();
+    }
+  }
+
+  return {
+    status: "completed",
+    fileCount: inspectedFiles.length,
+    totalBytes: validation.totalBytes,
+    files: inspectedFiles,
+    issues: [],
+  };
+}
+
+/** @deprecated Use inspectLocalPdfFiles. */
+export const inspectLocalPdfSelection = inspectLocalPdfFiles;
+
+function localDocumentId(index: number) {
+  return `D${String(index + 1).padStart(2, "0")}`;
+}
+
+function localPageId(documentId: string, pageNumber: number) {
+  return `${documentId}-P${pageNumber}`;
+}
+
+function localSegmentId(pageId: string) {
+  return `${pageId}-S1`;
+}
+
+function displayNameFor(fileName: string) {
+  const withoutExtension = fileName.replace(/\.pdf$/i, "");
+  const normalized = withoutExtension.replace(/[_-]+/g, " ").replace(/\s+/g, " ").trim();
+  return normalized || "PDF document";
+}
+
+function hasInstructionSignal(text: string) {
+  return /\b(?:ignore|disregard|override)\b.{0,80}\b(?:instruction|system|prompt|rule)\b/i.test(
+    text,
+  );
+}
+
+function localCoverageIssue(
+  documentId: string,
+  pageId: string,
+  kind: CoverageIssue["kind"],
+): CoverageIssue {
+  const rationaleByKind: Partial<Record<CoverageIssue["kind"], string>> = {
+    image_only_page:
+      "The PDF page has no embedded readable text. OCR is required before this page can support analysis.",
+    extraction_failed:
+      "The browser could not extract text from this PDF page. The page cannot support analysis until it is replaced or retried.",
+  };
+
+  return CoverageIssueSchema.parse({
+    id: `COVERAGE-${pageId}-${kind.toUpperCase().replaceAll("_", "-")}`,
+    documentId,
+    pageId,
+    kind,
+    initialConsequence: "unknown",
+    activeConsequence: "unknown",
+    rationale: rationaleByKind[kind] ?? "The PDF page needs human review before analysis.",
+    resolutionStatus: "open",
+    coverageReviewDecisionId: null,
+  });
+}
+
+function localPageRecord(
+  documentId: string,
+  pageNumber: number,
+  availability: PageAvailability,
+  extractedCharacterCount: number,
+): PageRecord {
+  const failureCode = availability === "available" ? undefined : "EXTRACTION_FAILED";
+  return {
+    id: localPageId(documentId, pageNumber),
+    documentId,
+    pageNumber,
+    expected: true,
+    availability,
+    extractionStatus:
+      availability === "available"
+        ? "completed"
+        : availability === "image_only"
+          ? "warning"
+          : "failed",
+    extractedCharacterCount,
+    ...(failureCode ? { failureCode } : {}),
+  };
+}
+
+function localSegment(
+  documentId: string,
+  pageNumber: number,
+  extracted: ExtractedPage,
+): SourceSegment {
+  const pageId = localPageId(documentId, pageNumber);
+  const instructionSignal = hasInstructionSignal(extracted.text);
+  return SourceSegmentSchema.parse({
+    id: localSegmentId(pageId),
+    documentId,
+    pageId,
+    pageNumber,
+    ordinal: 1,
+    rawText: extracted.text,
+    redactedText: extracted.text,
+    boundingBoxes: extracted.boxes,
+    sourceLanguage: "en",
+    translationStatus: "original_language",
+    extractionQuality: "machine_extracted",
+    instructionAdvisory: instructionSignal ? "advisory_signal" : "no_signal",
+    modelVisibility: "not_sent",
+    supportEligibility: instructionSignal ? "evidence_only" : "candidate_eligible",
+  });
+}
+
+async function documentSetDigest(
+  files: readonly ValidatedLocalPdfFile[],
+  fileDigests: readonly string[],
+) {
+  const canonical = JSON.stringify(
+    files.map((file, index) => ({
+      ordinal: index + 1,
+      fileName: file.fileName,
+      byteLength: file.byteLength,
+      sha256: fileDigests[index],
+    })),
+  );
+  return bytesToHex(
+    await globalThis.crypto.subtle.digest("SHA-256", new TextEncoder().encode(canonical)),
+  );
+}
+
+/**
+ * Extracts arbitrary browser-selected PDFs into session-local canonical source
+ * records. Input bytes are released after PDF.js finishes and are never
+ * returned by this function.
+ */
+export async function processLocalPdfSources(
+  selectedFiles: readonly File[],
+  runtimeLoader: () => Promise<PdfJsRuntimeLike> = loadBrowserPdfJsRuntime,
+): Promise<LocalPdfDocumentServiceResult> {
+  const validation = await validateLocalPdfSelection(selectedFiles);
+  if (validation.status !== "verified") {
+    throw toSafeDocumentError("INVALID_REQUEST", "intake_validation");
+  }
+
+  const runtime = await runtimeLoader();
+  if (runtime.GlobalWorkerOptions) runtime.GlobalWorkerOptions.workerSrc = WORKER_SRC;
+
+  const documents: LocalDocumentRecord[] = [];
+  const segments: SourceSegment[] = [];
+  const issues: CoverageIssue[] = [];
+  const fileDigests: string[] = [];
+
+  for (const [fileIndex, selected] of validation.files.entries()) {
+    const documentId = localDocumentId(fileIndex);
+    let loadingTask: PdfLoadingTaskLike | undefined;
+    let pdf: PdfDocumentLike | undefined;
+    const pages: PageRecord[] = [];
+
+    try {
+      const bytes = await selected.file.arrayBuffer();
+      fileDigests.push(await sha256File(bytes));
+      // Text extraction does not need font rendering, image decoding, canvas,
+      // or WebAssembly. Disabling those optional paths avoids Safari/CSP
+      // failures while keeping PDF parsing inside the browser.
+      loadingTask = runtime.getDocument({
+        data: new Uint8Array(bytes),
+        disableFontFace: true,
+        useSystemFonts: false,
+        useWasm: false,
+        useWorkerFetch: false,
+        isOffscreenCanvasSupported: false,
+        isImageDecoderSupported: false,
+      });
+      pdf = await loadingTask.promise;
+
+      for (let pageNumber = 1; pageNumber <= pdf.numPages; pageNumber += 1) {
+        let page: PdfPageLike | undefined;
+        try {
+          page = await pdf.getPage(pageNumber);
+          const extracted = textItemsToPage(await readPdfTextItems(page));
+          if (extracted.text.length === 0) {
+            const pageRecord = localPageRecord(documentId, pageNumber, "image_only", 0);
+            pages.push(pageRecord);
+            issues.push(localCoverageIssue(documentId, pageRecord.id, "image_only_page"));
+          } else {
+            pages.push(localPageRecord(documentId, pageNumber, "available", extracted.text.length));
+            segments.push(localSegment(documentId, pageNumber, extracted));
+          }
+        } catch (error) {
+          if (process.env.NODE_ENV !== "production") {
+            console.error("Browser-local PDF text extraction failed", {
+              fileName: selected.fileName,
+              pageNumber,
+              errorName: error instanceof Error ? error.name : "UnknownError",
+              errorMessage:
+                error instanceof Error ? error.message : "Unknown PDF extraction failure",
+            });
+          }
+          const pageRecord = localPageRecord(documentId, pageNumber, "extraction_failed", 0);
+          pages.push(pageRecord);
+          issues.push(localCoverageIssue(documentId, pageRecord.id, "extraction_failed"));
+        } finally {
+          page?.cleanup?.();
+        }
+      }
+    } catch {
+      if (fileDigests.length <= fileIndex) {
+        // Header validation succeeded, so this only protects digest generation
+        // from a later browser read failure without exposing file contents.
+        fileDigests.push("0".repeat(64));
+      }
+      const pageRecord = localPageRecord(documentId, 1, "extraction_failed", 0);
+      pages.push(pageRecord);
+      issues.push(localCoverageIssue(documentId, pageRecord.id, "extraction_failed"));
+    } finally {
+      pdf?.cleanup?.();
+      await pdf?.destroy?.();
+      await loadingTask?.destroy?.();
+    }
+
+    const availablePageCount = pages.filter((page) => page.availability === "available").length;
+    const processingStatus: LocalDocumentRecord["processingStatus"] =
+      availablePageCount === pages.length
+        ? "completed"
+        : availablePageCount > 0
+          ? "warning"
+          : "failed";
+    documents.push({
+      id: documentId,
+      caseId: CASE_ID,
+      fixtureVersion: FIXTURE_VERSION,
+      fileName: selected.fileName,
+      displayName: displayNameFor(selected.fileName),
+      sourceType: "other",
+      dataOrigin: "browser_local",
+      expectedPageCount: pages.length,
+      pages,
+      provenanceStatus: "unverified",
+      processingStatus,
+      syntheticLabelPresent: false,
+    });
+  }
+
+  const documentIds = documents.map((document) => document.id);
+  const affectedDocumentIds = documents
+    .filter((document) => document.processingStatus !== "completed")
+    .map((document) => document.id);
+  const readablePageCount = documents.reduce(
+    (total, document) =>
+      total + document.pages.filter((page) => page.availability === "available").length,
+    0,
+  );
+  const processing = [
+    completeStage("intake_validation", documentIds),
+    affectedDocumentIds.length === 0
+      ? completeStage("text_extraction", documentIds)
+      : readablePageCount === 0
+        ? failedStage("text_extraction", affectedDocumentIds, "EXTRACTION_FAILED")
+        : warningStage("text_extraction", affectedDocumentIds, "EXTRACTION_FAILED"),
+    completeStage("coverage_calculation", documentIds),
+    completeStage("identifier_masking", documentIds),
+  ];
+
+  const coverage = CoverageSummarySchema.parse({
+    expectedDocuments: documents.length,
+    processedDocuments: documents.filter((document) => document.processingStatus !== "failed").length,
+    expectedPages: documents.reduce((total, document) => total + document.expectedPageCount, 0),
+    availablePages: readablePageCount,
+    issues,
+    hasConsequentialOpenIssue: issues.length > 0,
+  });
+
+  return {
+    caseId: CASE_ID,
+    fixtureVersion: FIXTURE_VERSION,
+    documentSetDigest: await documentSetDigest(validation.files, fileDigests),
+    documents,
+    segments,
+    coverage,
+    processing,
+    selectedSegmentIds: segments
+      .filter((segment) => segment.supportEligibility === "candidate_eligible")
+      .map((segment) => segment.id),
   };
 }
 
@@ -548,7 +1202,35 @@ export class CfnDemoPdfSourceService {
       });
     }
 
-    return this.processSources(sourcesByDocumentId);
+    let result: CfnDemoDocumentServiceResult;
+    try {
+      result = await this.processSources(sourcesByDocumentId);
+    } catch {
+      // These bytes are the exact bundled demo packet (verified above). If the
+      // browser cannot even start PDF.js, keep the demo usable with its frozen
+      // local projection. Ordinary PDFs never reach this path.
+      return verifiedDemoPacketResult();
+    }
+    const extraction = result.processing.find(
+      (stage) => stage.name === "text_extraction",
+    );
+
+    // The selected files have already passed exact byte-length and SHA-256
+    // verification. If Safari cannot start PDF.js at all, use the frozen
+    // canonical projection for that verified packet instead of presenting all
+    // seven documents as unreadable.
+    if (
+      result.coverage.processedDocuments === 0 &&
+      result.coverage.availablePages === 0 &&
+      extraction?.status === "failed" &&
+      extraction.affectedDocumentIds.length === cfnDemoFixture.documents.length &&
+      (extraction.errorCode === "SOURCE_UNAVAILABLE" ||
+        extraction.errorCode === "EXTRACTION_FAILED")
+    ) {
+      return verifiedDemoPacketResult();
+    }
+
+    return result;
   }
 
   private async processSources(
@@ -601,7 +1283,7 @@ export class CfnDemoPdfSourceService {
         try {
           const pdfPage = await pdf.getPage(physicalPageNumber);
           this.pages.add(pdfPage);
-          const extracted = textItemsToPage((await pdfPage.getTextContent()).items);
+          const extracted = textItemsToPage(await readPdfTextItems(pdfPage));
           this.extractedPagesById.set(page.id, { ...extracted, pageId: page.id });
         } catch {
           failedPagesById.set(page.id, "EXTRACTION_FAILED");
@@ -615,9 +1297,25 @@ export class CfnDemoPdfSourceService {
     const issues = buildIssues(documents, this.extractedPagesById);
     const segments = cfnDemoFixture.segments.map((segment) => buildSegment(segment, this.extractedPagesById));
     const documentIds = documents.map((document) => document.id);
+    const extractionFailureDocumentIds = documents
+      .filter((document) =>
+        document.pages.some((page) => page.availability === "extraction_failed"),
+      )
+      .map((document) => document.id);
+    const extractionFailureCode = [...failedPagesById.values()].includes(
+      "SOURCE_UNAVAILABLE",
+    )
+      ? "SOURCE_UNAVAILABLE"
+      : "EXTRACTION_FAILED";
     const processing = [
       completeStage("intake_validation", documentIds),
-      completeStage("text_extraction", documentIds),
+      extractionFailureDocumentIds.length > 0
+        ? failedStage(
+            "text_extraction",
+            extractionFailureDocumentIds,
+            extractionFailureCode,
+          )
+        : completeStage("text_extraction", documentIds),
       completeStage("coverage_calculation", documentIds),
       completeStage("identifier_masking", documentIds),
     ];

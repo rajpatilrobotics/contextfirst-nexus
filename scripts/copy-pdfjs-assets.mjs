@@ -5,8 +5,22 @@ import { fileURLToPath } from "node:url";
 const expectedVersion = "6.1.200";
 const repoRoot = dirname(fileURLToPath(new URL("../package.json", import.meta.url)));
 const packageJsonPath = join(repoRoot, "node_modules", "pdfjs-dist", "package.json");
-const sourcePath = join(repoRoot, "node_modules", "pdfjs-dist", "build", "pdf.worker.min.mjs");
-const destinationPath = join(repoRoot, "public", "vendor", "pdfjs", "pdf.worker.min.mjs");
+// Keep the worker from the same Safari-compatible build as the browser reader.
+const sourcePath = join(
+  repoRoot,
+  "node_modules",
+  "pdfjs-dist",
+  "legacy",
+  "build",
+  "pdf.worker.min.mjs",
+);
+const destinationPath = join(
+  repoRoot,
+  "public",
+  "vendor",
+  "pdfjs",
+  "pdf.worker.legacy-6.1.200.min.mjs",
+);
 
 async function assertReadableFile(path, label) {
   const fileStat = await stat(path);

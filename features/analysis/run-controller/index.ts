@@ -114,6 +114,49 @@ export async function runSelectedAnalysis({
   recoveryOfRunId = null,
   now = () => new Date().toISOString(),
 }: RunControllerOptions): Promise<RunControllerResult> {
+  const usesBrowserLocalDocuments = state.documents.some(
+    (document) => document.dataOrigin === "browser_local",
+  );
+
+  if (usesBrowserLocalDocuments) {
+    try {
+      requirePreparedReplayPurpose(state);
+    } catch (error) {
+      return {
+        status: "blocked",
+        reason: error instanceof Error ? error.message : "analysis_service_unavailable",
+      };
+    }
+    if (recoveryOfRunId !== null || state.pendingLiveAnalysis !== null) {
+      return { status: "blocked", reason: "analysis_service_unavailable" };
+    }
+    if (
+      state.masking.reviewStatus !== "approved" ||
+      state.masking.leakScanStatus !== "passed"
+    ) {
+      return { status: "blocked", reason: "mask_review_incomplete" };
+    }
+    const selectedIds = new Set(state.selectedSegmentIds);
+    const hasCandidateEligibleSegment = state.segments.some(
+      (segment) =>
+        selectedIds.has(segment.id) &&
+        segment.supportEligibility === "candidate_eligible" &&
+        segment.extractionQuality !== "unavailable" &&
+        segment.redactedText.trim().length > 0,
+    );
+    if (!hasCandidateEligibleSegment) {
+      return { status: "blocked", reason: "no_candidate_eligible_segments" };
+    }
+
+    const result = dispatchCaseCommand({
+      type: "run_local_source_extraction",
+      meta: commandMeta(state, now),
+    });
+    return result.ok
+      ? { status: "completed", outcome: "replay_succeeded", commandResult: result }
+      : { status: "blocked", reason: result.reason, commandResult: result };
+  }
+
   let request: ReplayRequest;
   try {
     request = buildReplayRequest(state);

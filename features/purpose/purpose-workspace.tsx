@@ -106,13 +106,13 @@ export function PurposeWorkspace() {
       </header>
 
       <section
-        aria-label="Demo case summary"
+        aria-label="Test workspace summary"
         className="rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface-subtle)] px-4 py-3"
       >
         <dl className="grid gap-3 text-sm sm:grid-cols-3">
-          <div><dt className="cfn-type-label">Case</dt><dd>CFN-DEMO-001 · Fictional adult composite</dd></div>
-          <div><dt className="cfn-type-label">Version</dt><dd>1.0.0 · Demo-only data</dd></div>
-          <div><dt className="cfn-type-label">Next</dt><dd>Select and verify the demo PDFs in Documents</dd></div>
+          <div><dt className="cfn-type-label">Workspace</dt><dd>CFN-DEMO-001 · Fictional testing only</dd></div>
+          <div><dt className="cfn-type-label">Data boundary</dt><dd>No real or private data</dd></div>
+          <div><dt className="cfn-type-label">Next</dt><dd>Select fictional or hackathon test PDFs in Documents</dd></div>
         </dl>
       </section>
 

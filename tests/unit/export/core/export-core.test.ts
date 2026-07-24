@@ -192,6 +192,7 @@ function baseState(): CaseState {
     caseRevision: 1,
     caseStatus: "ready_to_export",
     fixtureVersion: "1.0.0",
+    documentSetDigest: cfnDemoFixture.canonicalFixtureDigest,
     guidancePack: { version: "1.0.0", digest: bundledGuidancePack.identity.digest },
     purposeBrief: {
       id: "PURPOSE-CFN-DEMO-001",

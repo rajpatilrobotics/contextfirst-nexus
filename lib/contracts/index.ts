@@ -116,7 +116,7 @@ export const StageStatusSchema = z.enum([
 ]);
 export type StageStatus = z.infer<typeof StageStatusSchema>;
 
-export const DataOriginSchema = z.literal("bundled_synthetic");
+export const DataOriginSchema = z.enum(["bundled_synthetic", "browser_local"]);
 export const AnalysisModeSchema = z.enum(["live", "deterministic_replay"]);
 export const LiveProviderIdSchema = z.enum(["openai", "google_gemini", "mistral"]);
 export const ProviderIdSchema = z.enum([
@@ -663,8 +663,9 @@ export const DocumentRecordSchema = strict({
     "operational_financial_record",
     "proceeding_record",
     "support_provider_note",
+    "other",
   ]),
-  dataOrigin: z.literal("bundled_synthetic"),
+  dataOrigin: DataOriginSchema,
   expectedPageCount: positiveInteger,
   pages: z.array(PageRecordSchema),
   provenanceStatus: z.enum(["fixture_verified", "unverified", "unknown"]),
@@ -1828,6 +1829,22 @@ export const FixtureProcessingResultSchema = strict({
   selectedSegmentIds: z.array(IdSchemas.segmentId).min(1),
 });
 
+export const LocalDocumentProcessingResultSchema = strict({
+  caseId: z.literal("CFN-DEMO-001"),
+  fixtureVersion: literalVersion,
+  documentSetDigest: sha256,
+  documents: z.array(DocumentRecordSchema).min(1).max(25),
+  segments: z.array(SourceSegmentSchema).min(1),
+  coverage: CoverageSummarySchema,
+  processing: z.array(ProcessingStageSchema),
+  // A readable packet can contain only instruction-like evidence. Preserve the
+  // source records while representing that no segment may generate candidates.
+  selectedSegmentIds: z.array(IdSchemas.segmentId),
+});
+export type LocalDocumentProcessingResult = z.infer<
+  typeof LocalDocumentProcessingResultSchema
+>;
+
 export const AuditEventTypeSchema = z.enum([
   "purpose_saved",
   "purpose_changed",
@@ -2619,6 +2636,7 @@ export const CaseCommandSchema = z.discriminatedUnion("type", [
   strict({ meta: CommandMetaSchema, type: z.literal("save_purpose"), purposeBrief: CasePurposeBriefSchema }),
   strict({ meta: CommandMetaSchema, type: z.literal("begin_fixture_processing") }),
   strict({ meta: CommandMetaSchema, type: z.literal("complete_fixture_processing"), result: FixtureProcessingResultSchema }),
+  strict({ meta: CommandMetaSchema, type: z.literal("complete_local_document_processing"), result: LocalDocumentProcessingResultSchema }),
   strict({ meta: CommandMetaSchema, type: z.literal("fail_fixture_processing"), stageName: FixtureProcessingStageNameSchema, safeErrorCode: SafeErrorCodeSchema }),
   strict({ meta: CommandMetaSchema, type: z.literal("retry_fixture_processing_stage"), stageName: FixtureProcessingStageNameSchema }),
   strict({ meta: CommandMetaSchema, type: z.literal("refresh_mask_suggestions"), sensitiveTerms: z.array(z.string()) }),
@@ -2632,12 +2650,13 @@ export const CaseCommandSchema = z.discriminatedUnion("type", [
   strict({ meta: CommandMetaSchema, type: z.literal("reject_live_analysis_preflight"), startCommandId: nonEmptyString, response: AnalyzeResponseSchema.refine((response) => typeof response === "object" && response !== null && "outcome" in response && response.outcome === "rejected_before_run") }),
   strict({ meta: CommandMetaSchema, type: z.literal("record_live_analysis_transport_failure"), startCommandId: nonEmptyString, reasonCode: AnalysisTransportFailureReasonSchema }),
   strict({ meta: CommandMetaSchema, type: z.literal("run_deterministic_replay"), request: ReplayRequestSchema }),
+  strict({ meta: CommandMetaSchema, type: z.literal("run_local_source_extraction") }),
   strict({ meta: CommandMetaSchema, type: z.literal("resolve_citation"), candidateId: IdSchemas.candidateId, citationId: nonEmptyString, selectedSegmentId: IdSchemas.segmentId, selectedRedactedSegmentRange: rangeSchema }),
   strict({ meta: CommandMetaSchema, type: z.literal("review_candidate"), intent: ReviewIntentSchema }),
   strict({ meta: CommandMetaSchema, type: z.literal("respond_context_gap"), intent: ContextGapResponseIntentSchema }),
   strict({ meta: CommandMetaSchema, type: z.literal("review_coverage_issue"), intent: CoverageReviewIntentSchema }),
   strict({ meta: CommandMetaSchema, type: z.literal("withdraw_candidate"), candidateId: IdSchemas.candidateId, reason: safeText }),
-  strict({ meta: CommandMetaSchema, type: z.literal("reveal_source"), citationId: nonEmptyString, reasonCode: z.literal("explicit_synthetic_source_review") }),
+  strict({ meta: CommandMetaSchema, type: z.literal("reveal_source"), citationId: nonEmptyString, reasonCode: z.enum(["explicit_synthetic_source_review", "explicit_local_source_review"]) }),
   strict({ meta: CommandMetaSchema, type: z.literal("evaluate_export_gate"), selection: ExportSelectionSchema }),
   strict({ meta: CommandMetaSchema, type: z.literal("create_export"), selection: ExportSelectionSchema }),
   strict({ meta: CommandMetaSchema, type: z.literal("report_unsafe_output"), entityIds: z.array(nonEmptyString), reasonCode: z.enum(["prohibited_claim", "privacy_concern", "citation_problem", "other_safe_category"]) }),
@@ -2652,6 +2671,7 @@ export const CaseStateSchema = strict({
   caseRevision: nonNegativeInteger,
   caseStatus: CaseStatusSchema,
   fixtureVersion: literalVersion,
+  documentSetDigest: sha256.nullable(),
   guidancePack: GuidancePackIdentitySchema,
   purposeBrief: CasePurposeBriefSchema.nullable(),
   documents: z.array(DocumentRecordSchema),

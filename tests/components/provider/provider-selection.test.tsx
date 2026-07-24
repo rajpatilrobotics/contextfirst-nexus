@@ -65,8 +65,9 @@ describe("TASK-039 replay-only analysis availability", () => {
     );
 
     expect(screen.getByText(REPLAY_VISIBLE_LABEL, { exact: false })).toBeInTheDocument();
-    expect(screen.getByText(/No case content is sent to an external service/i)).toBeInTheDocument();
-    expect(screen.getByRole("checkbox", { name: /frozen local demo output/i })).not.toBeChecked();
+    expect(screen.getByText(/No PDF or extracted content is sent to an external service or AI provider/i)).toBeInTheDocument();
+    expect(screen.getByText(/browser-local source extraction only/i)).toBeInTheDocument();
+    expect(screen.getByRole("checkbox", { name: /prepared demo replay or browser-local source extraction/i })).not.toBeChecked();
     expect(screen.queryByRole("radio")).not.toBeInTheDocument();
     expect(screen.queryByRole("combobox")).not.toBeInTheDocument();
     expect(screen.queryByText(/OpenAI|Gemini|Mistral|service tier|requested model/i)).not.toBeInTheDocument();
@@ -85,7 +86,7 @@ describe("TASK-039 replay-only analysis availability", () => {
 
     expect(onAcknowledgementChange).not.toHaveBeenCalled();
     const acknowledgement = screen.getByRole("checkbox", {
-      name: /sends nothing to an external service/i,
+      name: /has no provider transmission/i,
     });
     expect(acknowledgement).toHaveAccessibleDescription("Acknowledge how local analysis works.");
 
