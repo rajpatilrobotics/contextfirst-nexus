@@ -1,17 +1,35 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import {
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type KeyboardEvent,
+  type ReactNode,
+} from "react";
 import {
   AlertOctagon,
-  CheckSquare,
-  FileQuestion,
-  HandHelping,
-  MessageSquare,
-  NotebookPen,
-  Search,
+  AlertTriangle,
+  Ban,
+  Check,
+  CheckCircle2,
+  ChevronDown,
+  ChevronRight,
+  Clock,
+  Info,
+  Pencil,
+  Phone,
+  Plus,
+  User,
 } from "lucide-react";
+import {
+  Chip,
+  DemoOnlyNotice,
+  SectionTitle,
+} from "../../components/lovable/nexus-ui";
 import { useCaseState } from "../../components/shell";
-import { Alert, Button, Input, Select, Textarea } from "../../components/ui";
+import { Button, Select } from "../../components/ui";
 import type {
   CaseCommand,
   CaseState,
@@ -28,7 +46,7 @@ import {
   sourceLinkState,
 } from "../../lib/planning";
 
-type ChipTone = "neutral" | "warning" | "danger" | "success";
+type NexusChipTone = "neutral" | "amber" | "sage" | "rust" | "ink" | "mute";
 
 function commandMeta(state: CaseState, prefix: string): CaseCommand["meta"] {
   const createdAt = new Date().toISOString();
@@ -44,56 +62,6 @@ function commandMeta(state: CaseState, prefix: string): CaseCommand["meta"] {
   };
 }
 
-function PlanningChip({
-  children,
-  tone = "neutral",
-}: {
-  children: ReactNode;
-  tone?: ChipTone;
-}) {
-  const classes = {
-    neutral: "border-[var(--color-border)] bg-[var(--color-surface-subtle)]",
-    warning: "border-[var(--color-warning)] bg-[var(--color-warning-subtle)]",
-    danger: "border-[var(--color-danger)] bg-[var(--color-danger-subtle)]",
-    success: "border-[var(--color-supported)] bg-[var(--color-supported-subtle)]",
-  }[tone];
-  return (
-    <span className={`rounded-full border px-2 py-0.5 text-[11px] ${classes}`}>
-      {children}
-    </span>
-  );
-}
-
-function PlanningHeader({
-  stage,
-  title,
-  description,
-  icon: Icon,
-  boundary,
-}: {
-  stage: string;
-  title: string;
-  description: string;
-  icon: typeof AlertOctagon;
-  boundary: ReactNode;
-}) {
-  return (
-    <header className="grid gap-3 border-b border-[var(--color-border)] pb-5">
-      <div className="flex items-start gap-3">
-        <Icon aria-hidden="true" className="mt-1 shrink-0 text-[var(--amber)]" size={22} />
-        <div>
-          <p className="cfn-type-label text-[var(--color-ink-muted)]">{stage}</p>
-          <h1 className="cfn-type-heading-1">{title}</h1>
-          <p className="mt-1 max-w-3xl text-sm leading-6 text-[var(--color-ink-muted)]">
-            {description}
-          </p>
-        </div>
-      </div>
-      <Alert title="Safety boundary" tone="neutral">{boundary}</Alert>
-    </header>
-  );
-}
-
 function readable(value: string) {
   return value.replaceAll("_", " ");
 }
@@ -102,11 +70,11 @@ function pretty(value: string) {
   return readable(value).replace(/\b\w/g, (letter) => letter.toUpperCase());
 }
 
-function statusTone(status: string): ChipTone {
-  if (["resolved", "completed", "approved", "planned_for_manual_follow_up"].includes(status)) return "success";
-  if (["cancelled", "removed", "inappropriate"].includes(status)) return "danger";
-  if (["waiting", "deferred", "draft", "todo"].includes(status)) return "warning";
-  return "neutral";
+function nexusStatusTone(status: string): NexusChipTone {
+  if (["resolved", "completed", "approved", "edited", "planned_for_manual_follow_up"].includes(status)) return "sage";
+  if (["cancelled", "removed", "inappropriate"].includes(status)) return "rust";
+  if (["waiting", "deferred", "draft", "todo", "in_progress"].includes(status)) return "amber";
+  return "mute";
 }
 
 function PlanningResult({ message }: { message: string | null }) {
@@ -125,30 +93,202 @@ function SourceLinkStateBadge({
   source: { sourceType: string; sourceId: string | null; sourceAnalysisRunId: string | null; sourceCandidateRevision: number | null };
 }) {
   const linkState = sourceLinkState(state, source);
-  if (linkState === "not_run_scoped") return <PlanningChip>Manual planning record</PlanningChip>;
+  if (linkState === "not_run_scoped") return <Chip tone="mute">Manual planning record</Chip>;
   return (
-    <PlanningChip tone={linkState === "current" ? "success" : "warning"}>
+    <Chip tone={linkState === "current" ? "sage" : "amber"}>
       Source link {linkState}
-    </PlanningChip>
+    </Chip>
+  );
+}
+
+function PlanningField({
+  label,
+  children,
+}: {
+  label: string;
+  children: ReactNode;
+}) {
+  return (
+    <div>
+      <dt className="text-muted-foreground">{label}</dt>
+      <dd className="mt-0.5">{children}</dd>
+    </div>
+  );
+}
+
+function InterviewField({
+  label,
+  children,
+}: {
+  label: string;
+  children: ReactNode;
+}) {
+  return (
+    <label className="grid gap-1 text-sm">
+      <span className="text-xs text-muted-foreground">{label}</span>
+      {children}
+    </label>
+  );
+}
+
+function InterviewFilterPill({
+  active,
+  onClick,
+  label,
+  count,
+}: {
+  active: boolean;
+  onClick: () => void;
+  label: string;
+  count?: number;
+}) {
+  return (
+    <button
+      aria-pressed={active}
+      className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 text-[11px] font-medium focus-visible:ring-2 focus-visible:ring-ring ${active ? "border-primary bg-primary text-primary-foreground" : "border-border bg-background text-foreground hover:bg-muted"}`}
+      onClick={onClick}
+      type="button"
+    >
+      <span>{label}</span>
+      {typeof count === "number" ? (
+        <span className={active ? "opacity-90" : "text-muted-foreground"}>{count}</span>
+      ) : null}
+    </button>
+  );
+}
+
+function InterviewReviewChip({
+  status,
+}: {
+  status: InterviewQuestion["status"];
+}) {
+  const values: Record<
+    InterviewQuestion["status"],
+    { tone: NexusChipTone; label: string; icon: ReactNode }
+  > = {
+    draft: {
+      tone: "amber",
+      label: "Pending Review",
+      icon: <Clock className="h-3 w-3" />,
+    },
+    approved: {
+      tone: "sage",
+      label: "Approved for Use",
+      icon: <Check className="h-3 w-3" />,
+    },
+    edited: {
+      tone: "neutral",
+      label: "Edited",
+      icon: <Pencil className="h-3 w-3" />,
+    },
+    deferred: {
+      tone: "mute",
+      label: "Deferred",
+      icon: <Clock className="h-3 w-3" />,
+    },
+    removed: {
+      tone: "rust",
+      label: "Removed",
+      icon: <Ban className="h-3 w-3" />,
+    },
+    inappropriate: {
+      tone: "rust",
+      label: "Inappropriate",
+      icon: <AlertTriangle className="h-3 w-3" />,
+    },
+  };
+  const value = values[status];
+  return <Chip icon={value.icon} tone={value.tone}>{value.label}</Chip>;
+}
+
+function InterviewAction({
+  children,
+  icon,
+  onClick,
+  tone,
+}: {
+  children: ReactNode;
+  icon: ReactNode;
+  onClick: () => void;
+  tone?: "sage" | "rust";
+}) {
+  const classes = tone === "sage"
+    ? "border-[color-mix(in_oklab,var(--sage)_45%,transparent)] bg-[color-mix(in_oklab,var(--sage)_16%,transparent)]"
+    : tone === "rust"
+      ? "border-[color-mix(in_oklab,var(--rust)_40%,transparent)] bg-[color-mix(in_oklab,var(--rust)_10%,transparent)] text-[color:var(--rust)]"
+      : "border-border bg-background";
+  return (
+    <button
+      className={`inline-flex items-center gap-1.5 rounded-md border px-2.5 py-1 text-xs font-medium hover:opacity-90 focus-visible:ring-2 focus-visible:ring-ring ${classes}`}
+      onClick={onClick}
+      type="button"
+    >
+      {icon}{children}
+    </button>
+  );
+}
+
+function InterviewTrace({
+  title,
+  children,
+}: {
+  title: string;
+  children: ReactNode;
+}) {
+  return (
+    <div className="rounded-md border border-border/70 bg-background/40 p-3">
+      <div className="mb-1.5 font-mono text-[10px] uppercase tracking-[0.14em] text-muted-foreground">{title}</div>
+      {children}
+    </div>
+  );
+}
+
+function providerFormat(provider: ServiceProviderDirectoryRecord) {
+  const value = provider.accessibility.toLowerCase();
+  const remote = /remote|video|relay/.test(value);
+  const inPerson = /wheelchair|step-free/.test(value);
+  if (remote && inPerson) return "In-person + remote";
+  if (remote) return "Remote";
+  return "In-person";
+}
+
+function ServiceFilterSelect({
+  label,
+  value,
+  onChange,
+  options,
+}: {
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+  options: string[];
+}) {
+  const active = value !== "Any" && value !== "All";
+  return (
+    <label className={`flex items-center gap-1 rounded-md border px-2 py-1 text-[11px] ${active ? "border-[color:var(--amber)] bg-[color-mix(in_oklab,var(--amber)_10%,transparent)]" : "border-border bg-background"}`}>
+      <span className="text-muted-foreground">{label}</span>
+      <select
+        aria-label={label}
+        className="bg-transparent text-foreground focus:outline-none"
+        onChange={(event) => onChange(event.currentTarget.value)}
+        value={value}
+      >
+        {options.map((option) => <option key={option} value={option}>{option}</option>)}
+      </select>
+    </label>
   );
 }
 
 export function UrgentNeedsPreview() {
   const { state, dispatchCaseCommand } = useCaseState();
-  const [status, setStatus] = useState<"all" | UrgentNeed["status"]>("all");
-  const [urgency, setUrgency] = useState<"all" | UrgentNeed["urgency"]>("all");
-  const [selectedId, setSelectedId] = useState<string | null>(state.urgentNeeds[0]?.id ?? null);
   const [category, setCategory] = useState<UrgentNeed["category"]>("emergency_accommodation");
   const [description, setDescription] = useState("");
   const [safeContact, setSafeContact] = useState("");
   const [nextAction, setNextAction] = useState("");
   const [message, setMessage] = useState<string | null>(null);
-  const visible = state.urgentNeeds.filter(
-    (need) =>
-      (status === "all" || need.status === status) &&
-      (urgency === "all" || need.urgency === urgency),
+  const activeNeeds = state.urgentNeeds.filter(
+    (need) => !["resolved", "cancelled"].includes(need.status),
   );
-  const selected = visible.find((need) => need.id === selectedId) ?? visible[0] ?? null;
 
   function createNeed() {
     setMessage(null);
@@ -171,7 +311,6 @@ export function UrgentNeedsPreview() {
       return;
     }
     const created = result.state.urgentNeeds.at(-1);
-    setSelectedId(created?.id ?? null);
     setDescription("");
     setSafeContact("");
     setNextAction("");
@@ -189,109 +328,128 @@ export function UrgentNeedsPreview() {
   }
 
   return (
-    <div className="grid gap-5">
-      <PlanningHeader
-        boundary="Urgent Needs are operational planning records only. They do not score danger, determine trafficking status, judge credibility, dispatch emergency services, or contact anyone."
-        description="Practitioner-recorded operational needs stored in the canonical browser-session case state."
-        icon={AlertOctagon}
-        stage="Stage 3 · Analysis"
+    <div className="space-y-6">
+      <SectionTitle
+        actions={<Chip tone="rust">{activeNeeds.length} active urgent {activeNeeds.length === 1 ? "need" : "needs"}</Chip>}
+        description="Review bundled fictional examples and record practitioner-written operational needs. This screen never generates a risk score for a person."
+        eyebrow="Stage 3 · Analysis"
         title="Urgent Needs"
       />
-      <Alert title="If a person is in immediate danger" tone="danger">
-        Contact appropriate local emergency services outside this workspace. ContextFirst Nexus does not contact emergency services.
-      </Alert>
-      <section aria-label="Urgent need filters" className="grid gap-2 rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface)] p-3 sm:grid-cols-2">
-        <label className="grid gap-1 text-xs">
-          <span className="cfn-type-label">Status</span>
-          <Select onChange={(event) => setStatus(event.currentTarget.value as typeof status)} value={status}>
-            <option value="all">All statuses</option>
-            {["open", "in_progress", "waiting", "resolved", "cancelled"].map((value) => <option key={value} value={value}>{pretty(value)}</option>)}
-          </Select>
-        </label>
-        <label className="grid gap-1 text-xs">
-          <span className="cfn-type-label">Urgency</span>
-          <Select onChange={(event) => setUrgency(event.currentTarget.value as typeof urgency)} value={urgency}>
-            <option value="all">All urgency windows</option>
-            {["within_24_hours", "within_72_hours", "within_7_days", "routine"].map((value) => <option key={value} value={value}>{pretty(value)}</option>)}
-          </Select>
-        </label>
-      </section>
-      <div className="grid min-w-0 gap-4 xl:grid-cols-[minmax(260px,0.85fr)_minmax(0,1.3fr)_320px]">
-        <nav aria-label="Operational needs" className="min-w-0 overflow-hidden rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface)]">
-          <div className="border-b border-[var(--color-border)] px-3 py-3">
-            <h2 className="font-serif text-base">Needs ({visible.length})</h2>
+      <div className="rounded-lg border border-[color-mix(in_oklab,var(--rust)_30%,transparent)] bg-[color-mix(in_oklab,var(--rust)_6%,transparent)] p-4">
+        <div className="flex items-start gap-3">
+          <AlertOctagon className="mt-0.5 h-5 w-5 text-[color:var(--rust)]" />
+          <div className="text-sm">
+            <div className="font-serif text-base">If a person is in immediate danger</div>
+            <p className="mt-1 text-muted-foreground">
+              Contact appropriate local emergency services outside this workspace. This system does not contact emergency services.
+            </p>
           </div>
-          {visible.length ? (
-            <ul className="divide-y divide-[var(--color-border)]">
-              {visible.map((need) => (
-                <li key={need.id}>
-                  <button
-                    aria-current={selected?.id === need.id ? "true" : undefined}
-                    className={`grid w-full gap-1 border-l-2 px-3 py-3 text-left ${selected?.id === need.id ? "border-l-[var(--amber)] bg-[var(--color-surface-subtle)]" : "border-l-transparent hover:bg-[var(--color-surface-subtle)]"}`}
-                    onClick={() => setSelectedId(need.id)}
-                    type="button"
+        </div>
+      </div>
+
+      <div className="grid gap-4 lg:grid-cols-[1fr_320px]">
+        <div className="space-y-4">
+          {state.urgentNeeds.length ? state.urgentNeeds.map((need) => (
+            <article key={need.id} className="rounded-xl border border-border bg-card p-5">
+              <div className="flex items-start justify-between gap-4">
+                <div>
+                  <div className="font-mono text-[11px] text-muted-foreground">
+                    {need.id} · {need.origin === "bundled_synthetic" ? "Bundled fictional example" : "Human-created"}
+                  </div>
+                  <h2 className="mt-0.5 font-serif text-xl">{pretty(need.category)}</h2>
+                  <p className="mt-2 text-sm">{need.description}</p>
+                </div>
+                <div className="flex flex-col items-end gap-1">
+                  <Chip tone={need.urgency === "within_24_hours" || need.urgency === "within_72_hours" ? "rust" : "amber"}>
+                    {pretty(need.urgency)}
+                  </Chip>
+                  <Chip tone={nexusStatusTone(need.status)}>Status: {pretty(need.status)}</Chip>
+                </div>
+              </div>
+              <dl className="mt-4 grid gap-x-4 gap-y-2 text-xs sm:grid-cols-2">
+                <PlanningField label="Assigned">{need.owner}</PlanningField>
+                <PlanningField label="Information source">
+                  {need.origin === "bundled_synthetic" ? "Bundled fictional example" : "Current practitioner"}
+                </PlanningField>
+                <PlanningField label="Consent / contact restrictions">{need.safeContactConstraints}</PlanningField>
+                <PlanningField label="Required action">{need.nextAction}</PlanningField>
+                <PlanningField label="Follow-up">{need.followUpAt ?? "No follow-up recorded"}</PlanningField>
+              </dl>
+              <div className="mt-4 flex flex-wrap items-center gap-2 border-t border-border pt-3">
+                <button className="inline-flex items-center gap-1.5 rounded-md border border-border px-2.5 py-1 text-xs opacity-60" disabled type="button">
+                  <Phone className="h-3.5 w-3.5" />Open referral
+                </button>
+                <span className="text-xs text-muted-foreground">The system does not contact any provider on your behalf.</span>
+                <label className="ml-auto inline-flex items-center gap-2 text-xs text-muted-foreground">
+                  Status
+                  <select
+                    aria-label={`Lifecycle status for ${need.id}`}
+                    className="rounded-md border border-input bg-background px-2 py-1 text-xs text-foreground"
+                    onChange={(event) => changeStatus(need.id, event.currentTarget.value as UrgentNeed["status"])}
+                    value={need.status}
                   >
-                    <span className="font-mono text-[10px] text-[var(--color-ink-muted)]">{need.id} · {pretty(need.category)}</span>
-                    <span className="font-semibold">{need.nextAction}</span>
-                    <span className="flex flex-wrap gap-1.5">
-                      <PlanningChip tone={need.urgency === "within_24_hours" || need.urgency === "within_72_hours" ? "danger" : "neutral"}>{pretty(need.urgency)}</PlanningChip>
-                      <PlanningChip tone={statusTone(need.status)}>{pretty(need.status)}</PlanningChip>
-                    </span>
-                  </button>
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <Alert title="No operational needs match" tone="neutral">Change the filters or create a need.</Alert>
+                    {["open", "in_progress", "waiting", "resolved", "cancelled"].map((value) => <option key={value} value={value}>{pretty(value)}</option>)}
+                  </select>
+                </label>
+              </div>
+            </article>
+          )) : (
+            <div className="rounded-xl border border-dashed border-border bg-card p-6 text-center">
+              <div className="font-serif text-base">No operational needs recorded</div>
+              <div className="mt-1 text-xs text-muted-foreground">Add a practitioner-written need using the form.</div>
+            </div>
           )}
-        </nav>
-        {selected ? (
-          <article aria-label={`Urgent need detail: ${selected.id}`} className="rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface)] p-4">
-            <p className="font-mono text-[10px] text-[var(--color-ink-muted)]">{selected.id} · {selected.origin === "bundled_synthetic" ? "Bundled fictional example" : "Human-created"}</p>
-            <h2 className="mt-1 font-serif text-2xl">{pretty(selected.category)}</h2>
-            <p className="mt-2 text-sm">{selected.description}</p>
-            <dl className="mt-4 grid gap-3 text-sm sm:grid-cols-2">
-              {[
-                ["Owner", selected.owner],
-                ["Safe-contact constraints", selected.safeContactConstraints],
-                ["Next action", selected.nextAction],
-                ["Follow-up", selected.followUpAt ?? "No date recorded"],
-              ].map(([label, value]) => (
-                <div key={label}><dt className="cfn-type-label">{label}</dt><dd className="mt-1">{value}</dd></div>
-              ))}
-            </dl>
-            <label className="mt-4 grid gap-1 text-xs">
-              <span className="cfn-type-label">Lifecycle status</span>
-              <Select onChange={(event) => changeStatus(selected.id, event.currentTarget.value as UrgentNeed["status"])} value={selected.status}>
-                {["open", "in_progress", "waiting", "resolved", "cancelled"].map((value) => <option key={value} value={value}>{pretty(value)}</option>)}
-              </Select>
+        </div>
+
+        <aside className="space-y-3">
+          <div className="rounded-xl border border-border bg-card p-4">
+            <h2 className="font-mono text-[10px] uppercase tracking-[0.16em] text-muted-foreground">Add a need</h2>
+            <label className="mt-2 block text-xs text-muted-foreground">
+              Category
+              <select
+                className="mt-1 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                onChange={(event) => setCategory(event.currentTarget.value as UrgentNeed["category"])}
+                value={category}
+              >
+                {["emergency_accommodation", "legal_support", "mental_health_support", "interpretation", "documentation", "safe_contact", "other"].map((value) => <option key={value} value={value}>{pretty(value)}</option>)}
+              </select>
             </label>
-          </article>
-        ) : (
-          <Alert title="No selected need" tone="neutral">No need is visible under the current filters.</Alert>
-        )}
-        <aside className="h-fit rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface)] p-4">
-          <h2 className="font-serif text-lg">Add a need</h2>
-          <label className="mt-3 grid gap-1 text-sm">
-            <span className="cfn-type-label">Category</span>
-            <Select onChange={(event) => setCategory(event.currentTarget.value as UrgentNeed["category"])} value={category}>
-              {["emergency_accommodation", "legal_support", "mental_health_support", "interpretation", "documentation", "safe_contact", "other"].map((value) => <option key={value} value={value}>{pretty(value)}</option>)}
-            </Select>
-          </label>
-          <label className="mt-3 grid gap-1 text-sm">
-            <span className="cfn-type-label">Practitioner description</span>
-            <Textarea onChange={(event) => setDescription(event.currentTarget.value)} value={description} />
-          </label>
-          <label className="mt-3 grid gap-1 text-sm">
-            <span className="cfn-type-label">Safe-contact constraints</span>
-            <Textarea onChange={(event) => setSafeContact(event.currentTarget.value)} value={safeContact} />
-          </label>
-          <label className="mt-3 grid gap-1 text-sm">
-            <span className="cfn-type-label">Next action</span>
-            <Input onChange={(event) => setNextAction(event.currentTarget.value)} value={nextAction} />
-          </label>
-          <Button className="mt-3 w-full" onClick={createNeed} variant="primary">Record need</Button>
-          <PlanningResult message={message} />
+            <label className="mt-2 block text-xs text-muted-foreground">
+              Practitioner description
+              <textarea
+                className="mt-1 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                onChange={(event) => setDescription(event.currentTarget.value)}
+                rows={3}
+                value={description}
+              />
+            </label>
+            <label className="mt-2 block text-xs text-muted-foreground">
+              Safe-contact constraints
+              <textarea
+                className="mt-1 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                onChange={(event) => setSafeContact(event.currentTarget.value)}
+                rows={2}
+                value={safeContact}
+              />
+            </label>
+            <label className="mt-2 block text-xs text-muted-foreground">
+              Next action
+              <input
+                className="mt-1 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                onChange={(event) => setNextAction(event.currentTarget.value)}
+                value={nextAction}
+              />
+            </label>
+            <button
+              className="mt-2 w-full rounded-md bg-primary py-1.5 text-sm text-primary-foreground hover:bg-primary/90"
+              onClick={createNeed}
+              type="button"
+            >
+              Record need
+            </button>
+            <PlanningResult message={message} />
+          </div>
+          <DemoOnlyNotice>Bundled examples are fictional; practitioner updates remain local browser-session planning records and contact no one.</DemoOnlyNotice>
         </aside>
       </div>
     </div>
@@ -305,6 +463,10 @@ export function InterviewPlannerPreview() {
   const [selectedId, setSelectedId] = useState<string | null>(state.interviewQuestions[0]?.id ?? null);
   const [setupDraft, setSetupDraft] = useState(state.interviewSetup);
   const setupSignatureRef = useRef(JSON.stringify(state.interviewSetup));
+  const [setupOpen, setSetupOpen] = useState(false);
+  const [guidanceOpen, setGuidanceOpen] = useState(false);
+  const [detailView, setDetailView] = useState<"detail" | "readiness" | "coverage" | "sequence">("detail");
+  const [addOpen, setAddOpen] = useState(false);
   const [body, setBody] = useState("");
   const [rationale, setRationale] = useState("");
   const [questionEdits, setQuestionEdits] = useState<Record<string, { body: string; rationale: string }>>({});
@@ -317,6 +479,28 @@ export function InterviewPlannerPreview() {
   );
   const selected = visible.find((question) => question.id === selectedId) ?? visible[0] ?? null;
   const selectedQuestionEdit = selected ? questionEdits[selected.id] ?? { body: "", rationale: "" } : { body: "", rationale: "" };
+  const questionCounts = useMemo(() => {
+    const result: Record<"all" | InterviewQuestion["status"], number> = {
+      all: state.interviewQuestions.length,
+      draft: 0,
+      approved: 0,
+      edited: 0,
+      deferred: 0,
+      removed: 0,
+      inappropriate: 0,
+    };
+    for (const question of state.interviewQuestions) result[question.status] += 1;
+    return result;
+  }, [state.interviewQuestions]);
+  const coveredGapIds = useMemo(
+    () => new Set(
+      state.interviewQuestions
+        .filter((question) => ["approved", "edited"].includes(question.status))
+        .map((question) => question.linkedGapCandidateId)
+        .filter((id): id is string => Boolean(id)),
+    ),
+    [state.interviewQuestions],
+  );
 
   useEffect(() => {
     const nextSignature = JSON.stringify(state.interviewSetup);
@@ -370,6 +554,7 @@ export function InterviewPlannerPreview() {
     setSelectedId(created?.id ?? null);
     setBody("");
     setRationale("");
+    setAddOpen(false);
     setMessage(`${created?.id ?? "Question"} saved for practitioner review.`);
   }
 
@@ -396,136 +581,345 @@ export function InterviewPlannerPreview() {
   }
 
   return (
-    <div className="grid gap-5">
-      <PlanningHeader
-        boundary="Questions are trauma-informed planning aids. They are separate from evidence, candidate review, credibility judgments, and legal findings."
-        description="Session setup and practitioner-reviewed questions stored in canonical browser-session state."
-        icon={MessageSquare}
-        stage="Stage 4 · Planning"
-        title="Interview Planner"
-      />
-      <section className="rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface)] p-4">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <h2 className="font-serif text-lg">Session setup</h2>
-          <PlanningChip tone={state.interviewSetup.consentConfirmed ? "success" : "warning"}>{state.interviewSetup.consentConfirmed ? "Consent confirmed" : "Consent not confirmed"}</PlanningChip>
+    <div className="space-y-4">
+      <div className="flex flex-wrap items-end justify-between gap-3 border-b border-border pb-3">
+        <div>
+          <div className="font-mono text-[11px] uppercase tracking-[0.18em] text-muted-foreground">Stage 4 · Planning</div>
+          <h1 className="mt-0.5 font-serif text-2xl leading-tight text-foreground">Interview Planner</h1>
+          <p className="mt-1 max-w-2xl text-sm text-muted-foreground">
+            Prepare respectful, non-leading follow-up questions connected to evidence gaps. Questions are planning aids, not mandatory scripts.
+          </p>
         </div>
-        <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          {[
-            ["purpose", "Purpose"],
-            ["language", "Language"],
-            ["interpreter", "Interpreter"],
-            ["accessibility", "Accessibility"],
-            ["safeContact", "Safe contact"],
-          ].map(([field, label]) => (
-            <label className="grid gap-1 text-sm" key={field}>
-              <span className="cfn-type-label">{label}</span>
-              <Input
-                onChange={(event) => updateSetupDraft(field as keyof typeof setupDraft, event.currentTarget.value)}
-                value={String(setupDraft[field as keyof typeof setupDraft])}
-              />
+        <div className="flex flex-wrap items-center gap-1.5">
+          <Chip tone="amber" icon={<Clock className="h-3 w-3" />}>{questionCounts.draft} Pending Review</Chip>
+          <Chip tone="sage" icon={<Check className="h-3 w-3" />}>{questionCounts.approved} Approved for Use</Chip>
+          <Chip tone="neutral" icon={<CheckCircle2 className="h-3 w-3" />}>{coveredGapIds.size} Gaps Covered</Chip>
+          <Chip tone="rust" icon={<AlertTriangle className="h-3 w-3" />}>{Math.max(gapOptions.length - coveredGapIds.size, 0)} Gaps Uncovered</Chip>
+          <button
+            className="ml-2 inline-flex items-center gap-1 rounded-md border border-border bg-background px-2.5 py-1 text-xs font-medium hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring"
+            onClick={() => setAddOpen(true)}
+            type="button"
+          >
+            <Plus className="h-3.5 w-3.5" /> Add Question
+          </button>
+        </div>
+      </div>
+
+      <section className="rounded-lg border border-border bg-card">
+        <button
+          aria-expanded={setupOpen}
+          className="flex w-full items-center justify-between gap-3 px-3 py-2 text-left focus-visible:ring-2 focus-visible:ring-ring"
+          onClick={() => setSetupOpen((open) => !open)}
+          type="button"
+        >
+          <div className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1 text-xs">
+            <span className="font-mono text-[10px] uppercase tracking-[0.14em] text-muted-foreground">Session setup</span>
+            <span><b>Purpose:</b> {state.interviewSetup.purpose}</span>
+            <span className="text-muted-foreground">·</span>
+            <span>{state.interviewSetup.language}</span>
+            <span className="text-muted-foreground">·</span>
+            <span>{state.interviewSetup.interpreter}</span>
+            <span className="text-muted-foreground">·</span>
+            <span>{state.interviewSetup.accessibility}</span>
+            <span className="text-muted-foreground">·</span>
+            <span>{state.interviewSetup.safeContact}</span>
+            <span className="text-muted-foreground">·</span>
+            <span>{state.interviewSetup.consentConfirmed ? "Consent recorded" : "Consent not recorded"}</span>
+          </div>
+          <span className="inline-flex shrink-0 items-center gap-1 rounded-md border border-border px-2 py-0.5 text-[11px] font-medium text-foreground">
+            {setupOpen ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />}
+            {setupOpen ? "Hide" : "Edit setup"}
+          </span>
+        </button>
+        {setupOpen ? (
+          <div className="grid gap-3 border-t border-border p-3 text-sm sm:grid-cols-2">
+            <InterviewField label="Purpose">
+              <input className="ip-input" onChange={(event) => updateSetupDraft("purpose", event.currentTarget.value)} value={setupDraft.purpose} />
+            </InterviewField>
+            <InterviewField label="Language">
+              <input className="ip-input" onChange={(event) => updateSetupDraft("language", event.currentTarget.value)} value={setupDraft.language} />
+            </InterviewField>
+            <InterviewField label="Interpreter">
+              <input className="ip-input" onChange={(event) => updateSetupDraft("interpreter", event.currentTarget.value)} value={setupDraft.interpreter} />
+            </InterviewField>
+            <InterviewField label="Accessibility">
+              <input className="ip-input" onChange={(event) => updateSetupDraft("accessibility", event.currentTarget.value)} value={setupDraft.accessibility} />
+            </InterviewField>
+            <InterviewField label="Safe contact">
+              <input className="ip-input" onChange={(event) => updateSetupDraft("safeContact", event.currentTarget.value)} value={setupDraft.safeContact} />
+            </InterviewField>
+            <label className="flex items-center gap-2 text-sm">
+              <input checked={setupDraft.consentConfirmed} onChange={(event) => updateSetupDraft("consentConfirmed", event.currentTarget.checked)} type="checkbox" />
+              <span>Consent confirmed for interview planning</span>
             </label>
-          ))}
-          <label className="inline-flex items-center gap-2 text-sm">
-            <input
-              checked={setupDraft.consentConfirmed}
-              onChange={(event) => updateSetupDraft("consentConfirmed", event.currentTarget.checked)}
-              type="checkbox"
+            <button className="w-fit rounded-md border border-primary bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground hover:opacity-90" onClick={saveSetup} type="button">
+              Save session setup
+            </button>
+          </div>
+        ) : (
+          <div className="sr-only">
+            <InterviewField label="Purpose">
+              <input onChange={(event) => updateSetupDraft("purpose", event.currentTarget.value)} value={setupDraft.purpose} />
+            </InterviewField>
+            <InterviewField label="Language">
+              <input onChange={(event) => updateSetupDraft("language", event.currentTarget.value)} value={setupDraft.language} />
+            </InterviewField>
+            <InterviewField label="Interpreter">
+              <input onChange={(event) => updateSetupDraft("interpreter", event.currentTarget.value)} value={setupDraft.interpreter} />
+            </InterviewField>
+            <InterviewField label="Accessibility">
+              <input onChange={(event) => updateSetupDraft("accessibility", event.currentTarget.value)} value={setupDraft.accessibility} />
+            </InterviewField>
+            <InterviewField label="Safe contact">
+              <input onChange={(event) => updateSetupDraft("safeContact", event.currentTarget.value)} value={setupDraft.safeContact} />
+            </InterviewField>
+          </div>
+        )}
+      </section>
+
+      <section className="rounded-lg border border-border bg-[color-mix(in_oklab,var(--amber)_8%,transparent)]">
+        <button
+          aria-expanded={guidanceOpen}
+          className="flex w-full items-start justify-between gap-3 px-3 py-2 text-left focus-visible:ring-2 focus-visible:ring-ring"
+          onClick={() => setGuidanceOpen((open) => !open)}
+          type="button"
+        >
+          <div className="flex items-start gap-2 text-sm">
+            <Info className="mt-0.5 h-4 w-4 shrink-0 text-[color:var(--ink)]" aria-hidden />
+            <span>Every suggested question requires practitioner review. Hesitation, uncertainty, incomplete memory, or refusal to answer does not indicate dishonesty.</span>
+          </div>
+          <span className="inline-flex shrink-0 items-center gap-1 rounded-md border border-border bg-background px-2 py-0.5 text-[11px] font-medium">
+            {guidanceOpen ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />}
+            {guidanceOpen ? "Hide" : "More guidance"}
+          </span>
+        </button>
+        {guidanceOpen ? (
+          <ul className="space-y-1 border-t border-border/60 px-3 py-2 text-xs text-foreground/90">
+            <li>· Do not use accusatory, coercive, or leading questions.</li>
+            <li>· Do not assume an allegation is true or false.</li>
+            <li>· Prefer open prompts.</li>
+            <li>· Do not repeatedly request traumatic detail without a defined purpose.</li>
+            <li>· Uncertainty or inconsistent memory must not be treated as dishonesty.</li>
+            <li>· The person may pause or stop the interview at any time.</li>
+          </ul>
+        ) : null}
+      </section>
+
+      <div className="space-y-1.5" aria-label="Interview question filters">
+        <div className="flex flex-wrap items-center gap-1.5">
+          <span className="mr-1 font-mono text-[10px] uppercase tracking-[0.14em] text-muted-foreground">Status</span>
+          {([
+            ["all", "All"],
+            ["draft", "Pending Review"],
+            ["approved", "Approved for Use"],
+            ["edited", "Edited"],
+            ["deferred", "Deferred"],
+            ["removed", "Removed"],
+            ["inappropriate", "Inappropriate"],
+          ] as const).map(([value, label]) => (
+            <InterviewFilterPill
+              active={statusFilter === value}
+              count={questionCounts[value]}
+              key={value}
+              label={label}
+              onClick={() => setStatusFilter(value)}
             />
-            <span>Consent confirmed for interview planning</span>
-          </label>
+          ))}
         </div>
-        <Button className="mt-3" onClick={saveSetup} variant="primary">Save session setup</Button>
-      </section>
-      <section aria-label="Interview question filters" className="grid gap-2 rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface)] p-3 sm:grid-cols-2">
-        <label className="grid gap-1 text-xs">
-          <span className="cfn-type-label">Question status</span>
-          <Select onChange={(event) => setStatusFilter(event.currentTarget.value as typeof statusFilter)} value={statusFilter}>
-            <option value="all">All statuses</option>
-            {["draft", "approved", "edited", "deferred", "removed", "inappropriate"].map((value) => <option key={value} value={value}>{pretty(value)}</option>)}
-          </Select>
-        </label>
-        <label className="grid gap-1 text-xs">
-          <span className="cfn-type-label">Linked gap</span>
-          <Select onChange={(event) => setGapFilter(event.currentTarget.value)} value={gapFilter}>
-            <option value="all">All linked gaps</option>
-            {gapOptions.map((gap) => <option key={gap.id} value={gap.id}>{gap.id}</option>)}
-          </Select>
-        </label>
-      </section>
-      <div className="grid min-w-0 gap-4 lg:grid-cols-[minmax(240px,0.75fr)_minmax(0,1.35fr)_320px]">
-        <nav aria-label="Interview questions" className="overflow-hidden rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface)]">
-          {visible.length ? (
-            <ul className="divide-y divide-[var(--color-border)]">
-              {visible.map((question) => (
+        <div className="flex flex-wrap items-center gap-1.5">
+          <span className="mr-1 font-mono text-[10px] uppercase tracking-[0.14em] text-muted-foreground">Evidence gap</span>
+          <InterviewFilterPill active={gapFilter === "all"} label="All" onClick={() => setGapFilter("all")} />
+          {gapOptions.map((gap) => (
+            <InterviewFilterPill active={gapFilter === gap.id} key={gap.id} label={gap.id} onClick={() => setGapFilter(gap.id)} />
+          ))}
+        </div>
+      </div>
+
+      <div className="grid gap-3 lg:grid-cols-[36%_1fr]">
+        <nav aria-label="Interview questions">
+          <ul className="max-h-[70vh] overflow-y-auto rounded-lg border border-border bg-card">
+            {visible.length === 0 ? (
+              <li className="p-6 text-center text-xs text-muted-foreground">No questions match these filters.</li>
+            ) : null}
+            {visible.map((question) => {
+              const active = selected?.id === question.id;
+              return (
                 <li key={question.id}>
                   <button
-                    aria-current={selected?.id === question.id ? "true" : undefined}
-                    className={`grid w-full gap-1 border-l-2 p-3 text-left ${selected?.id === question.id ? "border-l-[var(--amber)] bg-[var(--color-surface-subtle)]" : "border-l-transparent hover:bg-[var(--color-surface-subtle)]"}`}
+                    aria-current={active ? "true" : undefined}
+                    className={`block w-full border-b border-border/60 p-3 text-left last:border-0 focus-visible:ring-2 focus-visible:ring-ring ${active ? "bg-muted/60" : "hover:bg-muted/40"}`}
                     onClick={() => setSelectedId(question.id)}
                     type="button"
                   >
-                    <span className="font-mono text-[10px] text-[var(--color-ink-muted)]">{question.id} · {question.linkedGapCandidateId ?? "manual"}</span>
-                    <span className="text-sm font-semibold">{question.body}</span>
-                    <PlanningChip tone={statusTone(question.status)}>{pretty(question.status)}</PlanningChip>
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="font-mono text-[10px] text-muted-foreground">{question.id}</span>
+                      <InterviewReviewChip status={question.status} />
+                    </div>
+                    <div className="mt-1 line-clamp-2 font-serif text-sm leading-snug text-foreground">{question.body}</div>
+                    <div className="mt-1.5 flex flex-wrap gap-1">
+                      <Chip tone="mute">{question.linkedGapCandidateId ?? "Manual question"}</Chip>
+                      <Chip tone={question.origin === "human_created" ? "sage" : "mute"} icon={<User className="h-3 w-3" />}>
+                        {question.origin === "human_created" ? "Human-created" : "Prepared fixture"}
+                      </Chip>
+                    </div>
                   </button>
                 </li>
-              ))}
-            </ul>
-          ) : (
-            <Alert title="No questions match" tone="neutral">Change filters or create a question.</Alert>
-          )}
+              );
+            })}
+          </ul>
         </nav>
-        {selected ? (
-          <article aria-label={`Interview question detail: ${selected.id}`} className="rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface)] p-4">
-            <p className="font-mono text-[10px] text-[var(--color-ink-muted)]">{selected.id} · {selected.linkedGapCandidateId ?? "manual question"}</p>
-            <h2 className="mt-2 font-serif text-xl">{selected.body}</h2>
-            <p className="mt-3 text-sm text-[var(--color-ink-muted)]">{selected.rationale}</p>
-            <div className="mt-3 flex flex-wrap gap-1.5">
-              <PlanningChip tone={statusTone(selected.status)}>{pretty(selected.status)}</PlanningChip>
-              <SourceLinkStateBadge source={selected.source} state={state} />
+
+        <section className="rounded-lg border border-border bg-card">
+          <div role="tablist" aria-label="Detail view" className="flex flex-wrap items-center gap-1 border-b border-border p-2">
+            {(["detail", "readiness", "coverage", "sequence"] as const).map((view) => (
+              <button
+                aria-selected={detailView === view}
+                className={`rounded-md border px-2.5 py-1 text-xs font-medium focus-visible:ring-2 focus-visible:ring-ring ${detailView === view ? "border-primary bg-primary text-primary-foreground" : "border-border bg-background hover:bg-muted"}`}
+                key={view}
+                onClick={() => setDetailView(view)}
+                role="tab"
+                type="button"
+              >
+                {view === "detail" ? "Question detail" : view === "readiness" ? "Session readiness" : view === "coverage" ? "Gap coverage" : "Sequence"}
+              </button>
+            ))}
+          </div>
+
+          {detailView === "detail" && selected ? (
+            <article aria-label={`Interview question detail: ${selected.id}`} className="space-y-4 p-4">
+              <div className="flex flex-wrap items-center gap-1.5">
+                <span className="font-mono text-[11px] text-muted-foreground">{selected.id}</span>
+                <InterviewReviewChip status={selected.status} />
+                <Chip tone="mute">{selected.linkedGapCandidateId ?? "Manual question"}</Chip>
+                <SourceLinkStateBadge source={selected.source} state={state} />
+                <Chip tone="amber" icon={<AlertTriangle className="h-3 w-3" />}>Human review required</Chip>
+              </div>
+              <div className="flex flex-wrap gap-1.5">
+                <InterviewAction tone="sage" icon={<Check className="h-3.5 w-3.5" />} onClick={() => updateQuestion(selected, "approved")}>Approve for use</InterviewAction>
+                <InterviewAction icon={<Pencil className="h-3.5 w-3.5" />} onClick={() => updateQuestion(selected, "edited")}>Save edit</InterviewAction>
+                <InterviewAction icon={<Clock className="h-3.5 w-3.5" />} onClick={() => updateQuestion(selected, "deferred")}>Defer</InterviewAction>
+                <InterviewAction tone="rust" icon={<AlertTriangle className="h-3.5 w-3.5" />} onClick={() => updateQuestion(selected, "inappropriate")}>Mark inappropriate</InterviewAction>
+                <InterviewAction tone="rust" icon={<Ban className="h-3.5 w-3.5" />} onClick={() => updateQuestion(selected, "removed")}>Remove</InterviewAction>
+              </div>
+              <InterviewTrace title="A · Neutral suggested wording">
+                <div className="font-serif text-base leading-snug">{selected.body}</div>
+                <label className="mt-3 grid gap-1 text-sm">
+                  <span className="text-xs text-muted-foreground">Edit question wording</span>
+                  <textarea className="ip-input min-h-[72px]" onChange={(event) => updateSelectedQuestionEdit(selected.id, { body: event.currentTarget.value })} placeholder={selected.body} value={selectedQuestionEdit.body} />
+                </label>
+                <div className="mt-2 text-xs italic text-muted-foreground">This wording is a starting point. Adapt it to the person&apos;s language, pace, accessibility needs, and circumstances.</div>
+              </InterviewTrace>
+              <InterviewTrace title="B · Why this question may help">
+                <p className="text-sm text-foreground/90">{selected.rationale}</p>
+                <label className="mt-3 grid gap-1 text-sm">
+                  <span className="text-xs text-muted-foreground">Edit rationale</span>
+                  <textarea className="ip-input min-h-[60px]" onChange={(event) => updateSelectedQuestionEdit(selected.id, { rationale: event.currentTarget.value })} placeholder={selected.rationale} value={selectedQuestionEdit.rationale} />
+                </label>
+                <p className="mt-1 text-xs text-muted-foreground">The question is not proof, and it does not assume any allegation is true.</p>
+              </InterviewTrace>
+              <InterviewTrace title="C · Evidence and Nexus linkage">
+                <ul className="space-y-1 text-sm">
+                  <li><span className="text-muted-foreground">Evidence Gap:</span> {selected.linkedGapCandidateId ?? "No gap linked"}</li>
+                  <li><span className="text-muted-foreground">Source type:</span> {pretty(selected.source.sourceType)}</li>
+                  <li><span className="text-muted-foreground">Source record:</span> {selected.source.sourceId ?? "Manual planning record"}</li>
+                  <li><span className="text-muted-foreground">Source link:</span> {sourceLinkState(state, selected.source)}</li>
+                </ul>
+              </InterviewTrace>
+              <InterviewTrace title="D · Sensitivity and safe framing">
+                <p className="text-sm text-foreground/90">Use trauma-informed pacing, avoid assumptions, and let the person pause or decline.</p>
+              </InterviewTrace>
+            </article>
+          ) : null}
+          {detailView === "detail" && !selected ? (
+            <div className="p-6 text-center text-xs text-muted-foreground">No question is visible under the current filters.</div>
+          ) : null}
+          {detailView === "readiness" ? (
+            <div className="p-4">
+              <div className="mb-2 font-mono text-[10px] uppercase tracking-[0.14em] text-muted-foreground">Session readiness</div>
+              <ul className="space-y-1.5">
+                {[
+                  [state.interviewSetup.consentConfirmed, "Consent confirmed"],
+                  [Boolean(state.interviewSetup.interpreter && state.interviewSetup.accessibility), "Interpreter / accessibility recorded"],
+                  [Boolean(state.interviewSetup.safeContact), "Safe-contact constraints recorded"],
+                  [questionCounts.draft === 0, `${questionCounts.draft} questions remain pending review`],
+                ].map(([ready, label]) => (
+                  <li className="flex items-start gap-2 text-sm" key={String(label)}>
+                    {ready ? <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-[color:var(--sage)]" /> : <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-[color:var(--rust)]" />}
+                    <span>{label}</span>
+                  </li>
+                ))}
+              </ul>
+              <p className="mt-3 text-xs text-muted-foreground">Readiness is a transparent checklist, not a numerical score.</p>
             </div>
-	            <label className="mt-4 grid gap-1 text-sm">
-	              <span className="cfn-type-label">Edit question wording</span>
-	              <Textarea onChange={(event) => updateSelectedQuestionEdit(selected.id, { body: event.currentTarget.value })} placeholder={selected.body} value={selectedQuestionEdit.body} />
-	            </label>
-	            <label className="mt-3 grid gap-1 text-sm">
-	              <span className="cfn-type-label">Edit rationale</span>
-	              <Textarea onChange={(event) => updateSelectedQuestionEdit(selected.id, { rationale: event.currentTarget.value })} placeholder={selected.rationale} value={selectedQuestionEdit.rationale} />
-	            </label>
-            <div className="mt-4 flex flex-wrap gap-2 border-t border-[var(--color-border)] pt-3">
-              {[
-                ["approved", "Approve for use"],
-                ["edited", "Save edit"],
-                ["deferred", "Defer"],
-                ["removed", "Remove"],
-                ["inappropriate", "Mark inappropriate"],
-              ].map(([value, label]) => (
-                <Button key={value} onClick={() => updateQuestion(selected, value as InterviewQuestion["status"])} variant={value === "approved" ? "primary" : "secondary"}>
-                  {label}
-                </Button>
-              ))}
+          ) : null}
+          {detailView === "coverage" ? (
+            <div className="p-4">
+              <div className="mb-2 font-mono text-[10px] uppercase tracking-[0.14em] text-muted-foreground">Gap-to-question coverage</div>
+              <ul className="divide-y divide-border/60 rounded-md border border-border">
+                {gapOptions.map((gap) => {
+                  const linked = state.interviewQuestions.filter((question) => question.linkedGapCandidateId === gap.id);
+                  const approved = linked.filter((question) => ["approved", "edited"].includes(question.status));
+                  return (
+                    <li className="flex items-center justify-between gap-3 p-3 text-sm" key={gap.id}>
+                      <button className="font-mono text-xs font-semibold hover:underline" onClick={() => { setGapFilter(gap.id); setDetailView("detail"); }} type="button">{gap.id}</button>
+                      <span className="text-xs text-muted-foreground">{linked.length} linked · {approved.length} approved</span>
+                      <Chip tone={approved.length ? "sage" : "rust"}>{approved.length ? "Covered" : "Uncovered"}</Chip>
+                    </li>
+                  );
+                })}
+                {!gapOptions.length ? <li className="p-3 text-xs text-muted-foreground">No current analysis gaps are available.</li> : null}
+              </ul>
             </div>
-          </article>
-        ) : (
-          <Alert title="No selected question" tone="neutral">No question is visible under the current filters.</Alert>
-        )}
-        <aside className="h-fit rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface)] p-4">
-          <h2 className="font-serif text-lg">New question</h2>
-          <label className="mt-3 grid gap-1 text-sm">
-            <span className="cfn-type-label">Question</span>
-            <Textarea onChange={(event) => setBody(event.currentTarget.value)} value={body} />
-          </label>
-          <label className="mt-3 grid gap-1 text-sm">
-            <span className="cfn-type-label">Rationale</span>
-            <Textarea onChange={(event) => setRationale(event.currentTarget.value)} value={rationale} />
-          </label>
-          <Button className="mt-3 w-full" onClick={createQuestion} variant="primary">Create question</Button>
-          <PlanningResult message={message} />
-        </aside>
+          ) : null}
+          {detailView === "sequence" ? (
+            <div className="space-y-3 p-4">
+              <div className="font-mono text-[10px] uppercase tracking-[0.14em] text-muted-foreground">Approved-question sequence</div>
+              <ul className="space-y-1">
+                {state.interviewQuestions.filter((question) => ["approved", "edited"].includes(question.status)).map((question) => (
+                  <li className="rounded-md border border-border bg-background px-2 py-1.5 text-sm" key={question.id}>
+                    <span className="mr-1 font-mono text-[10px] text-muted-foreground">{question.id}</span>{question.body}
+                  </li>
+                ))}
+              </ul>
+              <p className="text-xs text-muted-foreground">Sequence is a read-only projection of canonical approved questions.</p>
+            </div>
+          ) : null}
+        </section>
       </div>
-      <Alert title="Trauma-informed boundary" tone="neutral">
-        Prefer open prompts; do not assume truth or falsity; do not treat uncertainty, incomplete memory, hesitation, or refusal as dishonesty.
-      </Alert>
+
+      <DemoOnlyNotice>Questions and setup are stored in canonical browser-session state; nothing is transmitted.</DemoOnlyNotice>
+      <PlanningResult message={message} />
+
+      <aside
+        aria-label="New question"
+        aria-modal={addOpen || undefined}
+        className={addOpen ? "fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" : "sr-only"}
+        role={addOpen ? "dialog" : undefined}
+      >
+        <div className="w-full max-w-lg rounded-xl border border-border bg-card shadow-xl">
+          <div className="flex items-center justify-between border-b border-border p-3">
+            <h2 className="font-serif text-lg">New question</h2>
+            {addOpen ? <button aria-label="Close" className="rounded p-1 hover:bg-muted" onClick={() => setAddOpen(false)} type="button">×</button> : null}
+          </div>
+          <div className="grid gap-3 p-3 text-sm">
+            <InterviewField label="Question">
+              <textarea className="ip-input min-h-[72px]" onChange={(event) => setBody(event.currentTarget.value)} value={body} />
+            </InterviewField>
+            <InterviewField label="Rationale">
+              <textarea className="ip-input min-h-[60px]" onChange={(event) => setRationale(event.currentTarget.value)} value={rationale} />
+            </InterviewField>
+            <div className="rounded-md border border-dashed border-border px-3 py-2 text-xs text-muted-foreground">
+              New questions are human-created and start as draft pending practitioner review.
+            </div>
+          </div>
+          <div className="flex justify-end gap-2 border-t border-border p-3">
+            {addOpen ? <button className="rounded-md border border-border bg-background px-3 py-1.5 text-sm hover:bg-muted" onClick={() => setAddOpen(false)} type="button">Cancel</button> : null}
+            <button className="rounded-md border border-primary bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground hover:opacity-90" onClick={createQuestion} type="button">Create question</button>
+          </div>
+        </div>
+      </aside>
+
+      <style>{`.ip-input { border: 1px solid var(--border); background: var(--background); border-radius: 6px; padding: 6px 10px; font-size: 13px; width: 100%; }`}</style>
     </div>
   );
 }
@@ -535,14 +929,33 @@ export function ServicesPreview() {
   const categories = ["All", ...new Set(serviceProviderDirectory.map((provider) => provider.category))];
   const [category, setCategory] = useState("All");
   const [query, setQuery] = useState("");
+  const [location, setLocation] = useState("Any");
+  const [language, setLanguage] = useState("Any");
+  const [accessibility, setAccessibility] = useState("Any");
+  const [format, setFormat] = useState("Any");
+  const [hours, setHours] = useState("Any");
+  const [eligibility, setEligibility] = useState("Any");
+  const [safeMethod, setSafeMethod] = useState("Any");
   const [selectedId, setSelectedId] = useState<string>(serviceProviderDirectory[0].id);
   const [consent, setConsent] = useState(false);
   const [safeContact, setSafeContact] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const normalizedQuery = query.trim().toLowerCase();
+  const locations = ["Any", ...new Set(serviceProviderDirectory.map((provider) => provider.coverageArea))];
+  const languages = ["Any", ...new Set(serviceProviderDirectory.flatMap((provider) => provider.languages))];
   const visible = serviceProviderDirectory.filter(
     (provider) =>
       (category === "All" || provider.category === category) &&
+      (location === "Any" || provider.coverageArea === location) &&
+      (language === "Any" || provider.languages.includes(language)) &&
+      (accessibility === "Any" || provider.accessibility.toLowerCase().includes(accessibility.toLowerCase())) &&
+      (format === "Any" || providerFormat(provider) === format) &&
+      (hours === "Any" ||
+        (hours === "24/7" && provider.hours.includes("24/7")) ||
+        (hours === "Weekdays" && /Mon-Fri/i.test(provider.hours)) ||
+        (hours === "Weekends" && /Sat|Sun/i.test(provider.hours))) &&
+      (eligibility === "Any" || provider.eligibilityCaveat.toLowerCase().includes(eligibility.toLowerCase())) &&
+      (safeMethod === "Any" || provider.safeContactMethodLabel.toLowerCase().includes(safeMethod.toLowerCase())) &&
       (!normalizedQuery ||
         [
           provider.name,
@@ -557,6 +970,17 @@ export function ServicesPreview() {
   const selectedPlan = selected
     ? state.referralPlans.find((plan) => plan.providerId === selected.id && plan.planningStatus !== "cancelled") ?? null
     : null;
+  const activeFilterCount = [
+    category !== "All",
+    location !== "Any",
+    language !== "Any",
+    accessibility !== "Any",
+    format !== "Any",
+    hours !== "Any",
+    eligibility !== "Any",
+    safeMethod !== "Any",
+    normalizedQuery !== "",
+  ].filter(Boolean).length;
 
   useEffect(() => {
     setConsent(false);
@@ -566,6 +990,29 @@ export function ServicesPreview() {
 
   function selectProvider(providerId: string) {
     setSelectedId(providerId);
+  }
+
+  function clearFilters() {
+    setQuery("");
+    setCategory("All");
+    setLocation("Any");
+    setLanguage("Any");
+    setAccessibility("Any");
+    setFormat("Any");
+    setHours("Any");
+    setEligibility("Any");
+    setSafeMethod("Any");
+  }
+
+  function onProviderListKey(event: KeyboardEvent<HTMLElement>) {
+    if (event.key !== "ArrowDown" && event.key !== "ArrowUp") return;
+    event.preventDefault();
+    const currentIndex = visible.findIndex((provider) => provider.id === selected?.id);
+    if (currentIndex < 0) return;
+    const nextIndex = event.key === "ArrowDown"
+      ? Math.min(visible.length - 1, currentIndex + 1)
+      : Math.max(0, currentIndex - 1);
+    selectProvider(visible[nextIndex].id);
   }
 
   function savePlan(provider: ServiceProviderDirectoryRecord) {
@@ -604,77 +1051,116 @@ export function ServicesPreview() {
   }
 
   return (
-    <div className="grid gap-5">
-      <PlanningHeader
-        boundary="Providers are fictional and unverified. Listings do not guarantee eligibility, capacity, availability, or suitability. Saving a plan contacts no one and transmits nothing."
-        description="Immutable fictional provider directory with local browser-session referral plans."
-        icon={HandHelping}
-        stage="Stage 4 · Planning"
+    <div className="space-y-5">
+      <SectionTitle
+        description="Every provider listed here is fictional and clearly marked. The system does not transmit information or contact any provider."
+        eyebrow="Stage 4 · Planning"
         title="Services & Referrals"
       />
-      <section aria-label="Service filters" className="grid gap-3 rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface)] p-3 lg:grid-cols-[minmax(0,1fr)_16rem]">
-        <label className="relative">
-          <span className="sr-only">Search fictional providers</span>
-          <Search aria-hidden="true" className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[var(--color-ink-muted)]" size={15} />
-          <Input aria-label="Search fictional providers" className="pl-9" onChange={(event) => setQuery(event.currentTarget.value)} placeholder="Search providers, languages, eligibility" type="search" value={query} />
-        </label>
-        <label className="grid gap-1 text-xs">
-          <span className="cfn-type-label">Service category</span>
-          <Select onChange={(event) => setCategory(event.currentTarget.value)} value={category}>
-            {categories.map((value) => <option key={value} value={value}>{value}</option>)}
-          </Select>
-        </label>
+
+      <section aria-label="Service filters" className="rounded-xl border border-border bg-card p-3">
+        <div className="flex flex-wrap items-center gap-2">
+          <div className="relative min-w-[200px] flex-1">
+            <input
+              aria-label="Search fictional providers"
+              className="w-full rounded-md border border-input bg-background px-2.5 py-1.5 text-xs placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring"
+              onChange={(event) => setQuery(event.currentTarget.value)}
+              placeholder="Search providers…"
+              type="search"
+              value={query}
+            />
+          </div>
+          <ServiceFilterSelect label="Category" onChange={setCategory} options={categories} value={category} />
+          <ServiceFilterSelect label="Location" onChange={setLocation} options={locations} value={location} />
+          <ServiceFilterSelect label="Language" onChange={setLanguage} options={languages} value={language} />
+          <ServiceFilterSelect label="Accessibility" onChange={setAccessibility} options={["Any", "Wheelchair access", "Remote sessions", "Video relay", "Step-free entry"]} value={accessibility} />
+          <ServiceFilterSelect label="Format" onChange={setFormat} options={["Any", "In-person", "Remote", "In-person + remote"]} value={format} />
+          <ServiceFilterSelect label="Hours" onChange={setHours} options={["Any", "24/7", "Weekdays", "Weekends"]} value={hours} />
+          <ServiceFilterSelect label="Eligibility" onChange={setEligibility} options={["Any", "adult", "consent", "practitioner"]} value={eligibility} />
+          <ServiceFilterSelect label="Safe contact" onChange={setSafeMethod} options={["Any", "manual", "consent", "no direct contact", "independently"]} value={safeMethod} />
+          <button
+            className="rounded-md border border-border px-2.5 py-1.5 text-[11px] text-muted-foreground hover:bg-muted disabled:opacity-40"
+            disabled={activeFilterCount === 0}
+            onClick={clearFilters}
+            type="button"
+          >
+            Clear filters{activeFilterCount ? ` (${activeFilterCount})` : ""}
+          </button>
+        </div>
       </section>
-      <div className="grid min-w-0 gap-4 lg:grid-cols-[minmax(240px,0.72fr)_minmax(0,1.4fr)]">
-        <nav aria-label="Fictional providers" className="min-w-0 overflow-hidden rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface)]">
-          <div className="border-b border-[var(--color-border)] px-3 py-3"><h2 className="font-serif text-base">Providers ({visible.length})</h2></div>
-          {visible.length ? (
-            <ul className="divide-y divide-[var(--color-border)]">
-              {visible.map((provider) => (
-                <li key={provider.id}>
-                  <button
-                    aria-current={selected?.id === provider.id ? "true" : undefined}
-                    className={`grid w-full gap-1 border-l-2 px-3 py-3 text-left ${selected?.id === provider.id ? "border-l-[var(--amber)] bg-[var(--color-surface-subtle)]" : "border-l-transparent hover:bg-[var(--color-surface-subtle)]"}`}
-                    onClick={() => selectProvider(provider.id)}
-                    type="button"
-                  >
-                    <span className="font-mono text-[10px] text-[var(--color-ink-muted)]">{provider.id} · fictional provider</span>
-                    <span className="font-semibold">{provider.name}</span>
-                    <span className="text-xs text-[var(--color-ink-muted)]">{provider.category} · {provider.coverageArea}</span>
-                  </button>
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <Alert title="No fictional providers match" tone="neutral">Change the filters to show bundled examples.</Alert>
-          )}
+
+      <div className="grid gap-4 lg:grid-cols-[minmax(280px,36%)_1fr]">
+        <nav
+          aria-label="Fictional providers"
+          className="max-h-[70vh] space-y-2 overflow-y-auto pr-1 focus:outline-none"
+          onKeyDown={onProviderListKey}
+          tabIndex={0}
+        >
+          {!visible.length ? (
+            <div className="rounded-xl border border-dashed border-border bg-card p-6 text-center">
+              <div className="font-serif text-base">No providers match these filters</div>
+              <div className="mt-1 text-xs text-muted-foreground">Try clearing a filter or broadening the search.</div>
+              <button className="mt-3 rounded-md border border-border px-3 py-1 text-xs hover:bg-muted" onClick={clearFilters} type="button">Clear filters</button>
+            </div>
+          ) : null}
+          {visible.map((provider) => {
+            const isSelected = selected?.id === provider.id;
+            return (
+              <button
+                aria-current={isSelected ? "true" : undefined}
+                aria-selected={isSelected}
+                className={`w-full rounded-xl border p-3 text-left transition ${isSelected ? "border-[color:var(--amber)] bg-[color-mix(in_oklab,var(--amber)_10%,transparent)] shadow-sm" : "border-border bg-card hover:bg-muted/40"}`}
+                key={provider.id}
+                onClick={() => selectProvider(provider.id)}
+                type="button"
+              >
+                <div className="flex items-start justify-between gap-2">
+                  <div className="min-w-0">
+                    <div className="truncate font-serif text-sm">{provider.name}</div>
+                    <div className="mt-0.5 truncate text-[11px] text-muted-foreground">{provider.category} · {provider.coverageArea}</div>
+                  </div>
+                  <span className="shrink-0 rounded-full border border-border px-1.5 py-0.5 font-mono text-[9px] text-muted-foreground">{provider.id}</span>
+                </div>
+                <div className="mt-2 flex flex-wrap gap-1">
+                  <span className="rounded-full border border-border px-1.5 py-0.5 text-[10px] text-muted-foreground">{providerFormat(provider)}</span>
+                  <span className="rounded-full border border-border px-1.5 py-0.5 text-[10px] text-muted-foreground">{provider.hours.includes("24/7") ? "24/7" : provider.hours.split(" ")[0]}</span>
+                  {provider.languages[0] ? <span className="rounded-full border border-border px-1.5 py-0.5 text-[10px] text-muted-foreground">{provider.languages[0]}{provider.languages.length > 1 ? ` +${provider.languages.length - 1}` : ""}</span> : null}
+                </div>
+              </button>
+            );
+          })}
         </nav>
         {selected ? (
-          <article aria-label={`Selected provider: ${selected.name}`} className="min-w-0 rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface)] p-4">
+          <article aria-label={`Selected provider: ${selected.name}`} className="min-w-0 rounded-xl border border-border bg-card p-5">
             <div className="flex flex-wrap items-start justify-between gap-3">
-              <div>
+              <div className="min-w-0">
                 <div className="flex flex-wrap items-center gap-2">
-                  <PlanningChip tone="warning">Fictional unverified provider</PlanningChip>
-                  <span className="font-mono text-[10px] text-[var(--color-ink-muted)]">{selected.id}</span>
+                  <Chip tone="amber">Fictional demonstration provider</Chip>
+                  <span className="font-mono text-[10px] text-muted-foreground">{selected.id}</span>
                 </div>
-                <h2 className="mt-2 font-serif text-2xl">{selected.name}</h2>
-                <p className="text-sm text-[var(--color-ink-muted)]">{selected.category} · {selected.coverageArea}</p>
+                <h2 className="mt-1 font-serif text-2xl">{selected.name}</h2>
+                <div className="mt-0.5 text-xs text-muted-foreground">{selected.category} · {selected.coverageArea}</div>
               </div>
-              <PlanningChip tone={selectedPlan ? "success" : "neutral"}>{selectedPlan ? pretty(selectedPlan.planningStatus) : "No local plan"}</PlanningChip>
+              <Chip tone={selectedPlan ? "sage" : "mute"}>{selectedPlan ? pretty(selectedPlan.planningStatus) : "No local plan"}</Chip>
             </div>
-            <dl className="mt-4 grid gap-3 text-sm sm:grid-cols-2">
-              {[
-                ["Hours", selected.hours],
-                ["Languages", selected.languages.join(", ")],
-                ["Eligibility caveat", selected.eligibilityCaveat],
-                ["Accessibility", selected.accessibility],
-                ["Safe-contact method", selected.safeContactMethodLabel],
-                ["Fixture review date", selected.fixtureReviewDate],
-              ].map(([label, value]) => <div key={label}><dt className="cfn-type-label">{label}</dt><dd className="mt-1">{value}</dd></div>)}
+            <dl className="mt-4 grid gap-x-4 gap-y-2 text-xs sm:grid-cols-2 md:grid-cols-3">
+              <PlanningField label="Hours">{selected.hours}</PlanningField>
+              <PlanningField label="Cost">No fee (fictional demo)</PlanningField>
+              <PlanningField label="Support format">{providerFormat(selected)}</PlanningField>
+              <PlanningField label="Languages">{selected.languages.join(", ")}</PlanningField>
+              <PlanningField label="Accessibility">{selected.accessibility}</PlanningField>
+              <PlanningField label="Eligibility">{selected.eligibilityCaveat}</PlanningField>
+              <PlanningField label="Safe-contact options">{selected.safeContactMethodLabel}</PlanningField>
+              <PlanningField label="Location / coverage">{selected.coverageArea}</PlanningField>
+              <PlanningField label="Information source">Bundled fictional provider directory</PlanningField>
+              <PlanningField label="Fixture review date">{selected.fixtureReviewDate}</PlanningField>
             </dl>
-            <div className="mt-4 grid gap-3 border-t border-[var(--color-border)] pt-3">
-              <label className="inline-flex items-center gap-2 text-sm">
-                <input checked={consent} onChange={(event) => setConsent(event.currentTarget.checked)} type="checkbox" />
+            <div className="mt-4 rounded-md border border-border bg-muted/30 p-3 text-[11px] text-muted-foreground">
+              Availability, eligibility, and capacity are not guaranteed. The system does not transmit information to any provider. Practitioners must verify listing details independently before acting on them.
+            </div>
+            <div className="mt-4 grid gap-3 border-t border-border pt-3">
+              <label className="inline-flex items-center gap-2 text-sm" htmlFor={`consent-${selected.id}`}>
+                <input checked={consent} id={`consent-${selected.id}`} onChange={(event) => setConsent(event.currentTarget.checked)} type="checkbox" />
                 <span>Consent confirmed for this synthetic demonstration</span>
               </label>
               <label className="inline-flex items-center gap-2 text-sm">
@@ -684,18 +1170,21 @@ export function ServicesPreview() {
               <Button disabled={!consent || !safeContact} onClick={() => savePlan(selected)} variant="primary">Save local referral plan</Button>
               {selectedPlan ? (
                 <label className="grid gap-1 text-xs">
-                  <span className="cfn-type-label">Local planning status</span>
+                  <span className="text-muted-foreground">Local planning status</span>
                   <Select onChange={(event) => updatePlan(selectedPlan, event.currentTarget.value as ReferralPlan["planningStatus"])} value={selectedPlan.planningStatus}>
                     {["draft", "planned_for_manual_follow_up", "cancelled"].map((value) => <option key={value} value={value}>{pretty(value)}</option>)}
                   </Select>
                 </label>
               ) : null}
-              <p className="text-xs leading-5 text-[var(--color-ink-muted)]">Contact status is always not contacted. Transmission status is always not transmitted. Practitioners must verify independently.</p>
+              <p className="text-xs leading-5 text-muted-foreground">Contact status is always not contacted. Transmission status is always not transmitted. Practitioners must verify independently.</p>
               <PlanningResult message={message} />
+            </div>
+            <div className="mt-3">
+              <DemoOnlyNotice>The provider directory is fictional; referral plans remain local browser-session records and no provider is contacted.</DemoOnlyNotice>
             </div>
           </article>
         ) : (
-          <Alert title="No selected provider" tone="neutral">No provider is visible under the current filters.</Alert>
+          <div className="rounded-xl border border-dashed border-border bg-card p-10 text-center text-sm text-muted-foreground">Select a provider to view details.</div>
         )}
       </div>
     </div>
@@ -704,19 +1193,27 @@ export function ServicesPreview() {
 
 export function TasksPreview() {
   const { state, dispatchCaseCommand } = useCaseState();
-  const [filter, setFilter] = useState("all");
-  const [selectedId, setSelectedId] = useState<string | null>(state.caseTasks[0]?.id ?? null);
+  const [filter, setFilter] = useState("All");
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [message, setMessage] = useState<string | null>(null);
   const visible = state.caseTasks.filter((task) => {
-    if (filter === "open") return !["completed", "cancelled"].includes(task.status);
-    if (filter === "waiting") return task.status === "waiting";
-    if (filter === "document") return task.kind === "document_request";
-    if (filter === "safety") return task.origin === "urgent_need";
+    const dueAt = task.dueDate ? Date.parse(`${task.dueDate}T23:59:59.999Z`) : null;
+    const now = Date.now();
+    if (filter === "My tasks") return task.owner === "M. Chen";
+    if (filter === "Due soon") {
+      return dueAt !== null &&
+        dueAt >= now &&
+        dueAt <= now + 7 * 24 * 60 * 60 * 1000 &&
+        !["completed", "cancelled"].includes(task.status);
+    }
+    if (filter === "Overdue") return dueAt !== null && dueAt < now && !["completed", "cancelled"].includes(task.status);
+    if (filter === "Waiting") return task.status === "waiting";
+    if (filter === "Export blockers") return false;
+    if (filter === "Safety-related") return task.origin === "urgent_need";
+    if (filter === "Completed") return task.status === "completed";
     return true;
   });
-  const selected = visible.find((task) => task.id === selectedId) ?? visible[0] ?? null;
 
   function createTask() {
     const result = dispatchCaseCommand({
@@ -735,7 +1232,6 @@ export function TasksPreview() {
       return;
     }
     const created = result.state.caseTasks.at(-1);
-    setSelectedId(created?.id ?? null);
     setTitle("");
     setDescription("");
     setMessage(`${created?.id ?? "Task"} saved. Completing tasks does not resolve evidence gaps or export blockers.`);
@@ -752,90 +1248,94 @@ export function TasksPreview() {
   }
 
   return (
-    <div className="grid gap-5">
-      <PlanningHeader
-        boundary="Tasks are operational reminders. Completing a task does not resolve evidence gaps, confirm document receipt, change candidate review, or clear export blockers."
-        description="Canonical browser-session worklist for document requests, source comparisons, and general planning tasks."
-        icon={CheckSquare}
-        stage="Stage 4 · Planning"
+    <div className="space-y-6">
+      <SectionTitle
+        description="Operational actions. Operational reminders are not legal deadlines; do not treat them as such."
+        eyebrow="Stage 4 · Planning"
         title="Case Tasks"
       />
-      <div className="flex flex-wrap gap-1.5" role="group" aria-label="Task filters">
-        {[
-          ["all", "All"],
-          ["open", "Open"],
-          ["waiting", "Waiting"],
-          ["document", "Document requests"],
-          ["safety", "Safety-related"],
-        ].map(([value, label]) => (
+      <div className="flex flex-wrap gap-1" role="group" aria-label="Task filters">
+        {["All", "My tasks", "Due soon", "Overdue", "Waiting", "Export blockers", "Safety-related", "Completed"].map((value) => (
           <button
             aria-pressed={filter === value}
-            className={`rounded-full border px-2.5 py-1 text-xs ${filter === value ? "border-[var(--amber)] bg-[var(--color-warning-subtle)]" : "border-[var(--color-border)]"}`}
+            className={`rounded-full border px-2 py-0.5 text-[11px] ${filter === value ? "border-[color:var(--amber)] bg-[color-mix(in_oklab,var(--amber)_15%,transparent)]" : "border-border hover:bg-muted"}`}
             key={value}
             onClick={() => setFilter(value)}
             type="button"
           >
-            {label}
+            {value}
           </button>
         ))}
       </div>
-      <div className="grid min-w-0 gap-4 lg:grid-cols-[minmax(260px,0.8fr)_minmax(0,1.3fr)_320px]">
-        <nav aria-label="Case tasks" className="overflow-hidden rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface)]">
-          {visible.length ? (
-            <ul className="divide-y divide-[var(--color-border)]">
-              {visible.map((task) => (
-                <li key={task.id}>
-                  <button
-                    aria-current={selected?.id === task.id ? "true" : undefined}
-                    className={`grid w-full gap-1 border-l-2 p-3 text-left ${selected?.id === task.id ? "border-l-[var(--amber)] bg-[var(--color-surface-subtle)]" : "border-l-transparent hover:bg-[var(--color-surface-subtle)]"}`}
-                    onClick={() => setSelectedId(task.id)}
-                    type="button"
+      <div className="overflow-x-auto rounded-xl border border-border bg-card">
+        <table className="w-full text-sm">
+          <thead className="bg-muted/40 text-left font-mono text-[10px] uppercase tracking-[0.14em] text-muted-foreground">
+            <tr>
+              <th className="p-3">ID</th>
+              <th className="p-3">Task</th>
+              <th className="p-3">Source</th>
+              <th className="p-3">Due</th>
+              <th className="p-3">Priority</th>
+              <th className="p-3">Status</th>
+              <th className="p-3">Flags</th>
+            </tr>
+          </thead>
+          <tbody>
+            {visible.map((task) => (
+              <tr className="border-t border-border/60 align-top" key={task.id}>
+                <td className="p-3 font-mono text-xs">{task.id}</td>
+                <td className="p-3">
+                  <div className="font-medium">{task.title}</div>
+                  <div className="text-xs text-muted-foreground">{task.description}</div>
+                  <div className="mt-1 text-[11px] text-muted-foreground">
+                    Linked: <span className="font-mono">{task.originId ?? "manual planning record"}</span>
+                  </div>
+                </td>
+                <td className="p-3 text-xs">{pretty(task.origin)}</td>
+                <td className="p-3 font-mono text-xs">{task.dueDate ?? "—"}</td>
+                <td className="p-3"><Chip tone={task.priority === "high" ? "rust" : task.priority === "medium" ? "amber" : "mute"}>{task.priority}</Chip></td>
+                <td className="p-3">
+                  <select
+                    aria-label={`Task status for ${task.id}`}
+                    className="rounded-md border border-input bg-background px-2 py-1 text-xs"
+                    onChange={(event) => updateStatus(task, event.currentTarget.value as CaseTask["status"])}
+                    value={task.status}
                   >
-                    <span className="font-mono text-[10px] text-[var(--color-ink-muted)]">{task.id} · {pretty(task.kind)}</span>
-                    <span className="font-semibold">{task.title}</span>
-                    <span className="flex flex-wrap gap-1.5">
-                      <PlanningChip tone={task.priority === "high" ? "danger" : "warning"}>{pretty(task.priority)}</PlanningChip>
-                      <PlanningChip tone={statusTone(task.status)}>{pretty(task.status)}</PlanningChip>
-                    </span>
-                  </button>
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <Alert title="No tasks match" tone="neutral">Change filters or create a task.</Alert>
-          )}
-        </nav>
-        {selected ? (
-          <article aria-label={`Task detail: ${selected.id}`} className="rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface)] p-4">
-            <p className="font-mono text-[10px] text-[var(--color-ink-muted)]">{selected.id} · {pretty(selected.kind)}</p>
-            <h2 className="mt-1 font-serif text-2xl">{selected.title}</h2>
-            <p className="mt-2 text-sm">{selected.description}</p>
-            <div className="mt-3 flex flex-wrap gap-1.5">
-              <PlanningChip tone={statusTone(selected.status)}>{pretty(selected.status)}</PlanningChip>
-              <PlanningChip>{selected.dueDate ? `Operational due ${selected.dueDate}` : "No operational due date"}</PlanningChip>
-              <SourceLinkStateBadge source={selected.source} state={state} />
-            </div>
-            <dl className="mt-4 grid gap-3 text-sm sm:grid-cols-2">
-              <div><dt className="cfn-type-label">Owner</dt><dd>{selected.owner}</dd></div>
-              <div><dt className="cfn-type-label">Origin</dt><dd>{pretty(selected.origin)} {selected.originId ? `· ${selected.originId}` : ""}</dd></div>
-            </dl>
-            <label className="mt-4 grid gap-1 text-xs">
-              <span className="cfn-type-label">Task status</span>
-              <Select onChange={(event) => updateStatus(selected, event.currentTarget.value as CaseTask["status"])} value={selected.status}>
-                {["todo", "in_progress", "waiting", "completed", "cancelled"].map((value) => <option key={value} value={value}>{pretty(value)}</option>)}
-              </Select>
-            </label>
-          </article>
-        ) : (
-          <Alert title="No selected task" tone="neutral">No task is visible under the current filters.</Alert>
-        )}
-        <aside className="h-fit rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface)] p-4">
+                    {["todo", "in_progress", "waiting", "completed", "cancelled"].map((status) => <option key={status} value={status}>{pretty(status)}</option>)}
+                  </select>
+                </td>
+                <td className="p-3">
+                  <div className="flex flex-wrap gap-1">
+                    <Chip tone="mute">Operational reminder</Chip>
+                    {sourceLinkState(state, task.source) !== "current" && sourceLinkState(state, task.source) !== "not_run_scoped"
+                      ? <Chip tone="amber">Source {sourceLinkState(state, task.source)}</Chip>
+                      : null}
+                  </div>
+                </td>
+              </tr>
+            ))}
+            {!visible.length ? (
+              <tr><td className="p-6 text-center text-xs text-muted-foreground" colSpan={7}>No tasks match this filter.</td></tr>
+            ) : null}
+          </tbody>
+        </table>
+      </div>
+
+      <div className="grid gap-4 lg:grid-cols-[320px_1fr]">
+        <aside className="rounded-xl border border-border bg-card p-4">
           <h2 className="font-serif text-lg">Create task</h2>
-          <label className="mt-3 grid gap-1 text-sm"><span className="cfn-type-label">Title</span><Input onChange={(event) => setTitle(event.currentTarget.value)} value={title} /></label>
-          <label className="mt-3 grid gap-1 text-sm"><span className="cfn-type-label">Description</span><Textarea onChange={(event) => setDescription(event.currentTarget.value)} value={description} /></label>
-          <Button className="mt-3 w-full" onClick={createTask} variant="primary">Create task</Button>
+          <label className="mt-3 grid gap-1 text-sm">
+            <span className="text-xs text-muted-foreground">Title</span>
+            <input className="rounded-md border border-input bg-background px-2 py-1.5 text-sm" onChange={(event) => setTitle(event.currentTarget.value)} value={title} />
+          </label>
+          <label className="mt-3 grid gap-1 text-sm">
+            <span className="text-xs text-muted-foreground">Description</span>
+            <textarea className="rounded-md border border-input bg-background px-2 py-1.5 text-sm" onChange={(event) => setDescription(event.currentTarget.value)} rows={3} value={description} />
+          </label>
+          <button className="mt-3 w-full rounded-md bg-primary py-1.5 text-sm text-primary-foreground hover:bg-primary/90" onClick={createTask} type="button">Create task</button>
           <PlanningResult message={message} />
         </aside>
+        <DemoOnlyNotice>Tasks are operational reminders only. Completing them never changes evidence, candidate review, or export blockers.</DemoOnlyNotice>
       </div>
     </div>
   );
@@ -843,24 +1343,15 @@ export function TasksPreview() {
 
 export function NotesPreview() {
   const { state, dispatchCaseCommand } = useCaseState();
-  const [query, setQuery] = useState("");
   const [selectedId, setSelectedId] = useState<string | null>(state.practitionerNotes.find((note) => !note.archived)?.id ?? null);
   const [body, setBody] = useState("");
   const [noteEdits, setNoteEdits] = useState<Record<string, string>>({});
   const [message, setMessage] = useState<string | null>(null);
   const visible = useMemo(
-    () =>
-      state.practitionerNotes.filter(
-        (note) =>
-          !note.archived &&
-          `${note.id} ${note.body} ${note.linkedEntityIds.join(" ")}`
-            .toLowerCase()
-            .includes(query.toLowerCase()),
-      ),
-    [query, state.practitionerNotes],
+    () => state.practitionerNotes.filter((note) => !note.archived),
+    [state.practitionerNotes],
   );
   const selected = visible.find((note) => note.id === selectedId) ?? visible[0] ?? null;
-  const selectedNoteEdit = selected ? noteEdits[selected.id] ?? "" : "";
 
   function noteAuthorLabel(note: PractitionerNote) {
     return note.origin === "bundled_synthetic" || note.author === "fixture_reviewer"
@@ -915,62 +1406,98 @@ export function NotesPreview() {
   }
 
   return (
-    <div className="grid gap-5">
-      <PlanningHeader
-        boundary="Notes are practitioner commentary. They are not evidence, not audit records, excluded from analysis, and excluded from exports by default."
-        description="Canonical browser-session practitioner journal kept separate from evidence and audit history."
-        icon={NotebookPen}
-        stage="Stage 4 · Planning"
+    <div className="space-y-6">
+      <SectionTitle
+        description="Record reasoning or operational context. A practitioner note never silently becomes a verified fact."
+        eyebrow="Stage 4 · Planning"
         title="Notes & Journal"
       />
-      <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_320px]">
-        <div className="grid gap-3">
-          <label className="relative">
-            <span className="sr-only">Search notes</span>
-            <Search aria-hidden="true" className="absolute left-3 top-3 text-[var(--color-ink-muted)]" size={16} />
-            <input className="min-h-10 w-full rounded-[var(--radius-control)] border border-[var(--color-border)] bg-[var(--color-surface)] pl-9 pr-3 text-sm" onChange={(event) => setQuery(event.target.value)} placeholder="Search practitioner commentary" type="search" value={query} />
-          </label>
-          <div className="grid gap-3 lg:grid-cols-[minmax(220px,0.7fr)_minmax(0,1.3fr)]">
-            <nav aria-label="Practitioner notes" className="overflow-hidden rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface)]">
-              {visible.length ? (
-                <ul className="divide-y divide-[var(--color-border)]">
-                  {visible.map((note) => (
-                    <li key={note.id}>
-                      <button className={`grid w-full gap-1 border-l-2 p-3 text-left ${selected?.id === note.id ? "border-l-[var(--amber)] bg-[var(--color-surface-subtle)]" : "border-l-transparent hover:bg-[var(--color-surface-subtle)]"}`} onClick={() => setSelectedId(note.id)} type="button">
-                        <span className="font-mono text-[10px] text-[var(--color-ink-muted)]">{note.id} · {note.visibility}</span>
-                        <span className="line-clamp-2 text-sm">{note.body}</span>
-                      </button>
-                    </li>
-                  ))}
-                </ul>
-              ) : (
-                <Alert title="No notes match" tone="neutral">Change the search or create a note.</Alert>
-              )}
-            </nav>
-            {selected ? (
-              <article aria-label={`Note detail: ${selected.id}`} className="rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface)] p-4">
-                <p className="font-mono text-[10px] text-[var(--color-ink-muted)]">{selected.id} · {noteAuthorLabel(selected)} · {selected.visibility}</p>
-                <div className="mt-2 flex flex-wrap gap-1.5"><PlanningChip>Practitioner commentary</PlanningChip><PlanningChip>Not evidence</PlanningChip><PlanningChip>Excluded from export</PlanningChip></div>
-                <p className="mt-3 text-sm">{selected.body}</p>
-                <label className="mt-4 grid gap-1 text-sm"><span className="cfn-type-label">Edit commentary</span><Textarea onChange={(event) => {
-                  const value = event.currentTarget.value;
-                  setNoteEdits((drafts) => ({ ...drafts, [selected.id]: value }));
-                }} placeholder={selected.body} value={selectedNoteEdit} /></label>
-                <div className="mt-3 flex flex-wrap gap-2">
-                  <Button onClick={() => updateNote(selected)} variant="primary">Save note edit</Button>
-                  <Button onClick={() => archiveNote(selected)} variant="secondary">Archive note</Button>
-                </div>
+      <div className="grid gap-4 lg:grid-cols-[1fr_320px]">
+        <nav aria-label="Practitioner notes" className="space-y-3">
+          {visible.map((note) => {
+            const isSelected = selected?.id === note.id;
+            const edit = noteEdits[note.id] ?? "";
+            return (
+              <article
+                aria-label={`Note detail: ${note.id}`}
+                className={`rounded-xl border bg-card p-4 ${isSelected ? "border-[color:var(--amber)]" : "border-border"}`}
+                key={note.id}
+              >
+                <button className="block w-full text-left" onClick={() => setSelectedId(note.id)} type="button">
+                  <div className="flex flex-wrap items-start justify-between gap-2">
+                    <div>
+                      <div className="font-mono text-[10px] text-muted-foreground">
+                        {note.id} · {isSelected ? noteAuthorLabel(note) : note.origin === "bundled_synthetic" ? "Fixture reviewer" : noteAuthorLabel(note)} · {new Date(note.createdAt).toLocaleString()}
+                      </div>
+                      <div className="mt-1 flex flex-wrap gap-1">
+                        <Chip tone="mute">practitioner commentary</Chip>
+                        <Chip tone="mute">visibility: {note.visibility}</Chip>
+                        <Chip tone="amber">not evidence</Chip>
+                        <Chip tone="mute">excluded from export</Chip>
+                      </div>
+                    </div>
+                  </div>
+                  <p className="mt-3 text-sm">{note.body}</p>
+                  {note.linkedEntityIds.length ? (
+                    <div className="mt-3 flex flex-wrap gap-1 border-t border-border/60 pt-2 text-[11px]">
+                      {note.linkedEntityIds.map((id) => <Chip key={id} tone="mute">item {id}</Chip>)}
+                    </div>
+                  ) : null}
+                </button>
+                {isSelected ? (
+                  <div className="mt-3 border-t border-border/60 pt-3">
+                    <label className="grid gap-1 text-sm">
+                      <span className="text-xs text-muted-foreground">Edit commentary</span>
+                      <textarea
+                        className="rounded-md border border-input bg-background px-2 py-1 text-sm"
+                        onChange={(event) => {
+                          const value = event.currentTarget.value;
+                          setNoteEdits((drafts) => ({ ...drafts, [note.id]: value }));
+                        }}
+                        placeholder={note.body}
+                        rows={3}
+                        value={edit}
+                      />
+                    </label>
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      <button className="rounded-md bg-primary px-3 py-1.5 text-xs text-primary-foreground hover:bg-primary/90" onClick={() => updateNote(note)} type="button">Save note edit</button>
+                      <button className="rounded-md border border-border px-3 py-1.5 text-xs hover:bg-muted" onClick={() => archiveNote(note)} type="button">Archive note</button>
+                    </div>
+                  </div>
+                ) : null}
               </article>
-            ) : (
-              <Alert title="No selected note" tone="neutral">No note is visible under the current search.</Alert>
-            )}
-          </div>
-        </div>
-        <aside className="h-fit rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface)] p-4">
+            );
+          })}
+          {!visible.length ? (
+            <div className="rounded-xl border border-dashed border-border bg-card p-6 text-center text-sm text-muted-foreground">No active practitioner notes.</div>
+          ) : null}
+        </nav>
+        <aside className="rounded-xl border border-border bg-card p-4">
           <h2 className="font-serif text-lg">New note</h2>
-          <label className="mt-3 grid gap-1 text-sm"><span className="cfn-type-label">Commentary</span><Textarea onChange={(event) => setBody(event.currentTarget.value)} rows={6} value={body} /></label>
-          <Button className="mt-3 w-full" onClick={createNote} variant="primary"><FileQuestion aria-hidden="true" size={15} />Record note</Button>
+          <label className="mt-2 block text-xs text-muted-foreground">
+            Type
+            <select className="mt-1 w-full rounded-md border border-input bg-background px-2 py-1 text-sm" disabled value="practitioner-commentary">
+              <option value="practitioner-commentary">practitioner-commentary</option>
+            </select>
+          </label>
+          <label className="mt-2 block text-xs text-muted-foreground">
+            Commentary
+            <textarea
+              className="mt-1 w-full rounded-md border border-input bg-background px-2 py-1 text-sm"
+              onChange={(event) => setBody(event.currentTarget.value)}
+              placeholder="Describe reasoning or context (not evidence)."
+              rows={6}
+              value={body}
+            />
+          </label>
+          <label className="mt-2 flex items-center gap-2 text-xs"><input checked disabled readOnly type="checkbox" /> Classify as commentary (not evidence)</label>
+          <button className="mt-3 w-full rounded-md bg-primary py-1.5 text-sm text-primary-foreground hover:bg-primary/90" onClick={createNote} type="button">
+            Record note
+          </button>
           <PlanningResult message={message} />
+          <div className="mt-3">
+            <DemoOnlyNotice>Notes are practitioner commentary. They are not evidence, not audit records, and are excluded from analysis and exports by default.</DemoOnlyNotice>
+          </div>
         </aside>
       </div>
     </div>

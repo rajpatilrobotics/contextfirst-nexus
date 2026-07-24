@@ -10,7 +10,6 @@ import {
   FileText,
   HandHelping,
   HelpCircle,
-  History,
   Home,
   MessageSquare,
   Network,
@@ -19,9 +18,9 @@ import {
   Search,
   Send,
   ShieldCheck,
+  ScrollText,
 } from "lucide-react";
-import { Button } from "../ui";
-import { CaseStatusBadge, NavigationProgressStatus } from "../status";
+import { ExportStatusChip, SyntheticBanner } from "../lovable/nexus-ui";
 import { deriveAnalysisPrerequisites } from "../../features/documents/analysis-prerequisites";
 import { analysisRunInputMatchesState } from "../../lib/analysis/freshness";
 import type { AnalysisRun, CaseCommand, CaseState, StageStatus } from "../../lib/contracts";
@@ -41,7 +40,11 @@ export const STEP_NAVIGATION = [
 ] as const;
 
 type StepId = (typeof STEP_NAVIGATION)[number]["id"];
-type NavigationIcon = ComponentType<{ "aria-hidden"?: boolean | "true"; size?: number }>;
+type NavigationIcon = ComponentType<{
+  "aria-hidden"?: boolean | "true";
+  className?: string;
+  size?: number;
+}>;
 
 type WorkspaceNavigationItem = {
   group: "Intake" | "Analysis" | "Planning" | "Review" | "Export" | "Trust";
@@ -77,10 +80,10 @@ export const WORKSPACE_NAVIGATION: readonly WorkspaceNavigationItem[] = [
   },
   {
     group: "Intake",
-    href: "/case/demo/intake",
+    href: "/case/demo/documents",
     icon: FileText,
     id: "documents",
-    label: "Documents & Source Health",
+    label: "Documents",
     stage: "documents",
   },
   {
@@ -144,7 +147,7 @@ export const WORKSPACE_NAVIGATION: readonly WorkspaceNavigationItem[] = [
     href: "/case/demo/nexus",
     icon: Network,
     id: "integrity-map",
-    label: "Evidence Integrity Map",
+    label: "Charge–Coercion Nexus",
     stage: "review",
   },
   {
@@ -166,7 +169,7 @@ export const WORKSPACE_NAVIGATION: readonly WorkspaceNavigationItem[] = [
   {
     group: "Trust",
     href: "/case/demo/audit",
-    icon: History,
+    icon: ScrollText,
     id: "audit",
     label: "Audit Trail",
     stage: "export",
@@ -187,11 +190,10 @@ const NAVIGATION_GROUPS = [
   "Planning",
   "Review",
   "Export",
-  "Trust",
 ] as const;
 const STEP_DESTINATIONS: Record<StepId, string> = {
   purpose: "/case/demo/purpose",
-  documents: "/case/demo/intake",
+  documents: "/case/demo/documents",
   analysis: "/case/demo/analysis",
   planning: "/case/demo/interview",
   review: "/case/demo/nexus",
@@ -228,7 +230,7 @@ function commandMeta(state: CaseState): CaseCommand["meta"] {
 
 export function deriveCurrentStep(pathname: string | null | undefined): StepId {
   const path = pathname ?? "";
-  if (path.includes("/intake")) return "documents";
+  if (path.includes("/intake") || path.includes("/documents")) return "documents";
   if (
     path.includes("/analysis") ||
     path.includes("/urgent-needs") ||
@@ -399,6 +401,14 @@ function CaseShellContent({
     [state.activeAnalysisRunId, state.analysisRuns],
   );
   const provenance = describeRunProvenance(activeRun, Boolean(state.pendingLiveAnalysis));
+  const exportChipState =
+    state.exportGate?.caseRevision === state.caseRevision &&
+    state.exportGate.status === "ready"
+      ? "Ready"
+      : state.exportGate?.freshness === "current" &&
+          state.exportGate.status === "blocked"
+        ? "Blocked"
+        : "Pending";
 
   function handleReset() {
     const command: Extract<CaseCommand, { type: "reset_case" }> = {
@@ -417,188 +427,211 @@ function CaseShellContent({
   }
 
   return (
-    <div className="min-h-screen bg-[var(--color-canvas)] text-[var(--color-ink)]">
+    <div className="min-h-screen overflow-x-hidden bg-background text-foreground">
       <a
-        className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-50 focus:rounded-[var(--radius-control)] focus:bg-[var(--color-surface)] focus:px-4 focus:py-2"
+        className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-50 focus:rounded-md focus:bg-card focus:px-4 focus:py-2"
         href="#case-workspace"
       >
         Skip to case workspace
       </a>
-      <div
-        className="border-b border-[color-mix(in_oklab,var(--amber)_42%,transparent)] bg-[color-mix(in_oklab,var(--amber)_11%,transparent)] px-4 py-1.5 text-center text-xs font-semibold text-[var(--color-ink)]"
-        role="note"
-      >
-        {SYNTHETIC_BANNER_TEXT}
-      </div>
-      <header className="sticky top-0 z-40 border-b border-[var(--color-border)] bg-[color-mix(in_oklab,var(--color-surface)_94%,transparent)] shadow-sm backdrop-blur">
-        <div className="mx-auto flex w-full max-w-[1600px] flex-wrap items-center gap-3 px-4 py-3 lg:px-6">
-          <a
-            className="mr-auto inline-flex items-baseline gap-2 text-[var(--color-ink)] no-underline"
-            href="/"
-          >
-            <span
-              aria-hidden="true"
-              className="h-2.5 w-2.5 -translate-y-px rounded-full bg-[var(--amber)]"
-            />
-            <span className="font-serif text-base font-semibold">
-              ContextFirst <em className="font-normal text-[var(--color-ink-muted)]">Nexus</em>
-            </span>
-          </a>
-          <dl className="order-3 flex w-full flex-wrap items-center gap-x-4 gap-y-2 text-xs sm:order-none sm:w-auto">
-            <div>
-              <dt className="sr-only">Display case reference</dt>
-              <dd className="font-mono">REF-2024-0047-SYN</dd>
+      <SyntheticBanner compact />
+      <span className="sr-only">{SYNTHETIC_BANNER_TEXT}</span>
+      <header className="border-b border-border bg-card/60">
+        <div className="mx-auto flex flex-wrap items-center justify-between gap-3 px-6 py-3">
+          <div className="flex items-center gap-4">
+            <a href="/" className="flex items-baseline gap-2">
+              <span
+                aria-hidden
+                className="inline-block h-2.5 w-2.5 -translate-y-0.5 rounded-full bg-[color:var(--amber)]"
+              />
+              <span className="font-serif text-base">
+                ContextFirst <span className="italic text-muted-foreground">Nexus</span>
+              </span>
+            </a>
+            <span className="hidden text-border sm:inline">·</span>
+            <div className="hidden text-xs sm:block">
+              <span className="font-mono text-foreground">REF-2024-0047-SYN</span>
+              <span className="mx-2 text-border">·</span>
+              <span className="text-muted-foreground">Assigned</span> M. Chen
+              <span className="mx-2 text-border">·</span>
+              <span className="text-muted-foreground">
+                {state.documents.length} documents
+              </span>
+              <span className="sr-only">
+                Canonical case {state.caseId}. {provenance.analysisStatusLabel}.
+                {provenance.checkpointLabel ? ` ${provenance.checkpointLabel}.` : ""}
+              </span>
             </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <ExportStatusChip state={exportChipState} />
+            <a
+              href="/dashboard"
+              className="inline-flex items-center gap-1.5 rounded-md border border-border px-2.5 py-1 text-xs text-muted-foreground hover:text-foreground"
+            >
+              <Home className="h-3.5 w-3.5" aria-hidden /> Dashboard
+            </a>
+            <button
+              aria-label="Reset Case — reset demonstration"
+              aria-describedby="reset-case-note"
+              onClick={handleReset}
+              className="inline-flex items-center gap-1.5 rounded-md border border-border px-2.5 py-1 text-xs text-muted-foreground hover:text-foreground"
+              type="button"
+            >
+              <RotateCcw className="h-3.5 w-3.5" aria-hidden /> Reset demonstration
+            </button>
+          </div>
+          <p className="sr-only" id="reset-case-note">
+            Reset uses the central case command and returns the browser session to the
+            bundled demo case.
+          </p>
+          {resetMessage ? (
+            <p className="w-full text-xs text-muted-foreground" role="status">
+              {resetMessage}
+            </p>
+          ) : null}
+          <dl className="sr-only">
             <div>
-              <dt className="sr-only">Canonical case ID</dt>
-              <dd className="text-[var(--color-ink-muted)]">{state.caseId}</dd>
-            </div>
-            <div>
-              <dt className="sr-only">Assigned practitioner</dt>
-              <dd>M. Chen</dd>
-            </div>
-            <div>
-              <dt className="sr-only">Current section</dt>
-              <dd className="font-semibold">
+              <dt>Current section</dt>
+              <dd>
                 {STEP_NAVIGATION.find((step) => step.id === currentStep)?.label}
               </dd>
             </div>
-            <div>
-              <dt className="sr-only">Case status</dt>
-              <dd><CaseStatusBadge value={caseStatus} /></dd>
+            <div aria-label={`Case status: ${caseStatus}`}>
+              <dt>Case status</dt>
+              <dd>{caseStatus}</dd>
             </div>
-            <div className="text-[var(--color-ink-muted)]">
-              <dt className="sr-only">Analysis status</dt>
+            <div>
+              <dt>Analysis status</dt>
               <dd>{provenance.analysisStatusLabel}</dd>
             </div>
             {provenance.checkpointLabel ? (
-              <div className="text-[var(--color-ink-muted)]">
-                <dt className="sr-only">Checkpoint provenance</dt>
+              <div>
+                <dt>Checkpoint provenance</dt>
                 <dd>{provenance.checkpointLabel}</dd>
               </div>
             ) : null}
           </dl>
-          <a
-            className="inline-flex min-h-11 items-center gap-1.5 rounded-[var(--radius-control)] border border-[var(--color-border)] px-3 text-xs font-semibold text-[var(--color-ink)] no-underline hover:bg-[var(--color-surface-subtle)]"
-            href="/dashboard"
-          >
-            <Home aria-hidden="true" size={15} />
-            Dashboard
-          </a>
-          <a
-            className="inline-flex min-h-11 items-center gap-1.5 rounded-[var(--radius-control)] border border-[var(--color-border)] px-3 text-xs font-semibold text-[var(--color-ink)] no-underline hover:bg-[var(--color-surface-subtle)]"
-            href="/trust"
-          >
-            <ShieldCheck aria-hidden="true" size={15} />
-            Trust
-          </a>
-          <Button aria-describedby="reset-case-note" onClick={handleReset} variant="secondary">
-            <RotateCcw aria-hidden="true" size={16} />
-            Reset Case
-          </Button>
-          <p className="sr-only" id="reset-case-note">
-            Reset uses the central case command and returns the browser session to the bundled demo case.
-          </p>
-          {resetMessage ? (
-            <p className="w-full text-sm text-[var(--color-supported)]" role="status">
-              {resetMessage}
-            </p>
-          ) : null}
         </div>
 
         <section
           aria-label="Six-stage case progress"
-          className="border-t border-[var(--color-border)]"
+          className="max-w-full overflow-hidden sm:overflow-x-auto"
         >
-          <ol className="mx-auto grid w-full max-w-[1600px] grid-cols-2 gap-1 px-3 py-2 min-[560px]:grid-cols-3 lg:grid-cols-6 lg:px-5">
-            {STEP_NAVIGATION.map((step) => {
-              const progress = deriveStepProgress(step.id, state);
-              const isCurrent = step.id === currentStep;
-              const stepLabel = (
-                <>
+          <ol className="mx-auto grid grid-cols-3 gap-x-3 gap-y-2 px-6 pb-3 sm:flex sm:w-max sm:min-w-full sm:flex-nowrap sm:items-center sm:gap-2">
+            {STEP_NAVIGATION.map((step, index) => {
+            const progress = deriveStepProgress(step.id, state);
+            const isCurrent = step.id === currentStep;
+            const numberStyle = isCurrent
+              ? "border-[color:var(--amber)] bg-[color-mix(in_oklab,var(--amber)_20%,transparent)] text-foreground"
+              : progress === "completed"
+                ? "border-[color:var(--sage)] bg-[color-mix(in_oklab,var(--sage)_20%,transparent)] text-foreground"
+                : progress === "failed"
+                  ? "border-[color:var(--rust)] bg-[color-mix(in_oklab,var(--rust)_12%,transparent)] text-[color:var(--rust)]"
+                  : "border-border text-muted-foreground";
+            return (
+              <li key={step.id} className="flex min-w-0 items-center gap-2">
+                <a
+                  aria-current={isCurrent ? "step" : undefined}
+                  aria-label={`Open ${
+                    step.id === "analysis" ? "Structured Analysis" : step.label
+                  }`}
+                  className="flex items-center gap-2"
+                  href={STEP_DESTINATIONS[step.id]}
+                >
                   <span
-                    className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full border font-mono text-[10px] ${
-                      isCurrent
-                        ? "border-[var(--amber)]"
-                        : "border-[var(--color-border-strong)]"
-                    }`}
+                    className={`flex h-6 w-6 items-center justify-center rounded-full border font-mono text-[10px] ${numberStyle}`}
                   >
                     {step.index}
                   </span>
-                  <span className="truncate font-mono text-[10px] uppercase tracking-[0.12em]">
+                  <span
+                    className={`font-mono text-[11px] uppercase tracking-[0.14em] ${
+                      isCurrent ? "text-foreground" : "text-muted-foreground"
+                    }`}
+                  >
                     {step.label}
                   </span>
-                </>
-              );
-              return (
-                <li
-                  aria-current={isCurrent ? "step" : undefined}
-                  className={`min-w-0 rounded-[var(--radius-control)] border px-2 py-2 ${
-                    isCurrent
-                      ? "border-[var(--amber)] bg-[color-mix(in_oklab,var(--amber)_10%,transparent)]"
-                      : "border-transparent"
-                  }`}
-                  key={step.id}
-                >
-                  <a
-                    aria-label={`Open ${
-                      step.id === "analysis" ? "Structured Analysis" : step.label
-                    }`}
-                    className="flex items-center gap-2 text-[var(--color-ink)] no-underline"
-                    href={STEP_DESTINATIONS[step.id]}
-                  >
-                    {stepLabel}
-                  </a>
-                  <div className="mt-1 pl-8">
-                    <NavigationProgressStatus value={progress} />
-                  </div>
-                </li>
-              );
+                  <span className="sr-only">, {progress}</span>
+                </a>
+                {index < STEP_NAVIGATION.length - 1 ? (
+                  <span
+                    className="mx-1 hidden h-px w-8 bg-border sm:block"
+                    aria-hidden
+                  />
+                ) : null}
+              </li>
+            );
             })}
           </ol>
         </section>
       </header>
 
-      <div className="mx-auto grid w-full max-w-[1600px] lg:grid-cols-[250px_minmax(0,1fr)]">
-        <aside className="border-b border-[var(--color-border)] bg-[color-mix(in_oklab,var(--color-surface)_58%,transparent)] lg:min-h-[calc(100vh-170px)] lg:border-b-0 lg:border-r">
-          <nav aria-label="Case workspace" className="grid gap-4 p-3 sm:grid-cols-2 lg:block">
+      <div className="border-b border-border bg-muted/40 px-6 py-2 text-xs text-muted-foreground lg:hidden">
+        This case workspace is designed for a display of 1280px or wider. Sidebar
+        navigation still works on smaller screens.
+      </div>
+
+      <div className="mx-auto grid grid-cols-1 gap-0 lg:grid-cols-[240px_1fr]">
+        <aside className="border-r border-border bg-card/40 lg:min-h-[calc(100vh-140px)]">
+          <nav aria-label="Case workspace" className="p-3">
             {NAVIGATION_GROUPS.map((group) => (
-              <section className="mb-4" key={group}>
-                <h2 className="mb-1 px-2 font-mono text-[10px] uppercase tracking-[0.18em] text-[var(--color-ink-muted)]">
+              <div className="mb-4" key={group}>
+                <div className="mb-1 px-2 font-mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
                   {group}
-                </h2>
+                </div>
                 <ul className="space-y-0.5">
-                  {WORKSPACE_NAVIGATION.filter((item) => item.group === group).map((item) => {
-                    const Icon = item.icon;
-                    const active = item.id === activeDestination;
-                    return (
-                      <li key={item.id}>
-                        <a
-                          aria-current={active ? "page" : undefined}
-                          className={`flex min-h-10 items-center gap-2 rounded-[var(--radius-control)] px-2 py-1.5 text-sm no-underline ${
-                            active
-                              ? "bg-[var(--color-brand)] font-semibold !text-white"
-                              : "text-[var(--color-ink)] hover:bg-[var(--color-surface-subtle)]"
-                          }`}
-                          href={item.href}
-                        >
-                          <Icon aria-hidden="true" size={16} />
-                          <span>{item.label}</span>
-                        </a>
-                      </li>
-                    );
-                  })}
+                  {WORKSPACE_NAVIGATION.filter((item) => item.group === group).map(
+                    (item) => {
+                      const Icon = item.icon;
+                      const active = item.id === activeDestination;
+                      return (
+                        <li key={item.id}>
+                          <a
+                            aria-current={active ? "page" : undefined}
+                            className={`flex items-center gap-2 rounded-md px-2 py-1.5 text-sm ${
+                              active
+                                ? "bg-primary text-primary-foreground"
+                                : "text-foreground/80 hover:bg-muted"
+                            }`}
+                            href={item.href}
+                          >
+                            <Icon className="h-4 w-4 opacity-80" aria-hidden />
+                            <span>{item.label}</span>
+                          </a>
+                        </li>
+                      );
+                    },
+                  )}
                 </ul>
-              </section>
+              </div>
             ))}
+            <div className="mt-6 border-t border-border pt-3">
+              {WORKSPACE_NAVIGATION.filter((item) => item.id === "audit").map(
+                (item) => {
+                  const Icon = item.icon;
+                  const active = item.id === activeDestination;
+                  return (
+                    <a
+                      aria-current={active ? "page" : undefined}
+                      className={`flex items-center gap-2 rounded-md px-2 py-1.5 text-sm ${
+                        active
+                          ? "bg-primary text-primary-foreground"
+                          : "text-foreground/80 hover:bg-muted"
+                      }`}
+                      href={item.href}
+                      key={item.id}
+                    >
+                      <Icon className="h-4 w-4 opacity-80" aria-hidden />
+                      <span>{item.label}</span>
+                    </a>
+                  );
+                },
+              )}
+            </div>
           </nav>
         </aside>
 
-        <main
-          aria-labelledby="case-workspace-heading"
-          className="min-h-[520px] min-w-0 px-4 py-5 lg:px-6"
-          id="case-workspace"
-        >
+        <main className="min-w-0 px-6 py-6" id="case-workspace">
           <h2 className="sr-only" id="case-workspace-heading">
             {STEP_NAVIGATION.find((step) => step.id === currentStep)?.label} workspace
           </h2>
@@ -610,7 +643,7 @@ function CaseShellContent({
 }
 
 function deriveActiveDestination(path: string): WorkspaceNavigationItem["id"] {
-  if (path.includes("/intake")) return "documents";
+  if (path.includes("/intake") || path.includes("/documents")) return "documents";
   if (path.includes("/analysis")) return "structured-analysis";
   if (path.includes("/urgent-needs")) return "urgent-needs";
   if (path.includes("/gaps")) return "evidence-gaps";

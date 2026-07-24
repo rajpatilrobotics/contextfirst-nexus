@@ -325,9 +325,9 @@ export function PdfSelectionPanel({
           <div className="grid gap-1">
             <div className="flex items-center gap-2 text-[var(--color-brand)]">
               <FileCheck2 aria-hidden="true" size={18} />
-              <p className="cfn-type-label">Step 1</p>
+              <p className="text-sm font-semibold">Step 1</p>
             </div>
-            <h2 className="cfn-type-heading-2" id="pdf-intake-heading">
+            <h2 className="font-serif text-2xl leading-tight" id="pdf-intake-heading">
               Add PDFs
             </h2>
             <p className="max-w-2xl text-sm text-[var(--color-ink-muted)]">
@@ -364,7 +364,7 @@ export function PdfSelectionPanel({
             <input
               accept="application/pdf,.pdf"
               aria-label="Choose PDF files"
-              className="cfn-control-target max-w-full cursor-pointer rounded-[var(--radius-control)] border border-[var(--color-brand)] bg-[var(--color-surface)] text-sm text-[var(--color-ink-muted)] shadow-sm file:mr-3 file:cursor-pointer file:border-0 file:bg-[var(--color-brand)] file:px-4 file:py-2 file:font-semibold file:text-white hover:file:bg-[var(--color-brand-hover)]"
+              className="min-h-9 max-w-full cursor-pointer rounded-[var(--radius-control)] border border-[var(--color-brand)] bg-[var(--color-surface)] text-sm text-[var(--color-ink-muted)] shadow-sm file:mr-3 file:cursor-pointer file:border-0 file:bg-[var(--color-brand)] file:px-4 file:py-2 file:font-semibold file:text-white hover:file:bg-[var(--color-brand-hover)]"
               multiple
               onChange={handleInputChange}
               ref={inputRef}

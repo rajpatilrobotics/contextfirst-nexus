@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, type FormEvent } from "react";
-import { Ban, ShieldCheck } from "lucide-react";
+import { Ban, CheckCircle2, ShieldCheck } from "lucide-react";
 import {
   CasePurposeBriefSchema,
   RequiredExcludedDecisions,
@@ -19,7 +19,10 @@ import {
   Select,
   Textarea,
 } from "../../components/ui";
-import { AnalysisDisclosurePanel } from "../analysis/provider-selection";
+import {
+  Chip,
+  DemoOnlyNotice,
+} from "../../components/lovable/nexus-ui";
 
 type FormErrors = Record<string, string>;
 
@@ -235,7 +238,7 @@ export function CasePurposeBriefForm({
   };
 
   return (
-    <form className="grid gap-5" id="purpose-form" noValidate onSubmit={handleSubmit} tabIndex={-1}>
+    <form className="space-y-6" id="purpose-form" noValidate onSubmit={handleSubmit} tabIndex={-1}>
       {Object.keys(errors).length > 0 ? (
         <div
           aria-labelledby="purpose-error-summary-heading"
@@ -244,7 +247,7 @@ export function CasePurposeBriefForm({
           role="alert"
           tabIndex={-1}
         >
-          <h3 className="cfn-type-heading-3" id="purpose-error-summary-heading">Review the Purpose Brief</h3>
+          <h3 className="font-serif text-lg leading-tight" id="purpose-error-summary-heading">Review the Purpose Brief</h3>
           <ul className="list-disc pl-5">
             {Object.entries(errors).map(([key, message]) => (
               <li key={key}>
@@ -257,19 +260,16 @@ export function CasePurposeBriefForm({
         </div>
       ) : null}
 
-      <div className="grid items-start gap-5 lg:grid-cols-[minmax(0,1fr)_300px]">
-        <div className="grid min-w-0 gap-5">
-          <fieldset className="grid gap-4 rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface)] p-5">
-            <legend className="px-2 font-mono text-[10px] font-semibold uppercase tracking-[0.18em] text-[var(--color-ink-muted)]">
+      <div className="grid gap-6 lg:grid-cols-[1fr_320px]">
+        <div className="space-y-6">
+          <fieldset className="rounded-xl border border-border bg-card p-5">
+            <legend className="px-2 font-mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
               Practitioner &amp; recipient
             </legend>
-            <p className="cfn-type-body-small text-[var(--color-ink-muted)]">
-              Identify the practitioner context, authorized purpose, and intended recipient for this handoff.
-            </p>
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div>
-                <Label htmlFor="practitioner-role">Practitioner role</Label>
-                <Select id="practitioner-role" value={practitionerRole} onChange={(event) => setPractitionerRole(event.currentTarget.value as CasePurposeBrief["practitionerRole"] | "")}>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div className="grid gap-1 text-sm">
+                <Label className="!text-xs !font-normal text-muted-foreground" htmlFor="practitioner-role">Practitioner role</Label>
+                <Select className="!min-h-0 !rounded-md !px-2.5 !py-1.5 !text-[13px] !shadow-none" id="practitioner-role" value={practitionerRole} onChange={(event) => setPractitionerRole(event.currentTarget.value as CasePurposeBrief["practitionerRole"] | "")}>
                   <option value="">Choose role</option>
                   <option value="legal_aid">Legal aid</option><option value="defence">Defence</option>
                   <option value="public_defender">Public defender</option><option value="court_navigation">Court navigation</option>
@@ -277,9 +277,9 @@ export function CasePurposeBriefForm({
                 </Select>
                 {errors.practitionerRole ? <FieldError id="practitioner-role-error">{errors.practitionerRole}</FieldError> : null}
               </div>
-              <div>
-                <Label htmlFor="organization-type">Organization type</Label>
-                <Select id="organization-type" value={organizationType} onChange={(event) => setOrganizationType(event.currentTarget.value as CasePurposeBrief["organizationType"] | "")}>
+              <div className="grid gap-1 text-sm">
+                <Label className="!text-xs !font-normal text-muted-foreground" htmlFor="organization-type">Organization type</Label>
+                <Select className="!min-h-0 !rounded-md !px-2.5 !py-1.5 !text-[13px] !shadow-none" id="organization-type" value={organizationType} onChange={(event) => setOrganizationType(event.currentTarget.value as CasePurposeBrief["organizationType"] | "")}>
                   <option value="">Choose organization</option>
                   <option value="legal_aid">Legal aid</option><option value="public_defender">Public defender</option>
                   <option value="court_service">Court service</option><option value="ngo">NGO</option>
@@ -288,112 +288,180 @@ export function CasePurposeBriefForm({
                 </Select>
                 {errors.organizationType ? <FieldError id="organization-type-error">{errors.organizationType}</FieldError> : null}
               </div>
-              <div className="sm:col-span-2">
-                <Label htmlFor="stated-purpose">Authorized purpose</Label>
-                <Textarea id="stated-purpose" maxLength={500} value={statedPurpose} onChange={(event) => setStatedPurpose(event.currentTarget.value)} />
+              <div className="grid gap-1 text-sm">
+                <Label className="!text-xs !font-normal text-muted-foreground" htmlFor="stated-purpose">Authorized purpose</Label>
+                <Textarea className="!min-h-[50px] !rounded-md !px-2.5 !py-1.5 !text-[13px] !shadow-none" id="stated-purpose" maxLength={500} rows={2} value={statedPurpose} onChange={(event) => setStatedPurpose(event.currentTarget.value)} />
                 {errors.statedPurpose ? <FieldError id="stated-purpose-error">{errors.statedPurpose}</FieldError> : null}
               </div>
-              <div>
-                <Label htmlFor="intended-recipient">Intended recipient or handoff</Label>
-                <Input id="intended-recipient" maxLength={500} value={intendedRecipient} onChange={(event) => setIntendedRecipient(event.currentTarget.value)} />
+              <div className="grid gap-1 text-sm">
+                <Label className="!text-xs !font-normal text-muted-foreground" htmlFor="supported-workflow">Supported workflow</Label>
+                <Select
+                  aria-readonly="true"
+                  className="!min-h-0 !rounded-md !px-2.5 !py-1.5 !text-[13px] !shadow-none"
+                  defaultValue="case_preparation_handoff"
+                  id="supported-workflow"
+                >
+                  <option value="case_preparation_handoff">Case preparation &amp; handoff</option>
+                </Select>
+              </div>
+              <div className="grid gap-1 text-sm">
+                <Label className="!text-xs !font-normal text-muted-foreground" htmlFor="intended-recipient">Intended recipient</Label>
+                <Input aria-label="Intended recipient or handoff" className="!min-h-0 !rounded-md !px-2.5 !py-1.5 !text-[13px] !shadow-none" id="intended-recipient" maxLength={500} value={intendedRecipient} onChange={(event) => setIntendedRecipient(event.currentTarget.value)} />
                 {errors.intendedRecipient ? <FieldError id="intended-recipient-error">{errors.intendedRecipient}</FieldError> : null}
               </div>
-              <div>
-                <Label htmlFor="intended-recipient-category">Recipient category</Label>
-                <Select id="intended-recipient-category" value={intendedRecipientCategory} onChange={(event) => setIntendedRecipientCategory(event.currentTarget.value as CasePurposeBrief["intendedRecipientCategory"] | "")}>
+              <div className="grid gap-1 text-sm">
+                <Label className="!text-xs !font-normal text-muted-foreground" htmlFor="intended-recipient-category">Recipient category</Label>
+                <Select className="!min-h-0 !rounded-md !px-2.5 !py-1.5 !text-[13px] !shadow-none" id="intended-recipient-category" value={intendedRecipientCategory} onChange={(event) => setIntendedRecipientCategory(event.currentTarget.value as CasePurposeBrief["intendedRecipientCategory"] | "")}>
                   <option value="">Choose category</option><option value="legal_aid_team">Legal aid team</option>
                   <option value="public_defender">Public defender</option><option value="court_navigation">Court navigation</option>
                   <option value="ngo_caseworker">NGO caseworker</option><option value="policy_or_research_summary">Policy or research summary</option>
                 </Select>
                 {errors.intendedRecipientCategory ? <FieldError id="intended-recipient-category-error">{errors.intendedRecipientCategory}</FieldError> : null}
               </div>
-              <div>
-                <Label htmlFor="jurisdiction-code">Fictional jurisdiction</Label>
-                <Select id="jurisdiction-code" value={jurisdictionCode} onChange={(event) => setJurisdictionCode(event.currentTarget.value as CasePurposeBrief["jurisdictionCode"] | "")}>
+              <div className="grid gap-1 text-sm">
+                <Label className="!text-xs !font-normal text-muted-foreground" htmlFor="jurisdiction-code">Jurisdiction (verify locally)</Label>
+                <Select aria-label="Fictional jurisdiction" className="!min-h-0 !rounded-md !px-2.5 !py-1.5 !text-[13px] !shadow-none" id="jurisdiction-code" value={jurisdictionCode} onChange={(event) => setJurisdictionCode(event.currentTarget.value as CasePurposeBrief["jurisdictionCode"] | "")}>
                   <option value="">Choose jurisdiction</option><option value="J-01">J-01</option>
                   <option value="J-02">J-02</option><option value="unspecified">Unspecified</option>
                 </Select>
                 {errors.jurisdictionCode ? <FieldError id="jurisdiction-code-error">{errors.jurisdictionCode}</FieldError> : null}
               </div>
-              <div>
-                <Label htmlFor="translation-status">Translation status</Label>
-                <Select id="translation-status" value={translationStatus} onChange={(event) => setTranslationStatus(event.currentTarget.value as CasePurposeBrief["translationStatus"] | "")}>
+              <div className="grid gap-1 text-sm">
+                <Label className="!text-xs !font-normal text-muted-foreground" htmlFor="source-language">Source language</Label>
+                <Input
+                  className="!min-h-0 !rounded-md !px-2.5 !py-1.5 !text-[13px] !shadow-none"
+                  id="source-language"
+                  readOnly
+                  value="English"
+                />
+              </div>
+              <div className="grid gap-1 text-sm">
+                <Label className="!text-xs !font-normal text-muted-foreground" htmlFor="translation-status">Translation status</Label>
+                <Select className="!min-h-0 !rounded-md !px-2.5 !py-1.5 !text-[13px] !shadow-none" id="translation-status" value={translationStatus} onChange={(event) => setTranslationStatus(event.currentTarget.value as CasePurposeBrief["translationStatus"] | "")}>
                   <option value="">Choose status</option><option value="original_language">Original language</option>
                   <option value="translated_unverified">Translated, unverified</option><option value="unknown">Unknown</option>
                 </Select>
                 {errors.translationStatus ? <FieldError id="translation-status-error">{errors.translationStatus}</FieldError> : null}
               </div>
             </div>
-            <dl className="grid gap-2 border-t border-[var(--color-border)] pt-3 text-sm sm:grid-cols-2">
-              <div><dt className="font-mono text-[10px] uppercase tracking-[0.16em] text-[var(--color-ink-muted)]">Workflow</dt><dd>Case preparation handoff</dd></div>
-              <div><dt className="font-mono text-[10px] uppercase tracking-[0.16em] text-[var(--color-ink-muted)]">Source language</dt><dd>English</dd></div>
-            </dl>
           </fieldset>
 
-          <fieldset className="grid gap-4 rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface)] p-5">
-            <legend className="px-2 font-mono text-[10px] font-semibold uppercase tracking-[0.18em] text-[var(--color-ink-muted)]">
+          <fieldset className="rounded-xl border border-border bg-card p-5">
+            <legend className="px-2 font-mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
               Handoff type
             </legend>
-            <div>
+            <div className="sr-only">
               <Label htmlFor="requested-export">Requested handoff</Label>
               <Select id="requested-export" value={requestedExport} onChange={(event) => setRequestedExport(event.currentTarget.value as CasePurposeBrief["requestedExport"] | "")}>
                 <option value="">Choose one handoff</option>
                 <option value="full_practitioner_handoff">Full practitioner handoff</option>
                 <option value="minimum_necessary_safe_share">Minimum-necessary safe share</option>
               </Select>
-              {errors.requestedExport ? <FieldError id="requested-export-error">{errors.requestedExport}</FieldError> : null}
             </div>
             <div className="grid gap-3 sm:grid-cols-2">
-              <div
-                className={`rounded-[var(--radius-control)] border p-4 ${
+              <button
+                aria-pressed={requestedExport === "full_practitioner_handoff"}
+                className={`cursor-pointer rounded-lg border p-4 text-left ${
                   requestedExport === "full_practitioner_handoff"
-                    ? "border-[var(--amber)] bg-[var(--color-warning-subtle)]"
-                    : "border-[var(--color-border)] bg-[var(--color-canvas)]"
+                    ? "border-[color:var(--amber)] bg-[color-mix(in_oklab,var(--amber)_10%,transparent)]"
+                    : "border-border hover:bg-muted/50"
                 }`}
+                onClick={() => setRequestedExport("full_practitioner_handoff")}
+                type="button"
               >
-                <p className="font-serif text-base font-semibold">Full Practitioner Handoff</p>
-                <p className="mt-1 text-xs text-[var(--color-ink-muted)]">
-                  Reviewed source-linked material, limitations, and notes for the named practitioner.
+                <p className="font-serif text-lg">Full Practitioner Handoff</p>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  All source-linked observations, limitations, and reviewed notes for a designated practitioner.
                 </p>
-              </div>
-              <div
-                className={`rounded-[var(--radius-control)] border p-4 ${
+              </button>
+              <button
+                aria-pressed={requestedExport === "minimum_necessary_safe_share"}
+                className={`cursor-pointer rounded-lg border p-4 text-left ${
                   requestedExport === "minimum_necessary_safe_share"
-                    ? "border-[var(--amber)] bg-[var(--color-warning-subtle)]"
-                    : "border-[var(--color-border)] bg-[var(--color-canvas)]"
+                    ? "border-[color:var(--amber)] bg-[color-mix(in_oklab,var(--amber)_10%,transparent)]"
+                    : "border-border hover:bg-muted/50"
                 }`}
+                onClick={() => setRequestedExport("minimum_necessary_safe_share")}
+                type="button"
               >
-                <p className="font-serif text-base font-semibold">Minimum-Necessary Safe Share</p>
-                <p className="mt-1 text-xs text-[var(--color-ink-muted)]">
-                  Only reviewed fields needed for the named recipient and declared purpose.
+                <p className="font-serif text-lg">Minimum-Necessary Safe Share</p>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  Only the fields required by the named recipient and declared purpose.
                 </p>
-              </div>
+              </button>
             </div>
+            {errors.requestedExport ? <FieldError id="requested-export-error">{errors.requestedExport}</FieldError> : null}
+          </fieldset>
+
+          <fieldset className="rounded-xl border border-border bg-card p-5">
+            <legend className="px-2 font-mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
+              Required acknowledgements
+            </legend>
+            <ul className="space-y-2">
+              <li className="rounded-md border border-border/70 bg-background px-3 py-1 text-sm">
+                <Checkbox checked={authorityAttested} id="authority-attested" label="I attest that I am using only fictional or hackathon test PDFs for the stated workflow." onChange={(event) => setAuthorityAttested(event.currentTarget.checked)} />
+                {errors.authorityAttested ? <FieldError id="authority-attested-error">{errors.authorityAttested}</FieldError> : null}
+              </li>
+              <li className="rounded-md border border-border/70 bg-background px-3 py-1 text-sm">
+                <Checkbox checked={authorityNotVerified} id="authority-not-verified" label="I understand that the system cannot verify my authority." onChange={(event) => setAuthorityNotVerified(event.currentTarget.checked)} />
+                {errors.authorityNotVerified ? <FieldError id="authority-not-verified-error">{errors.authorityNotVerified}</FieldError> : null}
+              </li>
+              <li className="rounded-md border border-border/70 bg-background px-3 py-1 text-sm">
+                <Checkbox checked={syntheticAttested} id="synthetic-attested" label="I attest that the selected PDFs contain no real or private case data." onChange={(event) => setSyntheticAttested(event.currentTarget.checked)} />
+                {errors.syntheticAttested ? <FieldError id="synthetic-attested-error">{errors.syntheticAttested}</FieldError> : null}
+              </li>
+              <li className="rounded-md border border-border/70 bg-background px-3 py-1 text-sm">
+                <Checkbox checked={syntheticAcknowledged} id="synthetic-acknowledged" label="I acknowledge the fictional and hackathon test-data-only boundary." onChange={(event) => setSyntheticAcknowledged(event.currentTarget.checked)} />
+                {errors.syntheticAcknowledged ? <FieldError id="synthetic-acknowledged-error">{errors.syntheticAcknowledged}</FieldError> : null}
+              </li>
+              <li className="rounded-md border border-border/70 bg-background px-3 py-1 text-sm">
+                <Checkbox checked={prohibitedAcknowledged} id="prohibited-acknowledged" label="I acknowledge that the system does not make the excluded consequential decisions." onChange={(event) => setProhibitedAcknowledged(event.currentTarget.checked)} />
+                {errors.prohibitedAcknowledged ? <FieldError id="prohibited-acknowledged-error">{errors.prohibitedAcknowledged}</FieldError> : null}
+              </li>
+              <li className="rounded-md border border-border/70 bg-background px-3 py-1 text-sm">
+                <Checkbox checked={cooperationAcknowledged} id="cooperation-acknowledged" label="I confirm that cooperation with authorities is not a condition of analysis." onChange={(event) => setCooperationAcknowledged(event.currentTarget.checked)} />
+                {errors.cooperationAcknowledged ? <FieldError id="cooperation-acknowledged-error">{errors.cooperationAcknowledged}</FieldError> : null}
+              </li>
+              {analysisOption ? (
+                <li className="rounded-md border border-border/70 bg-background px-3 py-1 text-sm">
+                  <Checkbox
+                    aria-describedby={errors.analysisAcknowledgement ? "analysis-disclosure-error" : undefined}
+                    checked={analysisAcknowledged}
+                    disabled={disabled}
+                    id="analysis-disclosure-acknowledgement"
+                    label="I understand that analysis uses prepared demo replay or browser-local source extraction, is not live AI, and has no provider transmission."
+                    onChange={(event) => setAnalysisAcknowledged(event.currentTarget.checked)}
+                  />
+                  {errors.analysisAcknowledgement ? (
+                    <FieldError id="analysis-disclosure-error">
+                      {errors.analysisAcknowledgement}
+                    </FieldError>
+                  ) : null}
+                </li>
+              ) : null}
+            </ul>
           </fieldset>
 
           <fieldset
-            className="grid gap-3 rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface)] p-5"
+            className="rounded-xl border border-border bg-muted/30 p-5"
             id="excluded-decisions"
             tabIndex={-1}
           >
-            <legend className="px-2 font-mono text-[10px] font-semibold uppercase tracking-[0.18em] text-[var(--color-ink-muted)]">
-              Decisions kept outside this system
+            <legend className="px-2 font-mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
+              Prohibited determinations
             </legend>
-            <p className="cfn-type-body-small text-[var(--color-ink-muted)]">
-              Confirm every consequential decision that remains with qualified people and local processes.
+            <p className="mb-2 text-xs text-muted-foreground">
+              Confirm every consequential decision that remains outside system support.
             </p>
-            <div className="grid gap-2 sm:grid-cols-2">
+            <div className="grid gap-1.5 text-sm sm:grid-cols-2">
               {RequiredExcludedDecisions.map((decision) => (
-                <div
-                  className="rounded-[var(--radius-control)] border border-[var(--color-border)] bg-[var(--color-canvas)] px-3 py-1"
-                  key={decision}
-                >
+                <div className="flex items-start gap-2" key={decision}>
                   <Checkbox
                     checked={excludedDecisions.has(decision)}
                     id={`excluded-${decision}`}
                     label={(
                       <>
-                        <Ban aria-hidden="true" className="shrink-0 text-[var(--rust)]" size={15} />
+                        <Ban aria-hidden="true" className="shrink-0 text-[color:var(--rust)]" size={15} />
                         <span>{excludedDecisionLabels[decision]}</span>
                       </>
                     )}
@@ -405,85 +473,79 @@ export function CasePurposeBriefForm({
             {errors.excludedDecisions ? <FieldError id="excluded-decisions-error">{errors.excludedDecisions}</FieldError> : null}
           </fieldset>
 
-          <fieldset className="grid gap-3 rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface)] p-5">
-            <legend className="px-2 font-mono text-[10px] font-semibold uppercase tracking-[0.18em] text-[var(--color-ink-muted)]">
-              Required acknowledgements
-            </legend>
-            <p className="cfn-type-body-small text-[var(--color-ink-muted)]">
-              This prototype accepts fictional test material only. Confirm each boundary before saving.
-            </p>
-            <div className="grid gap-2">
-              <div className="rounded-[var(--radius-control)] border border-[var(--color-border)] bg-[var(--color-canvas)] px-3 py-1">
-                <Checkbox checked={authorityAttested} id="authority-attested" label="I attest that I am using only fictional or hackathon test PDFs for the stated workflow." onChange={(event) => setAuthorityAttested(event.currentTarget.checked)} />
-                {errors.authorityAttested ? <FieldError id="authority-attested-error">{errors.authorityAttested}</FieldError> : null}
+          <div className="flex flex-wrap items-center gap-3">
+            <Button
+              aria-label="Save Case Purpose Brief"
+              className="shrink-0"
+              disabled={disabled}
+              type="submit"
+              variant="primary"
+            >
+              Record purpose &amp; continue
+            </Button>
+            {!saveMessage ? (
+              <span className="text-xs text-muted-foreground">
+                Complete all acknowledgements and choose a handoff type to enable.
+              </span>
+            ) : null}
+            {saveMessage ? (
+              <Chip tone="sage" icon={<CheckCircle2 className="h-3 w-3" />}>
+                Ready to proceed
+              </Chip>
+            ) : null}
+          </div>
+          {saveMessage ? <p role="status" className="text-[var(--color-supported)]">{saveMessage}</p> : null}
+
+          <div className="grid gap-3 sm:grid-cols-2">
+            <Alert title="Authority and prototype boundary" tone="warning">
+              <p className="text-xs leading-5">
+                This role chooser is not authentication. The system records your attestation but
+                cannot verify your authority. Use only fictional or hackathon test PDFs that contain
+                no real or private case data. PDF text is extracted in this browser and is not
+                transmitted to an AI provider.
+              </p>
+            </Alert>
+
+            <section
+              aria-label="Human review boundary"
+              className="rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface-subtle)] p-4"
+            >
+              <div className="flex items-center gap-2">
+                <ShieldCheck aria-hidden="true" className="text-[var(--color-supported)]" size={18} />
+                <h3 className="font-mono text-[10px] font-semibold uppercase tracking-[0.16em]">
+                  Human review boundary
+                </h3>
               </div>
-              <div className="rounded-[var(--radius-control)] border border-[var(--color-border)] bg-[var(--color-canvas)] px-3 py-1">
-                <Checkbox checked={authorityNotVerified} id="authority-not-verified" label="I understand that the system cannot verify my authority." onChange={(event) => setAuthorityNotVerified(event.currentTarget.checked)} />
-                {errors.authorityNotVerified ? <FieldError id="authority-not-verified-error">{errors.authorityNotVerified}</FieldError> : null}
-              </div>
-              <div className="rounded-[var(--radius-control)] border border-[var(--color-border)] bg-[var(--color-canvas)] px-3 py-1">
-                <Checkbox checked={syntheticAttested} id="synthetic-attested" label="I attest that the selected PDFs contain no real or private case data." onChange={(event) => setSyntheticAttested(event.currentTarget.checked)} />
-                {errors.syntheticAttested ? <FieldError id="synthetic-attested-error">{errors.syntheticAttested}</FieldError> : null}
-              </div>
-              <div className="rounded-[var(--radius-control)] border border-[var(--color-border)] bg-[var(--color-canvas)] px-3 py-1">
-                <Checkbox checked={syntheticAcknowledged} id="synthetic-acknowledged" label="I acknowledge the fictional and hackathon test-data-only boundary." onChange={(event) => setSyntheticAcknowledged(event.currentTarget.checked)} />
-                {errors.syntheticAcknowledged ? <FieldError id="synthetic-acknowledged-error">{errors.syntheticAcknowledged}</FieldError> : null}
-              </div>
-              <div className="rounded-[var(--radius-control)] border border-[var(--color-border)] bg-[var(--color-canvas)] px-3 py-1">
-                <Checkbox checked={prohibitedAcknowledged} id="prohibited-acknowledged" label="I acknowledge that the system does not make the excluded consequential decisions." onChange={(event) => setProhibitedAcknowledged(event.currentTarget.checked)} />
-                {errors.prohibitedAcknowledged ? <FieldError id="prohibited-acknowledged-error">{errors.prohibitedAcknowledged}</FieldError> : null}
-              </div>
-              <div className="rounded-[var(--radius-control)] border border-[var(--color-border)] bg-[var(--color-canvas)] px-3 py-1">
-                <Checkbox checked={cooperationAcknowledged} id="cooperation-acknowledged" label="I confirm that cooperation with authorities is not a condition of analysis." onChange={(event) => setCooperationAcknowledged(event.currentTarget.checked)} />
-                {errors.cooperationAcknowledged ? <FieldError id="cooperation-acknowledged-error">{errors.cooperationAcknowledged}</FieldError> : null}
-              </div>
-            </div>
-          </fieldset>
+              <p className="mt-2 text-sm leading-5 text-[var(--color-ink-muted)]">
+                Saving records purpose and boundaries only. It does not start analysis or turn suggestions
+                into practitioner findings.
+              </p>
+            </section>
+          </div>
         </div>
 
-        <aside className="grid gap-4 lg:sticky lg:top-5">
-          <Alert title="Authority and prototype boundary" tone="warning">
-            <p className="cfn-type-body-small">
-              This role chooser is not authentication. The system records your attestation but cannot verify
-              your authority. Use only fictional or hackathon test PDFs that contain no real or private case
-              data. PDF text is extracted in this browser and is not transmitted to an AI provider.
-            </p>
-          </Alert>
+        <aside className="space-y-3">
+          <DemoOnlyNotice>
+            the primary action is enabled by local state only.
+          </DemoOnlyNotice>
 
           {analysisOption ? (
-            <AnalysisDisclosurePanel
-              acknowledged={analysisAcknowledged}
-              disabled={disabled}
-              error={errors.analysisAcknowledgement}
-              onAcknowledgementChange={setAnalysisAcknowledged}
-            />
+            <fieldset
+              aria-describedby={errors.analysisAcknowledgement ? "analysis-disclosure-error" : undefined}
+              className="rounded-xl border border-border bg-card p-4 text-xs"
+            >
+              <legend className="sr-only">How analysis works</legend>
+              <div className="font-mono text-[10px] uppercase tracking-[0.18em] text-foreground">
+                Analysis-service disclosure
+              </div>
+              <p className="mt-2 text-muted-foreground">
+                Any machine-assisted suggestion is labelled “Synthetic AI suggestion — not verified”.
+                A suggestion never becomes a finding without an explicit practitioner decision.
+              </p>
+            </fieldset>
           ) : null}
-
-          <section
-            aria-label="Human review boundary"
-            className="rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface-subtle)] p-4"
-          >
-            <div className="flex items-center gap-2">
-              <ShieldCheck aria-hidden="true" className="text-[var(--color-supported)]" size={18} />
-              <h3 className="font-mono text-[10px] font-semibold uppercase tracking-[0.16em]">
-                Human review boundary
-              </h3>
-            </div>
-            <p className="mt-2 cfn-type-body-small text-[var(--color-ink-muted)]">
-              Saving records purpose and boundaries only. It does not start analysis or turn suggestions
-              into practitioner findings.
-            </p>
-          </section>
         </aside>
       </div>
-
-      <div className="cfn-primary-action-bar sticky bottom-3 z-10 shadow-[var(--shadow-elevated)]">
-        <p className="cfn-type-body-small text-[var(--color-ink-muted)]">
-          Save this step first. You will then continue to Documents to select fictional test PDFs.
-        </p>
-        <Button className="shrink-0" disabled={disabled} type="submit" variant="primary">Save Case Purpose Brief</Button>
-      </div>
-      {saveMessage ? <p role="status" className="text-[var(--color-supported)]">{saveMessage}</p> : null}
     </form>
   );
 }

@@ -1,5 +1,12 @@
 import type { ExportGate } from "../../lib/contracts";
-import { Alert, Card } from "../../components/ui";
+import {
+  AlertTriangle,
+  CheckCircle2,
+  ChevronRight,
+  XCircle,
+} from "lucide-react";
+import { Chip } from "../../components/lovable/nexus-ui";
+import { Button } from "../../components/ui";
 
 type Blocker = Extract<ExportGate, { status: "blocked" }>["blockers"][number];
 
@@ -53,56 +60,126 @@ function remediationLabel(blocker: Blocker) {
   if (route.endsWith("/review")) return "Return to Review";
   return "Review this selection";
 }
-export function ExportGatePanel({ gate, headingRef }: {
+
+function blockerGroup(code: Blocker["code"]) {
+  if (code === "REVIEW_INCOMPLETE") return "human-review";
+  if (code === "CITATION_UNRESOLVED") return "citations";
+  if (code === "DEPENDENCY_UNRESOLVED") return "dependencies";
+  if (code === "COVERAGE_CONSEQUENTIAL" || code === "DATA_ORIGIN_PROHIBITED") return "coverage";
+  if (code === "MASK_REVIEW_INCOMPLETE" || code === "PII_CHECK_FAILED") return "masking";
+  if (code === "PROCESSING_FAILED") return "documents";
+  if (code === "SAFETY_VALIDATION_FAILED") return "safety";
+  if (code === "ANALYSIS_RUN_STALE") return "analysis";
+  if (code === "MINIMUM_NECESSITY_UNCONFIRMED") return "safe-share";
+  if (code === "GATE_EVALUATION_STALE") return "export";
+  return "purpose";
+}
+
+export function ExportGatePanel({ gate, headingRef, onEvaluate }: {
   gate: ExportGate | null;
   headingRef: React.RefObject<HTMLHeadingElement | null>;
+  onEvaluate?: () => void;
 }) {
   return (
-    <Card className="grid gap-4">
-      <header className="grid gap-1" id="export-gate" tabIndex={-1}>
-        <p className="cfn-type-label text-[var(--color-ink-muted)]">Readiness check</p>
-        <h3 className="cfn-type-heading-3" ref={headingRef} tabIndex={-1}>Readiness result</h3>
-      </header>
+    <section className="grid gap-3" id="export-gate" tabIndex={-1}>
+      <h3 className="sr-only" ref={headingRef} tabIndex={-1}>Readiness result</h3>
 
       {!gate ? (
-        <Alert title="Readiness not checked" tone="warning">
-          <p>Check readiness to see what needs attention before a handoff can be created.</p>
-        </Alert>
+        <div className="rounded-xl border border-border bg-card p-4">
+          <div className="flex items-start gap-3">
+            <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-[color:var(--amber)]" />
+            <div className="min-w-0 flex-1">
+              <div className="flex flex-wrap items-center gap-2">
+                <Chip tone="mute">readiness</Chip>
+                <h4 className="font-serif text-lg">Readiness not checked</h4>
+              </div>
+              <p className="mt-1 text-xs text-muted-foreground">
+                Check the current canonical case state before a handoff can be created.
+              </p>
+            </div>
+            {onEvaluate ? (
+              <Button className="shrink-0" onClick={onEvaluate} variant="primary">
+                Check readiness
+              </Button>
+            ) : null}
+          </div>
+        </div>
       ) : null}
 
       {gate?.status === "ready" ? (
-        <Alert title="Ready to create the handoff">
-          <p>All required purpose, document, review, citation, and safety checks are current.</p>
-        </Alert>
+        <div className="rounded-xl border border-border bg-card p-4">
+          <div className="flex items-start gap-3">
+            <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-[color:var(--sage)]" />
+            <div className="min-w-0 flex-1">
+              <div className="flex flex-wrap items-center gap-2">
+                <Chip tone="mute">readiness</Chip>
+                <h4 className="font-serif text-lg">Ready to create the handoff</h4>
+              </div>
+              <p className="mt-1 text-xs text-muted-foreground">
+                All required purpose, document, review, citation, and safety checks are current.
+              </p>
+            </div>
+            <Chip tone="sage">ready</Chip>
+            <ChevronRight className="mt-1 h-4 w-4 shrink-0 text-muted-foreground" />
+          </div>
+        </div>
       ) : null}
 
       {gate?.status === "blocked" ? (
-        <div className="grid gap-4">
-          <Alert title={`${gate.blockers.length} ${gate.blockers.length === 1 ? "item needs" : "items need"} attention`} tone="danger">
-            <p>Finish the steps below before creating a handoff. There is no bypass.</p>
-          </Alert>
+        <>
+          <p className="sr-only" role="alert">
+            {gate.blockers.length} {gate.blockers.length === 1 ? "item needs" : "items need"} attention.
+            Finish the steps below before creating a handoff. There is no bypass.
+          </p>
           {gate.blockers.map((blocker) => (
-            <section className="rounded-[var(--radius-control)] border border-[var(--color-danger)] bg-[var(--color-danger-subtle)] p-4" key={blocker.id}>
-              <h4 className="font-semibold">{blockerLabels[blocker.code]}</h4>
-              <p className="mt-1 text-sm">{blocker.message}</p>
-              <p className="mt-3 text-sm"><span className="font-semibold">Next step:</span> {blocker.remediation}</p>
-              <a
-                className="mt-3 inline-flex min-h-10 items-center rounded-[var(--radius-control)] bg-[var(--color-brand)] px-3 py-2 text-sm font-semibold !text-white"
-                href={remediationHref(blocker)}
-              >
-                {remediationLabel(blocker)}
-              </a>
-              <details className="mt-3 text-xs text-[var(--color-ink-muted)]">
-                <summary className="cursor-pointer font-semibold">Technical details</summary>
-                <dl className="mt-2 grid gap-1">
-                  <div><dt className="inline font-semibold">Code: </dt><dd className="inline">{blocker.code}</dd></div>
-                  <div><dt className="inline font-semibold">Affected IDs: </dt><dd className="inline break-words">{blocker.entityIds.join(", ") || "No entity ID supplied"}</dd></div>
-                </dl>
+            <section key={blocker.id}>
+              <details className="rounded-xl border border-border bg-card">
+                <summary className="flex cursor-pointer items-start gap-3 p-4">
+                  <XCircle className="mt-0.5 h-5 w-5 shrink-0 text-[color:var(--rust)]" />
+                  <div className="min-w-0 flex-1">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <Chip tone="mute">{blockerGroup(blocker.code)}</Chip>
+                      <h4 className="font-serif text-lg">{blockerLabels[blocker.code]}</h4>
+                    </div>
+                    <p className="mt-1 text-xs text-muted-foreground">{blocker.message}</p>
+                  </div>
+                  <Chip tone="rust">critical</Chip>
+                  <ChevronRight className="mt-1 h-4 w-4 shrink-0 text-muted-foreground transition-transform" />
+                </summary>
+                <div className="border-t border-border p-4 text-sm">
+                  {blocker.entityIds.length ? (
+                    <div className="mb-2 flex flex-wrap gap-1">
+                      <span className="text-xs text-muted-foreground">Affected:</span>
+                      {blocker.entityIds.map((id) => (
+                        <Chip key={id} tone="neutral">{id}</Chip>
+                      ))}
+                    </div>
+                  ) : null}
+                  <p className="text-xs text-muted-foreground">
+                    <span className="font-medium text-foreground">Remediation:</span>{" "}
+                    {blocker.remediation}
+                  </p>
+                  <a
+                    className="mt-3 inline-flex min-h-10 items-center rounded-md border border-border bg-background px-3 py-2 text-sm font-semibold"
+                    href={remediationHref(blocker)}
+                  >
+                    {remediationLabel(blocker)}
+                  </a>
+                  <dl className="mt-3 grid gap-1 text-xs text-muted-foreground">
+                    <div><dt className="inline font-semibold">Code: </dt><dd className="inline">{blocker.code}</dd></div>
+                    <div><dt className="inline font-semibold">Affected IDs: </dt><dd className="inline break-words">{blocker.entityIds.join(", ") || "No entity ID supplied"}</dd></div>
+                  </dl>
+                </div>
               </details>
             </section>
           ))}
-        </div>
+        </>
       ) : null}
-    </Card>
+      {gate && onEvaluate ? (
+        <Button className="w-fit" onClick={onEvaluate} variant="secondary">
+          Check readiness again
+        </Button>
+      ) : null}
+    </section>
   );
 }

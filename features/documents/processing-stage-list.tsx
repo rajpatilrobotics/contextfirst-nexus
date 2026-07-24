@@ -45,8 +45,8 @@ export function ProcessingStageList({
   return (
     <Card className="grid gap-4">
       <div>
-        <h2 className="cfn-type-heading-2">Local document preparation</h2>
-        <p className="cfn-type-body-small text-[var(--color-ink-muted)]">
+        <h2 className="font-serif text-2xl leading-tight">Local document preparation</h2>
+        <p className="text-sm leading-5 text-[var(--color-ink-muted)]">
           These four checks prepare the selected PDFs in this browser. Candidate extraction,
           citation validation, timeline assembly, and safety checks start only after you choose
           Start analysis.
@@ -71,14 +71,14 @@ export function ProcessingStageList({
                 <span className="mt-0.5 shrink-0">{stageIcon(stage.status)}</span>
                 <div className="min-w-0">
                   <p className="font-semibold">{STAGE_LABELS[name]}</p>
-                  <p className="cfn-type-body-small capitalize">Status: {stage.status}</p>
+                  <p className="text-sm leading-5 capitalize">Status: {stage.status}</p>
                   {stage.affectedDocumentIds.length > 0 ? (
-                    <p className="cfn-type-body-small break-words">
+                    <p className="text-sm leading-5 break-words">
                       Affected records: {stage.affectedDocumentIds.join(", ")}
                     </p>
                   ) : null}
                   {stage.errorCode ? (
-                    <p className="cfn-type-body-small text-[var(--color-danger)]" role="alert">
+                    <p className="text-sm leading-5 text-[var(--color-danger)]" role="alert">
                       Safe code: {stage.errorCode}. Review the affected record and retry only this
                       stage when allowed.
                     </p>

@@ -231,15 +231,15 @@ export function ContextGapPanel({
   return (
     <article
       aria-labelledby={`gap-${gap.id}-heading`}
-      className="grid gap-4 rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface)] p-4"
+      className="grid overflow-hidden rounded-xl border border-border bg-card"
       id={`candidate-${gap.id}`}
       tabIndex={-1}
     >
-      <header className="grid gap-2">
+      <header className="grid gap-2 border-b border-border p-4">
         <div className="flex flex-wrap items-start justify-between gap-2">
           <div>
-            <p className="cfn-type-code text-[var(--color-ink-muted)]">{gap.id}</p>
-            <h3 className="cfn-type-heading-3" id={`gap-${gap.id}-heading`}>
+            <p className="font-mono text-[11px] text-muted-foreground">{gap.id}</p>
+            <h3 className="mt-1 font-serif text-xl sm:text-2xl" id={`gap-${gap.id}-heading`}>
               {gap.title}
             </h3>
           </div>
@@ -251,8 +251,8 @@ export function ContextGapPanel({
         <p className="font-semibold">{gap.reviewQuestion}</p>
       </header>
 
-      <div className="grid gap-2 rounded-[var(--radius-control)] bg-[var(--color-surface-subtle)] p-3">
-        <p className="cfn-type-label">Context response</p>
+      <div className="mx-4 mt-4 grid gap-2 rounded-md border border-border/70 bg-muted/30 p-3">
+        <p className="text-sm font-semibold">Context response</p>
         <p>{responseLabel(gap.responseStatus)}</p>
         {gap.responseStatus === "answered" ? (
           <div className="flex items-start gap-2 text-sm">
@@ -271,8 +271,8 @@ export function ContextGapPanel({
         </Alert>
       ) : null}
 
-      <section aria-label={`Evidence and dependencies for ${gap.id}`} className="grid gap-3">
-        <h4 className="cfn-type-label">Evidence, limitations, and dependencies</h4>
+      <section aria-label={`Evidence and dependencies for ${gap.id}`} className="grid gap-3 px-4">
+        <h4 className="text-sm font-semibold">Evidence, limitations, and dependencies</h4>
         {gap.dependencies.length ? (
           <ul className="grid gap-2">
             {gap.dependencies.map((dependency) => {
@@ -319,7 +319,7 @@ export function ContextGapPanel({
         ) : null}
       </section>
 
-      <div aria-label={`Context gap actions for ${gap.id}`} className="flex flex-wrap gap-2">
+      <div aria-label={`Context gap actions for ${gap.id}`} className="flex flex-wrap gap-2 border-t border-border bg-muted/30 p-3">
         <Button disabled={actionCoverage.hasQuestion} onClick={() => createGapAction("create_interview_question")} variant="secondary">
           Create interview question
         </Button>
@@ -349,7 +349,7 @@ export function ContextGapPanel({
       {activeAction ? (
         <section
           aria-label="Context gap response details"
-          className="grid gap-3 rounded-[var(--radius-control)] border border-[var(--color-border-strong)] bg-[var(--color-surface-subtle)] p-3"
+          className="mx-4 grid gap-3 rounded-md border border-border bg-muted/30 p-3"
         >
           <div className="flex items-start gap-2">
             <CircleHelp aria-hidden="true" className="mt-0.5 shrink-0" size={18} />
@@ -391,9 +391,9 @@ export function ContextGapPanel({
           This context gap now has a terminal practitioner decision and no longer blocks review completion.
         </Alert>
       ) : (
-        <section className="grid gap-3 rounded-[var(--radius-control)] border border-[var(--color-brand)] bg-[var(--color-brand-subtle)] p-3">
+        <section className="mx-4 grid gap-3 rounded-md border border-primary bg-secondary p-3">
           <div>
-            <p className="cfn-type-label text-[var(--color-brand)]">Required decision</p>
+            <p className="text-sm font-semibold text-[var(--color-brand)]">Required decision</p>
             <p className="text-sm">
               Recording a context response preserves useful context, but a practitioner decision is still required to complete review.
             </p>
@@ -406,7 +406,7 @@ export function ContextGapPanel({
           </Button>
         </section>
       )}
-      <p className="border-t border-[var(--color-border)] pt-3 text-xs text-[var(--color-ink-muted)]">
+      <p className="border-t border-border px-4 py-3 text-xs text-muted-foreground">
         Export impact: {reviewComplete
           ? "the required practitioner decision is complete; other canonical blockers may still apply."
           : "this gap remains part of review completeness until its required practitioner decision is recorded."}
@@ -436,8 +436,8 @@ export function ContextGapList({
   return (
     <section aria-labelledby="context-gaps-heading" className="grid gap-4">
       <div>
-        <p className="cfn-type-label text-[var(--color-ink-muted)]">Missing and conflicting context</p>
-        <h2 className="cfn-type-heading-2" id="context-gaps-heading">Context gaps</h2>
+        <p className="text-sm font-semibold text-[var(--color-ink-muted)]">Missing and conflicting context</p>
+        <h2 className="font-serif text-2xl leading-tight" id="context-gaps-heading">Context gaps</h2>
         <p className="text-sm text-[var(--color-ink-muted)]">
           Answer, defer, preserve as unknown, or keep outside the current scope. No response is forced.
         </p>

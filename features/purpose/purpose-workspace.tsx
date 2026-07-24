@@ -8,6 +8,11 @@ import {
   type CasePurposeBrief,
 } from "../../lib/contracts";
 import { useCaseState } from "../../components/shell";
+import {
+  Chip,
+  DemoOnlyNotice,
+  SectionTitle,
+} from "../../components/lovable/nexus-ui";
 import { Alert, Button, Card, Skeleton } from "../../components/ui";
 import {
   AnalysisServiceUnavailable,
@@ -96,43 +101,12 @@ export function PurposeWorkspace() {
     && state.purposeBrief.providerSelection.releaseConfigurationId === "prepared-replay-v1";
 
   return (
-    <div className="mx-auto grid w-full max-w-6xl gap-5">
-      <header className="grid gap-2 border-b border-[var(--color-border)] pb-5">
-        <p className="font-mono text-[11px] font-semibold uppercase tracking-[0.18em] text-[var(--color-ink-muted)]">
-          Stage 1 · Intake
-        </p>
-        <h2 className="cfn-type-heading-2">Purpose Brief</h2>
-        <p className="max-w-[760px] text-[var(--color-ink-muted)]">
-          Record why this review is being prepared, who will receive it, and which decisions remain
-          with a qualified practitioner.
-        </p>
-      </header>
-
-      <section
-        aria-label="Test workspace summary"
-        className="overflow-hidden rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface)]"
-      >
-        <dl className="grid text-sm sm:grid-cols-3 sm:divide-x sm:divide-[var(--color-border)]">
-          <div className="border-b border-[var(--color-border)] px-4 py-3 sm:border-b-0">
-            <dt className="font-mono text-[10px] font-semibold uppercase tracking-[0.16em] text-[var(--color-ink-muted)]">
-              Workspace
-            </dt>
-            <dd className="mt-1 font-semibold">CFN-DEMO-001 · Fictional testing only</dd>
-          </div>
-          <div className="border-b border-[var(--color-border)] px-4 py-3 sm:border-b-0">
-            <dt className="font-mono text-[10px] font-semibold uppercase tracking-[0.16em] text-[var(--color-ink-muted)]">
-              Data boundary
-            </dt>
-            <dd className="mt-1 font-semibold">No real or private data</dd>
-          </div>
-          <div className="px-4 py-3">
-            <dt className="font-mono text-[10px] font-semibold uppercase tracking-[0.16em] text-[var(--color-ink-muted)]">
-              Next
-            </dt>
-            <dd className="mt-1 font-semibold">Review source health in Documents</dd>
-          </div>
-        </dl>
-      </section>
+    <div className="space-y-6">
+      <SectionTitle
+        description="Record why the review is being performed before analysis begins. All fields are demonstration-only."
+        eyebrow="Stage 1 · Intake"
+        title="Purpose Brief"
+      />
 
       {availabilityState === "loading" ? (
         <div className="grid gap-3" aria-label="Loading analysis availability">
@@ -158,6 +132,20 @@ export function PurposeWorkspace() {
         />
       ) : null}
 
+      <section
+        aria-label="Test workspace summary"
+        className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_320px]"
+      >
+        <div className="flex flex-wrap items-center gap-2 rounded-xl border border-border bg-card px-4 py-3">
+          <Chip tone="mute">CFN-DEMO-001</Chip>
+          <span className="text-sm font-medium">Fictional testing only</span>
+          <span className="text-xs text-muted-foreground">No real or private data</span>
+        </div>
+        <DemoOnlyNotice>
+          the primary action records canonical local state and does not start analysis.
+        </DemoOnlyNotice>
+      </section>
+
       {state.purposeBrief?.status === "complete" ? (
         <Alert title="Saved purpose is complete">
           <div className="flex flex-col items-start justify-between gap-3 sm:flex-row sm:items-center">
@@ -168,7 +156,7 @@ export function PurposeWorkspace() {
               action after the document checks pass.
             </p>
             <a
-              className="cfn-control-target inline-flex shrink-0 items-center justify-center gap-2 rounded-[var(--radius-control)] border border-[var(--color-brand)] bg-[var(--color-brand)] px-4 py-2 text-sm font-semibold !text-white no-underline hover:bg-[var(--color-brand-hover)]"
+              className="min-h-9 inline-flex shrink-0 items-center justify-center gap-2 rounded-[var(--radius-control)] border border-[var(--color-brand)] bg-[var(--color-brand)] px-4 py-2 text-sm font-semibold !text-white no-underline hover:bg-[var(--color-brand-hover)]"
               href="/case/demo/intake"
             >
               Continue to Documents
@@ -183,8 +171,8 @@ export function PurposeWorkspace() {
           <p className="font-mono text-[10px] font-semibold uppercase tracking-[0.16em] text-[var(--color-ink-muted)]">
             Optional judging shortcut
           </p>
-          <h3 className="mt-1 cfn-type-heading-3">Jump to a prepared Review checkpoint</h3>
-          <p className="cfn-type-body-small text-[var(--color-ink-muted)]">
+          <h3 className="mt-1 font-serif text-lg leading-tight">Jump to a prepared Review checkpoint</h3>
+          <p className="text-sm leading-5 text-[var(--color-ink-muted)]">
             Skip the normal Purpose and Documents journey only when demonstrating the Review workspace.
             This uses a trusted local replay and sends nothing externally.
           </p>

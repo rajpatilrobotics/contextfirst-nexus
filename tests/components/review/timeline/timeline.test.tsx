@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import { createTrustedReplayBundle, createReplayInputState, trustedSegments } from "../../../../lib/analysis/replay";
@@ -25,16 +25,23 @@ function reviewState(): CaseState {
 }
 
 describe("TASK-020 qualified timeline", () => {
-  it("renders canonical timeline events with separate status dimensions and source controls", () => {
+  it("renders canonical timeline events with compact cards and selected-event source controls", async () => {
+    const user = userEvent.setup();
     const state = reviewState();
     render(<Timeline onOpenSource={vi.fn()} state={state} />);
 
-    expect(screen.getByRole("list", { name: "Qualified timeline events" })).toBeInTheDocument();
+    const timeline = screen.getByRole("list", { name: "Qualified timeline events" });
+    expect(timeline).toBeInTheDocument();
     expect(screen.getByText("2025-04-02 assigned deceptive-message task")).toBeInTheDocument();
     expect(screen.getAllByLabelText(/Evidence nature: Documented in source/i).length).toBeGreaterThan(0);
     expect(screen.getAllByLabelText(/Item origin: AI suggestion/i).length).toBeGreaterThan(0);
     expect(screen.getAllByLabelText(/Support status: Exact-source supported/i).length).toBeGreaterThan(0);
     expect(screen.getAllByLabelText(/Review status: Pending/i).length).toBeGreaterThan(0);
+    expect(within(timeline).queryByRole("button", { name: /Open exact source/i })).not.toBeInTheDocument();
+
+    await user.click(
+      within(screen.getByRole("listitem", { name: "Timeline event: CAND-TASK-0402" })).getByRole("button"),
+    );
     expect(screen.getByRole("button", { name: /Open exact source: D05, page 1, D05-P1-S05/i })).toBeEnabled();
   });
 
@@ -48,6 +55,9 @@ describe("TASK-020 qualified timeline", () => {
     expect(screen.getByText("2025-04-02 assigned deceptive-message task")).toBeInTheDocument();
     expect(screen.queryByText("Documented arrival in J-02")).not.toBeInTheDocument();
 
+    await user.click(
+      within(screen.getByRole("listitem", { name: "Timeline event: CAND-TASK-0402" })).getByRole("button"),
+    );
     await user.click(screen.getByRole("button", { name: /Open exact source: D05, page 1, D05-P1-S05/i }));
     expect(open).toHaveBeenCalledOnce();
     expect(screen.getByLabelText("Filter timeline")).toHaveValue("control");
@@ -124,6 +134,9 @@ describe("TASK-020 qualified timeline", () => {
     const state = reviewState();
     render(<TimelineSourceExperience onCommand={vi.fn()} sourceMode="desktop" state={state} />);
 
+    await user.click(
+      within(screen.getByRole("listitem", { name: "Timeline event: CAND-TASK-0402" })).getByRole("button"),
+    );
     const citation = screen.getByRole("button", { name: /Open exact source: D05, page 1, D05-P1-S05/i });
     await user.click(citation);
     expect(screen.getByRole("complementary")).toBeInTheDocument();

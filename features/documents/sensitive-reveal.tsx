@@ -52,11 +52,11 @@ export function SensitiveReveal({
   return (
     <Card className="grid gap-4">
       <div>
-        <p className="cfn-type-label">Redacted source view</p>
-        <h3 className="cfn-type-heading-3">
-          <span className="cfn-type-code">{segment.id}</span>
+        <p className="text-sm font-semibold">Redacted source view</p>
+        <h3 className="font-serif text-lg leading-tight">
+          <span className="font-mono text-xs">{segment.id}</span>
         </h3>
-        <p className="cfn-type-body-small text-[var(--color-ink-muted)]">
+        <p className="text-sm leading-5 text-[var(--color-ink-muted)]">
           {segment.documentId} · {segment.pageId ?? "Page unavailable"} · English, original language
         </p>
       </div>
@@ -93,7 +93,7 @@ export function SensitiveReveal({
                   </p>
                 </Alert>
                 {revealFailed ? (
-                  <p className="cfn-type-body-small text-[var(--color-danger)]" role="alert">
+                  <p className="text-sm leading-5 text-[var(--color-danger)]" role="alert">
                     The reveal was not recorded, so the demo original remains hidden.
                   </p>
                 ) : null}

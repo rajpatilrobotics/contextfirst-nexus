@@ -18,6 +18,7 @@ import {
 } from "../../lib/documents";
 import { cfnDemoFixture } from "../../lib/fixtures";
 import { useCaseState } from "../../components/shell";
+import { SectionTitle } from "../../components/lovable/nexus-ui";
 import { Alert, Select } from "../../components/ui";
 import {
   runSelectedAnalysis,
@@ -583,18 +584,19 @@ export function DocumentsWorkspace({
   }
 
   return (
-    <div className="grid min-w-0 gap-5">
-      <header className="grid gap-1">
-        <p className="font-mono text-[10px] uppercase tracking-[0.18em] text-[var(--color-ink-muted)]">
-          Stage 2 · Intake
-        </p>
-        <h1 className="cfn-type-heading-1">Documents &amp; Source Health</h1>
-        <p className="max-w-3xl text-sm text-[var(--color-ink-muted)]">
-          Every selected source reports what was processed, what remains
-          unreadable, and which limitations require practitioner review.
-          Analysis begins only when you explicitly start it.
-        </p>
-      </header>
+    <div className="space-y-6">
+      <SectionTitle
+        description="Every source declares what was extracted, what needs OCR, and what remains unreadable. Nothing is silently pretended-processed."
+        eyebrow="Stage 2 · Intake"
+        title="Documents & Source Health"
+      />
+
+      {state.documents.length > 0 ? (
+        <DocumentCards
+          documents={state.documents}
+          maskingStatus={state.masking.reviewStatus}
+        />
+      ) : null}
 
       <nav aria-label="Document preparation progress">
         <ol className="grid grid-cols-2 gap-2 lg:grid-cols-4">
@@ -672,8 +674,8 @@ export function DocumentsWorkspace({
             tabIndex={-1}
           >
             <div>
-              <p className="cfn-type-label text-[var(--color-brand)]">Step 2</p>
-              <h2 className="cfn-type-heading-2" id="local-processing-heading">
+              <p className="text-sm font-semibold text-[var(--color-brand)]">Step 2</p>
+              <h2 className="font-serif text-2xl leading-tight" id="local-processing-heading">
                 {intakeMode === "local_preview" ? "Documents processed locally" : "Demo packet processed locally"}
               </h2>
               <p className="text-sm text-[var(--color-ink-muted)]">
@@ -686,8 +688,6 @@ export function DocumentsWorkspace({
                 <p>{notice.message}</p>
               </Alert>
             ) : null}
-
-            <DocumentCards documents={state.documents} />
 
             <details className="rounded-[var(--radius-control)] border border-[var(--color-border)] p-3">
               <summary className="cursor-pointer font-semibold text-[var(--color-brand)]">
@@ -713,8 +713,8 @@ export function DocumentsWorkspace({
             className="grid gap-4 rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface)] p-4 sm:p-5"
           >
             <div>
-              <p className="cfn-type-label text-[var(--color-brand)]">Step 3</p>
-              <h2 className="cfn-type-heading-2" id="required-checks-heading">
+              <p className="text-sm font-semibold text-[var(--color-brand)]">Step 3</p>
+              <h2 className="font-serif text-2xl leading-tight" id="required-checks-heading">
                 Complete required checks
               </h2>
               <p className="text-sm text-[var(--color-ink-muted)]">
@@ -762,8 +762,8 @@ export function DocumentsWorkspace({
               </summary>
               <section aria-labelledby="source-review-heading" className="mt-3 grid gap-4">
                 <div>
-                  <h3 className="cfn-type-heading-3" id="source-review-heading">Source review</h3>
-                  <p className="cfn-type-body-small text-[var(--color-ink-muted)]">
+                  <h3 className="font-serif text-lg leading-tight" id="source-review-heading">Source review</h3>
+                  <p className="text-sm leading-5 text-[var(--color-ink-muted)]">
                     Redacted text is shown first. Original source text is revealed only after confirmation.
                   </p>
                 </div>
@@ -774,7 +774,7 @@ export function DocumentsWorkspace({
                 ) : (
                   <>
                     <div className="max-w-xl">
-                      <label className="cfn-type-label block" htmlFor="source-segment-select">Source segment</label>
+                      <label className="text-sm font-semibold block" htmlFor="source-segment-select">Source segment</label>
                       <Select
                         disabled={actionsDisabled}
                         id="source-segment-select"
@@ -806,8 +806,8 @@ export function DocumentsWorkspace({
           {documentsProcessed ? (
           <section aria-labelledby="start-analysis-heading" className="grid scroll-mt-28 gap-3" id="analysis" tabIndex={-1}>
             <div>
-              <p className="cfn-type-label text-[var(--color-brand)]">Step 4</p>
-              <h2 className="cfn-type-heading-2" id="start-analysis-heading">Start analysis</h2>
+              <p className="text-sm font-semibold text-[var(--color-brand)]">Step 4</p>
+              <h2 className="font-serif text-2xl leading-tight" id="start-analysis-heading">Start analysis</h2>
             </div>
             <AnalysisPrerequisites
               disabled={actionsDisabled}

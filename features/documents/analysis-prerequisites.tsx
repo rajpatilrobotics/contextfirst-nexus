@@ -162,7 +162,7 @@ function TerminalResult({ result }: { result: AnalysisPresentation }) {
         tone="danger"
       >
         <p>{result.userMessage}</p>
-        <p className="cfn-type-body-small">Safe code: {result.code}</p>
+        <p className="text-sm leading-5">Safe code: {result.code}</p>
       </Alert>
     );
   }
@@ -203,7 +203,7 @@ export function AnalysisPrerequisites({
   return (
     <Card className="grid gap-4">
       <div>
-        <h3 className="cfn-type-heading-3">
+        <h3 className="font-serif text-lg leading-tight">
           {prerequisites.ready ? "Everything is ready" : "Finish the checks above"}
         </h3>
         <p className="text-sm text-[var(--color-ink-muted)]">
@@ -246,7 +246,7 @@ export function AnalysisPrerequisites({
       {activeRun ? (
         <Alert title="Canonical active run">
           <p>
-            <span className="cfn-type-code">{activeRun.id}</span> · {activeRun.status}
+            <span className="font-mono text-xs">{activeRun.id}</span> · {activeRun.status}
           </p>
         </Alert>
       ) : null}
@@ -254,7 +254,7 @@ export function AnalysisPrerequisites({
       {state.candidates.length > 0 ? (
         <section aria-labelledby="canonical-candidates-heading" className="grid gap-3">
           <div className="flex flex-wrap items-center justify-between gap-2">
-            <h3 className="cfn-type-heading-3" id="canonical-candidates-heading">Canonical analysis candidates</h3>
+            <h3 className="font-serif text-lg leading-tight" id="canonical-candidates-heading">Canonical analysis candidates</h3>
             <span className="rounded-full bg-[var(--color-brand-subtle)] px-3 py-1 text-sm font-semibold text-[var(--color-brand)]">
               {state.candidates.length} ready for review
             </span>
@@ -268,7 +268,7 @@ export function AnalysisPrerequisites({
                 <li className="rounded-[var(--radius-control)] border border-[var(--color-border)] p-2.5" key={candidate.id}>
                   <p className="font-semibold">{candidate.title}</p>
                   <p className="text-xs text-[var(--color-ink-muted)]">
-                    <span className="cfn-type-code">{candidate.id}</span> · {candidate.supportStatus.replaceAll("_", " ")}
+                    <span className="font-mono text-xs">{candidate.id}</span> · {candidate.supportStatus.replaceAll("_", " ")}
                   </p>
                 </li>
               ))}

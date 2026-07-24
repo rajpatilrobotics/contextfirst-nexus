@@ -1,3 +1,108 @@
+# Exact Lovable UI transplant correction, 2026-07-24
+
+## 1. Goal
+
+Make every judge-visible screen match the approved Lovable repository at
+commit `0bca52afe26babe477ef37f4ed8f7df32c9fb135` as closely as the same
+framework can render it, while preserving the working canonical ContextFirst
+state, commands, PDF processing, review, audit, export, and safety behavior.
+
+## 2. Problem
+
+The deployed application at commit `fbb23ee` is a hybrid. The prior pass
+mapped Lovable colors and typography onto legacy Codex components and
+hand-recreated page layouts. It did not transplant Lovable's actual shells,
+shared UI system, route markup, spacing, or responsive composition.
+
+The 2026-07-24 side-by-side audit confirmed material differences on Landing,
+Dashboard, and Structured Analysis, and source comparison confirmed the same
+pattern across the remaining routes. This is an implementation-strategy
+error, not a Vercel cache or deployment error.
+
+## 3. Proposed solution
+
+Run one focused presentation-transplant phase:
+
+- Treat the Lovable JSX, class structure, styles, section order, spacing,
+  controls, and responsive layouts as the immutable presentation source.
+- Keep Next.js routing and the existing canonical ContextFirst domain layer.
+- Connect canonical selectors and commands to the transplanted UI through
+  thin route-specific view-model adapters.
+- Do not embed legacy workspaces inside Lovable-looking wrappers.
+- Do not copy Lovable's Zustand store, static counters, fake mutations, mock
+  export truth, or provider-transmission behavior.
+- Keep the current production deployment unchanged until the exact-UI branch
+  passes visual review and the user explicitly approves deployment.
+
+## 4. Files to change
+
+- `app/globals.css`
+- `app/page.tsx`, `app/dashboard/page.tsx`, `app/trust/page.tsx`
+- `app/case/demo/**/page.tsx`
+- `components/marketing/`, `components/shell/`, and a faithful port of
+  Lovable's shared `nexus-ui` presentation components
+- Judge-visible feature presentation components under `features/`
+- Small adapter modules that map canonical `CaseState` to Lovable display
+  models
+- Focused tests only where presentation wiring changes behavior
+
+Canonical contracts, reducer semantics, PDF pipeline, audit rules, export
+engine, and safety boundaries should change only if an adapter exposes a real
+contract mismatch.
+
+## 5. Step by step tasks
+
+1. Create a new local integration branch from clean `main`.
+2. Port Lovable's global styles and exact marketing/workspace shells.
+3. Port the exact Lovable JSX and classes for every route.
+4. Replace TanStack links with Next links and fixture/Zustand reads with
+   canonical view-model adapters.
+5. Wire each supported control to the existing canonical command; keep
+   unsupported controls truthfully disabled.
+6. Remove legacy presentation from judge-visible routes while retaining the
+   domain logic behind it.
+7. Capture matching-viewport screenshots of the Lovable reference and the
+   corrected app, compare them side by side, and fix visible differences.
+8. Stop after local verification. Do not commit, push, or deploy without
+   explicit approval.
+
+## 6. Acceptance criteria
+
+- Landing, Dashboard, shell, and every workspace route use Lovable's actual
+  layout hierarchy rather than a Lovable-inspired Codex layout.
+- At the same viewport and state, section order, major dimensions, spacing,
+  typography, borders, radii, controls, and responsive composition match the
+  approved Lovable source.
+- Differences are limited to canonical live values, truthful loading/error
+  states, and compact safety disclosures required by the functional app.
+- No parallel Zustand or fixture domain store is introduced.
+- Existing Purpose, Documents, Analysis, Gaps, planning, Nexus, Timeline,
+  Export, Audit, Trust, reset, persistence, and source-reveal behavior remains
+  functional.
+- No judge-visible route renders the old generic `cfn-*` workspace layout.
+- Production remains untouched until the user reviews the local comparison.
+
+## 7. Testing plan
+
+- Run `npm run typecheck`.
+- Run focused component tests for shell, Dashboard, Purpose, Documents,
+  Analysis, Gaps, planning workflows, Export, reset, and persistence.
+- Run `npm run build`.
+- Browser-smoke every judge-visible route and the main demonstration flow.
+- Capture same-viewport side-by-side screenshots for Landing, Dashboard,
+  Purpose, Documents, Analysis, Gaps, Interview, Services, Nexus, Timeline,
+  Export, Audit, and Trust.
+- Run `git diff --check`.
+
+Broad test suites are not required unless focused checks expose a shared
+regression.
+
+## 8. Open questions
+
+- Implementation requires explicit approval of this corrected transplant
+  plan.
+- Commit, push, and production deployment remain separate approval gates.
+
 # Lovable UI integration and hackathon completion, 2026-07-23
 
 ## Read-only reconnaissance checkpoint, 2026-07-24

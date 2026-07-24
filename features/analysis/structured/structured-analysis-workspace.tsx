@@ -3,10 +3,12 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
   AlertTriangle,
-  Filter,
+  Info,
   Search,
   ShieldCheck,
+  Sparkles,
 } from "lucide-react";
+import { Chip } from "../../../components/lovable/nexus-ui";
 import { useCaseState } from "../../../components/shell";
 import {
   EvidenceNatureStatus,
@@ -22,7 +24,6 @@ import type {
   EvidenceDependency,
   ItemOrigin,
   ReviewLane,
-  ReviewStatus,
   SupportStatus,
 } from "../../../lib/contracts";
 import { deriveAnalysisPrerequisites } from "../../documents/analysis-prerequisites";
@@ -111,6 +112,10 @@ function dependencyTarget(dependency: EvidenceDependency) {
   return dependency.nexusCandidateId;
 }
 
+function laneCode(lane: ReviewLane | null | undefined) {
+  return LANE_META.find((item) => item.id === lane)?.code ?? null;
+}
+
 export function candidateHasCanonicalConflict(candidate: CaseCandidate) {
   return (
     candidate.supportStatus === "conflicting" ||
@@ -178,33 +183,44 @@ function AnalysisHeader({
   const conflicts = candidates.filter(candidateHasCanonicalConflict).length;
 
   return (
-    <header className="grid gap-3 border-b border-[var(--color-border)] pb-4">
-      <div>
-        <p className="font-mono text-[10px] font-semibold uppercase tracking-[0.18em] text-[var(--color-ink-muted)]">
+    <header className="flex flex-wrap items-start justify-between gap-3 border-b border-border pb-3">
+      <div className="min-w-0">
+        <p className="font-mono text-[11px] uppercase tracking-[0.18em] text-muted-foreground">
           Stage 3 · Analysis
         </p>
-        <h1 className="mt-1 text-3xl">Structured Analysis</h1>
-        <p className="mt-1 max-w-3xl text-sm text-[var(--color-ink-muted)]">
-          Source-linked canonical candidates organized for explicit human review.
-          Lanes and filters are projections only; they never create findings or
-          change candidate membership.
+        <h1 className="mt-0.5 font-serif text-xl leading-tight text-foreground sm:text-2xl">
+          Structured Analysis
+        </h1>
+        <p className="mt-1 max-w-2xl text-xs text-muted-foreground sm:text-sm">
+          Candidate observations organized for explicit human review. Origin,
+          support, and limitations remain visible.
         </p>
+        <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
+          <Chip tone="amber">{pending} pending review</Chip>
+          <Chip tone="mute">{candidates.length} candidates</Chip>
+          <Chip tone="mute">Machine assistance: transparent, non-binding</Chip>
+        </div>
       </div>
-      <dl className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+      <a
+        className="inline-flex h-8 shrink-0 items-center gap-1.5 rounded-md border border-border bg-card px-3 text-sm hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        href="/case/demo/documents"
+      >
+        <Sparkles
+          aria-hidden="true"
+          className="h-4 w-4 text-[color:var(--amber)]"
+        />
+        Review analysis setup
+      </a>
+      <dl className="sr-only">
         {[
           ["Lane candidates", candidates.length],
           ["Pending review", pending],
           ["Reviewed", reviewed],
           ["Conflicts", conflicts],
         ].map(([label, value]) => (
-          <div
-            className="rounded-[var(--radius-control)] border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-2"
-            key={label}
-          >
-            <dt className="font-mono text-[9px] uppercase tracking-[0.14em] text-[var(--color-ink-muted)]">
-              {label}
-            </dt>
-            <dd className="font-serif text-xl">{value}</dd>
+          <div key={label}>
+            <dt>{label}</dt>
+            <dd>{value}</dd>
           </div>
         ))}
       </dl>
@@ -215,20 +231,22 @@ function AnalysisHeader({
 function LaneSelector({
   activeLane,
   candidates,
+  coverageWarning,
   onChange,
 }: {
   activeLane: ReviewLane;
   candidates: CaseCandidate[];
+  coverageWarning?: string | null;
   onChange: (lane: ReviewLane) => void;
 }) {
   return (
-    <section aria-labelledby="analysis-lanes-heading" className="grid gap-2">
+    <section aria-labelledby="analysis-lanes-heading" className="space-y-1">
       <h2 className="sr-only" id="analysis-lanes-heading">
         Structured analysis lanes
       </h2>
       <div
         aria-label="Structured analysis lanes"
-        className="grid gap-2 md:grid-cols-3"
+        className="flex w-full overflow-x-auto rounded-md border border-border bg-card p-0.5"
         role="tablist"
       >
         {LANE_META.map((lane) => {
@@ -239,35 +257,55 @@ function LaneSelector({
           return (
             <button
               aria-controls="structured-analysis-workspace"
+              aria-label={`Lane ${lane.code} — ${lane.label}`}
               aria-selected={active}
-              className={`cfn-control-target grid gap-1 rounded-[var(--radius-control)] border px-3 py-2 text-left ${
+              className={`relative flex h-11 min-w-[160px] flex-1 items-center justify-center gap-2 rounded-sm px-3 text-sm transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
                 active
-                  ? "border-[var(--amber)] bg-[var(--color-warning-subtle)]"
-                  : "border-[var(--color-border)] bg-[var(--color-surface)] hover:bg-[var(--color-surface-subtle)]"
+                  ? "bg-primary font-medium text-primary-foreground shadow-[inset_0_-2px_0_0_var(--primary-foreground)]"
+                  : "text-muted-foreground hover:bg-muted/60 hover:text-foreground"
               }`}
               key={lane.id}
               onClick={() => onChange(lane.id)}
               role="tab"
+              tabIndex={active ? 0 : -1}
               type="button"
             >
-              <span className="flex items-center justify-between gap-3">
-                <span className="font-serif text-sm font-semibold sm:text-base">
-                  Lane {lane.code} — {lane.label}
-                </span>
-                <span className="rounded-full border border-[var(--color-border)] px-2 py-0.5 font-mono text-[10px]">
-                  {count}
-                </span>
+              <span className="font-mono text-xs opacity-80" aria-hidden>
+                {lane.code}
               </span>
-              <span className="line-clamp-2 text-xs leading-4 text-[var(--color-ink-muted)]">
-                {lane.boundary}
+              <span className="truncate">{lane.label}</span>
+              <span
+                className={`shrink-0 rounded-full px-1.5 py-[1px] font-mono text-[10px] ${
+                  active
+                    ? "bg-primary-foreground/20 text-primary-foreground"
+                    : "bg-muted text-muted-foreground"
+                }`}
+              >
+                {count}
               </span>
             </button>
           );
         })}
       </div>
-      <p className="text-xs text-[var(--color-ink-muted)]">
-        Canonical lane membership is preserved exactly; candidates are never
-        copied or reclassified by this view.
+      <p className="flex min-w-0 flex-nowrap items-center gap-2 overflow-hidden whitespace-nowrap text-[11px] text-muted-foreground">
+        <Info aria-hidden="true" className="h-3 w-3 shrink-0" />
+        <span
+          className="min-w-0 truncate"
+          title={`Analysis lanes organize practitioner review; they do not represent legal findings. ${LANE_META.find((lane) => lane.id === activeLane)?.boundary ?? ""}`}
+        >
+          Analysis lanes organize practitioner review; they do not represent legal
+          findings. {LANE_META.find((lane) => lane.id === activeLane)?.boundary}
+        </span>
+        {coverageWarning ? (
+          <span
+            aria-label="Coverage warning"
+            className="ml-auto shrink-0 rounded-full border border-[color-mix(in_oklab,var(--amber)_45%,transparent)] bg-[color-mix(in_oklab,var(--amber)_10%,transparent)] px-2 py-0 text-[10px] leading-[14px] text-[color:var(--color-warning)]"
+            role="region"
+            title={coverageWarning}
+          >
+            Coverage warning · source limitation
+          </span>
+        ) : null}
       </p>
     </section>
   );
@@ -304,15 +342,15 @@ function CandidateList({
   return (
     <section
       aria-labelledby="structured-candidate-list-heading"
-      className="min-w-0 overflow-hidden rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface)]"
+      className="min-w-0 overflow-hidden rounded-xl border border-border bg-card"
     >
-      <div className="border-b border-[var(--color-border)] px-3 py-3">
+      <div className="border-b border-border p-3">
         <h2 className="font-serif text-base" id="structured-candidate-list-heading">
           Candidates ({candidates.length})
         </h2>
       </div>
       {candidates.length ? (
-        <ul className="divide-y divide-[var(--color-border)]">
+        <ul>
           {candidates.map((candidate) => {
             const selected = candidate.id === selectedId;
             return (
@@ -320,33 +358,45 @@ function CandidateList({
                 <button
                   aria-current={selected ? "true" : undefined}
                   aria-label={`Select candidate ${candidate.id}: ${candidate.title}`}
-                  className={`cfn-control-target grid w-full gap-2 border-l-2 px-3 py-3 text-left ${
+                  className={`block w-full border-b border-border/60 border-l-2 px-3 py-3 text-left transition last:border-b-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring ${
                     selected
-                      ? "border-l-[var(--amber)] bg-[var(--color-surface-subtle)]"
-                      : "border-l-transparent hover:bg-[var(--color-surface-subtle)]"
+                      ? "border-l-primary bg-muted/70"
+                      : "border-l-transparent hover:bg-muted/30"
                   }`}
                   onClick={() => onSelect(candidate.id)}
                   type="button"
                 >
-                  <span className="min-w-0">
-                    <span className="block font-mono text-[10px] text-[var(--color-ink-muted)]">
-                      {candidate.id}
+                  <span className="flex items-start justify-between gap-3">
+                    <span className="min-w-0">
+                      <span className="block font-mono text-[10px] text-muted-foreground">
+                        {candidate.id} · {readable(candidate.kind)}
+                      </span>
+                      <span className="mt-0.5 block truncate text-sm font-medium">
+                        {candidate.title}
+                      </span>
+                      <span className="mt-0.5 line-clamp-2 block text-[11px] text-muted-foreground">
+                        {candidate.currentText}
+                      </span>
                     </span>
-                    <span className="mt-0.5 block text-sm font-semibold">
-                      {candidate.title}
-                    </span>
-                    <span className="mt-1 line-clamp-2 block text-xs leading-5 text-[var(--color-ink-muted)]">
-                      {candidate.currentText}
+                    <span className="shrink-0">
+                      <ReviewStatusBadge value={candidate.reviewStatus} />
                     </span>
                   </span>
-                  <span className="flex flex-wrap gap-1.5">
-                    <ReviewStatusBadge value={candidate.reviewStatus} />
+                  <span className="mt-1.5 flex flex-wrap items-center gap-1">
+                    {laneCode(candidate.lane) ? (
+                      <Chip tone="neutral">
+                        Lane {laneCode(candidate.lane)}
+                      </Chip>
+                    ) : null}
+                    <ItemOriginStatus value={candidate.itemOrigin} />
                     <SupportStatusBadge value={candidate.supportStatus} />
                     {candidateHasCanonicalConflict(candidate) ? (
-                      <span className="cfn-status-token" data-tone="conflict">
-                        <AlertTriangle aria-hidden="true" size={13} />
+                      <Chip
+                        icon={<AlertTriangle aria-hidden="true" size={13} />}
+                        tone="rust"
+                      >
                         Conflict
-                      </span>
+                      </Chip>
                     ) : null}
                   </span>
                 </button>
@@ -398,15 +448,20 @@ function CandidateDetail({
   return (
     <article
       aria-label={`Candidate detail: ${candidate.id}`}
-      className="min-w-0 overflow-hidden rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface)]"
+      className="min-w-0 overflow-hidden rounded-xl border border-border bg-card"
     >
-      <header className="grid gap-3 border-b border-[var(--color-border)] p-4">
+      <header className="grid gap-3 border-b border-border p-5">
         <div>
-          <p className="font-mono text-[10px] uppercase tracking-[0.14em] text-[var(--color-ink-muted)]">
-            {candidate.id} · {readable(candidate.kind)}
-          </p>
+          <div className="flex flex-wrap items-center gap-2 font-mono text-[11px] text-muted-foreground">
+            <span>{candidate.id}</span>
+            <span aria-hidden="true">·</span>
+            <Chip tone="mute">{readable(candidate.kind)}</Chip>
+            {laneCode(candidate.lane) ? (
+              <Chip tone="neutral">Lane {laneCode(candidate.lane)}</Chip>
+            ) : null}
+          </div>
           <h2 className="mt-1 font-serif text-2xl">{candidate.title}</h2>
-          <p className="mt-2 text-sm leading-6 text-[var(--color-ink-muted)]">
+          <p className="mt-2 text-sm text-muted-foreground">
             {candidate.currentText}
           </p>
         </div>
@@ -420,73 +475,7 @@ function CandidateDetail({
         </div>
       </header>
 
-      <div className="grid gap-5 p-4 xl:grid-cols-2">
-        <section aria-labelledby={`candidate-${candidate.id}-provenance`}>
-          <h3
-            className="font-mono text-[10px] font-semibold uppercase tracking-[0.16em] text-[var(--color-ink-muted)]"
-            id={`candidate-${candidate.id}-provenance`}
-          >
-            Provenance and review
-          </h3>
-          <dl className="mt-2 grid gap-2 text-sm">
-            <div>
-              <dt className="cfn-type-label">Active run</dt>
-              <dd className="break-all font-mono text-xs">
-                {candidate.analysisRunId}
-              </dd>
-            </div>
-            <div>
-              <dt className="cfn-type-label">Current wording origin</dt>
-              <dd>{ORIGIN_LABELS[candidate.currentTextOrigin]}</dd>
-            </div>
-            <div>
-              <dt className="cfn-type-label">Assertion and inclusion</dt>
-              <dd>
-                {readable(candidate.assertionMode)} ·{" "}
-                {readable(candidate.inclusionStatus)}
-              </dd>
-            </div>
-            <div>
-              <dt className="cfn-type-label">Latest human decision</dt>
-              <dd>
-                {latestDecision
-                  ? `${readable(latestDecision.action)} by ${
-                      latestDecision.actor === "fixture_reviewer"
-                        ? "Fixture reviewer"
-                        : "Current practitioner"
-                    }`
-                  : "No individual review recorded"}
-              </dd>
-            </div>
-          </dl>
-        </section>
-
-        <section aria-labelledby={`candidate-${candidate.id}-limitations`}>
-          <h3
-            className="font-mono text-[10px] font-semibold uppercase tracking-[0.16em] text-[var(--color-ink-muted)]"
-            id={`candidate-${candidate.id}-limitations`}
-          >
-            Limitations and unknowns
-          </h3>
-          {candidate.unknowns.length ? (
-            <ul className="mt-2 list-disc space-y-1 pl-5 text-sm">
-              {candidate.unknowns.map((unknown) => (
-                <li key={unknown}>{unknown}</li>
-              ))}
-            </ul>
-          ) : (
-            <p className="mt-2 text-sm text-[var(--color-ink-muted)]">
-              No separate unknown is recorded for this candidate.
-            </p>
-          )}
-          {candidate.relatedCoverageIssueIds.length ? (
-            <Alert title="Related coverage limitation" tone="warning">
-              {candidate.relatedCoverageIssueIds.join(", ")}. Missing content is
-              not filled or inferred.
-            </Alert>
-          ) : null}
-        </section>
-
+      <div className="grid gap-5 p-5 md:grid-cols-2">
         <section
           aria-labelledby={`candidate-${candidate.id}-citations`}
           className="grid content-start gap-3"
@@ -501,12 +490,12 @@ function CandidateDetail({
             <ul className="grid gap-2">
               {sourceDependencies.map((dependency) => (
                 <li
-                  className="grid gap-2 rounded-[var(--radius-control)] border border-[var(--color-border)] bg-[var(--color-canvas)] p-3"
+                  className="grid gap-2 rounded-md border border-border/70 bg-background/60 p-2"
                   key={dependency.id}
                 >
                   <div className="flex flex-wrap items-center gap-2">
                     <EvidenceNatureStatus value={dependency.evidenceNature} />
-                    <span className="text-xs text-[var(--color-ink-muted)]">
+                    <span className="text-[11px] text-muted-foreground">
                       {readable(dependency.relationship)} ·{" "}
                       {dependency.active
                         ? "active"
@@ -530,21 +519,36 @@ function CandidateDetail({
           )}
         </section>
 
-        <section
-          aria-labelledby={`candidate-${candidate.id}-dependencies`}
-          className="grid content-start gap-3"
-        >
+        <section aria-labelledby={`candidate-${candidate.id}-limitations`}>
           <h3
             className="font-mono text-[10px] font-semibold uppercase tracking-[0.16em] text-[var(--color-ink-muted)]"
-            id={`candidate-${candidate.id}-dependencies`}
+            id={`candidate-${candidate.id}-limitations`}
           >
-            Dependencies
+            Limitations &amp; dependencies
           </h3>
+          {candidate.unknowns.length ? (
+            <ul className="mt-2 list-disc space-y-1 pl-5 text-xs leading-5">
+              {candidate.unknowns.map((unknown) => (
+                <li key={unknown}>{unknown}</li>
+              ))}
+            </ul>
+          ) : (
+            <p className="mt-2 text-xs text-[var(--color-ink-muted)]">
+              No separate unknown is recorded for this candidate.
+            </p>
+          )}
+          {candidate.relatedCoverageIssueIds.length ? (
+            <div className="mt-2 rounded-md border border-[color-mix(in_oklab,var(--amber)_40%,transparent)] bg-[color-mix(in_oklab,var(--amber)_10%,transparent)] p-2 text-[11px]">
+              <span className="font-medium">Related coverage limitation:</span>{" "}
+              {candidate.relatedCoverageIssueIds.join(", ")}. Missing content is
+              not filled or inferred.
+            </div>
+          ) : null}
           {candidate.dependencies.length ? (
-            <ul className="grid gap-2 text-sm">
+            <ul className="mt-2 grid gap-1 text-xs">
               {candidate.dependencies.map((dependency) => (
                 <li
-                  className="rounded-[var(--radius-control)] border border-[var(--color-border)] bg-[var(--color-canvas)] px-3 py-2"
+                  className="rounded-md border border-border/70 bg-background/60 px-2 py-1.5"
                   key={dependency.id}
                 >
                   <span className="font-mono text-xs">
@@ -563,25 +567,64 @@ function CandidateDetail({
               No canonical dependencies are recorded.
             </p>
           )}
+
+          <dl
+            aria-label="Candidate provenance and review"
+            className="mt-3 grid gap-1 border-t border-border pt-2 text-[11px] text-muted-foreground"
+          >
+            <div>
+              <dt className="inline font-medium text-foreground">Active run: </dt>
+              <dd className="inline break-all font-mono">
+                {candidate.analysisRunId}
+              </dd>
+            </div>
+            <div>
+              <dt className="inline font-medium text-foreground">
+                Wording origin:{" "}
+              </dt>
+              <dd className="inline">
+                {ORIGIN_LABELS[candidate.currentTextOrigin]}
+              </dd>
+            </div>
+            <div>
+              <dt className="inline font-medium text-foreground">State: </dt>
+              <dd className="inline">
+                {readable(candidate.assertionMode)} ·{" "}
+                {readable(candidate.inclusionStatus)}
+              </dd>
+            </div>
+            <div>
+              <dt className="inline font-medium text-foreground">
+                Latest human decision:{" "}
+              </dt>
+              <dd className="inline">
+                {latestDecision
+                  ? `${readable(latestDecision.action)} by ${
+                      latestDecision.actor === "fixture_reviewer"
+                        ? "Fixture reviewer"
+                        : "Current practitioner"
+                    }`
+                  : "No individual review recorded"}
+              </dd>
+            </div>
+          </dl>
         </section>
       </div>
 
       <section
         aria-labelledby={`candidate-${candidate.id}-review-actions`}
-        className="grid gap-3 border-t border-[var(--color-border)] bg-[var(--color-surface-subtle)] p-4"
+        className="border-t border-border bg-muted/30 p-4"
       >
-        <div>
-          <h3
-            className="font-mono text-[10px] font-semibold uppercase tracking-[0.16em]"
-            id={`candidate-${candidate.id}-review-actions`}
-          >
-            Human review
-          </h3>
-          <p className="mt-1 text-xs text-[var(--color-ink-muted)]">
-            Every action dispatches the existing canonical review command. No
-            filter or selection action changes case state.
-          </p>
-        </div>
+        <h3
+          className="mb-2 font-mono text-[10px] font-semibold uppercase tracking-[0.16em]"
+          id={`candidate-${candidate.id}-review-actions`}
+        >
+          Human review
+        </h3>
+        <p className="sr-only">
+          Every action dispatches the existing canonical review command. No
+          filter or selection action changes case state.
+        </p>
         <CandidateReviewActions
           allowWithdrawal
           candidate={candidate}
@@ -635,6 +678,13 @@ export function StructuredAnalysisWorkspace() {
   const openCoverageIssues = state.coverage.issues.filter(
     (issue) => issue.resolutionStatus !== "resolved",
   );
+  const coverageWarning = openCoverageIssues.length
+    ? `${openCoverageIssues.length} source coverage ${
+        openCoverageIssues.length === 1
+          ? "limitation remains"
+          : "limitations remain"
+      } visible. Missing or unreadable content is not filled.`
+    : null;
   const withdrawalCandidate = withdrawalCandidateId
     ? state.candidates.find(
         (candidate) => candidate.id === withdrawalCandidateId,
@@ -728,6 +778,7 @@ export function StructuredAnalysisWorkspace() {
       <LaneSelector
         activeLane={activeLane}
         candidates={presentationCandidates}
+        coverageWarning={coverageWarning}
         onChange={setActiveLane}
       />
     </>
@@ -830,7 +881,7 @@ export function StructuredAnalysisWorkspace() {
         aria-hidden={
           sourceSelection && sourceMode === "mobile" ? "true" : undefined
         }
-        className="grid min-w-0 flex-1 gap-4"
+        className="min-w-0 flex-1 space-y-2"
         ref={workspaceRef}
       >
         {sharedHeader}
@@ -840,117 +891,122 @@ export function StructuredAnalysisWorkspace() {
             A consequential coverage issue remains open. Missing content is not
             inferred, and affected positive acceptance and export remain blocked.
           </Alert>
-        ) : openCoverageIssues.length ? (
-          <Alert title="Coverage warning" tone="warning">
-            {openCoverageIssues.length} source coverage{" "}
-            {openCoverageIssues.length === 1 ? "limitation remains" : "limitations remain"}{" "}
-            visible. The analysis does not fill missing or unreadable content.
-          </Alert>
         ) : null}
 
         <section
           aria-label="Structured analysis filters"
-          className="grid gap-2 rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface)] p-2.5"
+          className="flex flex-wrap items-center gap-1 rounded-md border border-border bg-card px-2 py-1.5 xl:flex-nowrap"
         >
           <div
             aria-label="Review status filters"
-            className="flex flex-wrap gap-1.5"
+            className="contents"
             role="group"
           >
+            <span className="mr-0.5 shrink-0 font-mono text-[10px] uppercase tracking-[0.16em] text-muted-foreground">
+              Status
+            </span>
             {STATUS_FILTERS.map((filter) => (
               <button
                 aria-label={`${filter.label} (${statusCounts[filter.id]})`}
                 aria-pressed={statusFilter === filter.id}
-                className={`inline-flex min-h-8 items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs ${
+                className={`inline-flex h-8 shrink-0 items-center gap-0.5 rounded-full border px-1.5 text-[11px] transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
                   statusFilter === filter.id
-                    ? "border-[var(--color-brand)] bg-[var(--color-brand)] text-white"
-                    : "border-[var(--color-border)] hover:bg-[var(--color-surface-subtle)]"
+                    ? "border-primary bg-primary font-medium text-primary-foreground"
+                    : "border-border bg-background text-foreground hover:bg-muted"
                 }`}
                 key={filter.id}
                 onClick={() => setStatusFilter(filter.id)}
                 type="button"
               >
                 {filter.label}
-                <span className="font-mono text-[10px]">
+                <span
+                  className={`rounded-full px-1 py-[1px] font-mono text-[9px] ${
+                    statusFilter === filter.id
+                      ? "bg-primary-foreground/20 text-primary-foreground"
+                      : "bg-muted text-muted-foreground"
+                  }`}
+                >
                   {statusCounts[filter.id]}
                 </span>
               </button>
             ))}
           </div>
 
-          <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-[minmax(14rem,1fr)_auto_auto_auto]">
-            <label className="relative">
-              <span className="sr-only">Search candidates</span>
-              <Search
-                aria-hidden="true"
-                className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[var(--color-ink-muted)]"
-                size={15}
-              />
-              <Input
-                aria-label="Search candidates"
-                className="pl-9"
-                onChange={(event) => setQuery(event.currentTarget.value)}
-                placeholder="Search candidates"
-                type="search"
-                value={query}
-              />
-            </label>
-            <label className="flex items-center gap-2">
-              <Filter
-                aria-hidden="true"
-                className="text-[var(--color-ink-muted)]"
-                size={14}
-              />
-              <span className="sr-only">Origin filter</span>
-              <Select
-                aria-label="Origin filter"
-                onChange={(event) =>
-                  setOriginFilter(event.currentTarget.value as OriginFilter)
-                }
-                value={originFilter}
-              >
-                <option value="all">All origins</option>
-                {Object.entries(ORIGIN_LABELS).map(([value, label]) => (
-                  <option key={value} value={value}>
-                    {label}
-                  </option>
-                ))}
-              </Select>
-            </label>
-            <label>
-              <span className="sr-only">Support filter</span>
-              <Select
-                aria-label="Support filter"
-                onChange={(event) =>
-                  setSupportFilter(event.currentTarget.value as SupportFilter)
-                }
-                value={supportFilter}
-              >
-                <option value="all">All support states</option>
-                {Object.entries(SUPPORT_LABELS).map(([value, label]) => (
-                  <option key={value} value={value}>
-                    {label}
-                  </option>
-                ))}
-              </Select>
-            </label>
-            <Button
-              className="min-h-9 px-3 py-1.5"
-              disabled={!filtersActive}
-              onClick={clearFilters}
-              variant="secondary"
+          <span
+            className="mx-1 hidden h-5 w-px shrink-0 bg-border sm:block"
+            aria-hidden
+          />
+
+          <label className="relative min-w-[112px] flex-1 sm:w-32 sm:flex-none">
+            <span className="sr-only">Search candidates</span>
+            <Search
+              aria-hidden="true"
+              className="pointer-events-none absolute left-2 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground"
+            />
+            <Input
+              aria-label="Search candidates"
+              className="!h-8 !min-h-0 w-full rounded-md border-border bg-background !py-0 pl-7 pr-2 text-xs"
+              onChange={(event) => setQuery(event.currentTarget.value)}
+              placeholder="Search candidates"
+              type="search"
+              value={query}
+            />
+          </label>
+          <label className="w-[112px] shrink-0">
+            <span className="sr-only">Origin filter</span>
+            <Select
+              aria-label="Origin filter"
+              className="!h-8 !min-h-0 rounded-md border-border bg-background px-1.5 !py-0 text-xs"
+              onChange={(event) =>
+                setOriginFilter(event.currentTarget.value as OriginFilter)
+              }
+              value={originFilter}
             >
-              Clear filters
-            </Button>
-          </div>
-          <p aria-live="polite" className="text-xs text-[var(--color-ink-muted)]">
-            Showing {visibleCandidates.length} of {laneCandidates.length} canonical
-            lane candidates.
+              <option value="all">All origins</option>
+              {Object.entries(ORIGIN_LABELS).map(([value, label]) => (
+                <option key={value} value={value}>
+                  {label}
+                </option>
+              ))}
+            </Select>
+          </label>
+          <label className="w-[132px] shrink-0">
+            <span className="sr-only">Support filter</span>
+            <Select
+              aria-label="Support filter"
+              className="!h-8 !min-h-0 rounded-md border-border bg-background px-1.5 !py-0 text-xs"
+              onChange={(event) =>
+                setSupportFilter(event.currentTarget.value as SupportFilter)
+              }
+              value={supportFilter}
+            >
+              <option value="all">All support states</option>
+              {Object.entries(SUPPORT_LABELS).map(([value, label]) => (
+                <option key={value} value={value}>
+                  {label}
+                </option>
+              ))}
+            </Select>
+          </label>
+          <Button
+            className="!h-8 !min-h-0 shrink-0 px-1.5 !py-0 text-xs"
+            disabled={!filtersActive}
+            onClick={clearFilters}
+            variant="secondary"
+          >
+            Clear filters
+          </Button>
+          <p
+            aria-live="polite"
+            className="ml-auto shrink-0 whitespace-nowrap text-[11px] text-muted-foreground"
+          >
+            Showing <span className="font-medium text-foreground">{visibleCandidates.length}</span> of{" "}
+            {laneCandidates.length}
           </p>
         </section>
 
         <div
-          className="grid min-w-0 gap-4 lg:grid-cols-[minmax(18rem,0.72fr)_minmax(0,1.45fr)]"
+          className="grid min-w-0 gap-4 lg:grid-cols-[380px_1fr]"
           id="structured-analysis-workspace"
         >
           <CandidateList

@@ -31,7 +31,7 @@ function CoverageIssueReview({
 
   return (
     <div className="grid gap-3 rounded-[var(--radius-control)] border border-[var(--color-control-border)] p-3">
-      <p className="cfn-type-label">Qualified coverage limitation review</p>
+      <p className="text-sm font-semibold">Qualified coverage limitation review</p>
       <div>
         <Label htmlFor={`${issueId}-consequence`}>Reviewed consequence</Label>
         <Select
@@ -91,17 +91,17 @@ export function CoverageManifest({
   return (
     <Card className="grid gap-4">
       <div>
-        <h2 className="cfn-type-heading-2">Coverage manifest</h2>
-        <p className="cfn-type-body-small text-[var(--color-ink-muted)]">
+        <h2 className="font-serif text-2xl leading-tight">Coverage manifest</h2>
+        <p className="text-sm leading-5 text-[var(--color-ink-muted)]">
           Coverage is reported as counts and explicit issues, never as a completeness or confidence score.
         </p>
       </div>
 
       <dl className="grid gap-3 text-sm sm:grid-cols-2 lg:grid-cols-4">
-        <div><dt className="cfn-type-label">Expected documents</dt><dd>{coverage.expectedDocuments}</dd></div>
-        <div><dt className="cfn-type-label">Processed documents</dt><dd>{coverage.processedDocuments}</dd></div>
-        <div><dt className="cfn-type-label">Expected pages</dt><dd>{coverage.expectedPages}</dd></div>
-        <div><dt className="cfn-type-label">Available pages</dt><dd>{coverage.availablePages}</dd></div>
+        <div><dt className="text-sm font-semibold">Expected documents</dt><dd>{coverage.expectedDocuments}</dd></div>
+        <div><dt className="text-sm font-semibold">Processed documents</dt><dd>{coverage.processedDocuments}</dd></div>
+        <div><dt className="text-sm font-semibold">Expected pages</dt><dd>{coverage.expectedPages}</dd></div>
+        <div><dt className="text-sm font-semibold">Available pages</dt><dd>{coverage.availablePages}</dd></div>
       </dl>
 
       {coverage.expectedDocuments === 0 ? (
@@ -125,12 +125,12 @@ export function CoverageManifest({
                   {issue.pageId ? `${issue.pageId}: ` : `${issue.documentId}: `}
                   {issue.kind === "missing_page" ? "Unavailable, missing page" : labelValue(issue.kind)}
                 </p>
-                <p className="cfn-type-body-small">{issue.rationale}</p>
+                <p className="text-sm leading-5">{issue.rationale}</p>
               </div>
               <dl className="grid gap-2 text-sm sm:grid-cols-3">
-                <div><dt className="cfn-type-label">Initial consequence</dt><dd>{labelValue(issue.initialConsequence)}</dd></div>
-                <div><dt className="cfn-type-label">Active consequence</dt><dd>{labelValue(issue.activeConsequence)}</dd></div>
-                <div><dt className="cfn-type-label">Resolution</dt><dd>{labelValue(issue.resolutionStatus)}</dd></div>
+                <div><dt className="text-sm font-semibold">Initial consequence</dt><dd>{labelValue(issue.initialConsequence)}</dd></div>
+                <div><dt className="text-sm font-semibold">Active consequence</dt><dd>{labelValue(issue.activeConsequence)}</dd></div>
+                <div><dt className="text-sm font-semibold">Resolution</dt><dd>{labelValue(issue.resolutionStatus)}</dd></div>
               </dl>
               {issue.resolutionStatus === "open" && onReviewIssue ? (
                 <CoverageIssueReview

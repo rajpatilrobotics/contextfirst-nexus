@@ -5,7 +5,6 @@ import {
   PRIMARY_CASE_DISPLAY_ID,
   derivePrimaryCaseSummary,
 } from "../../../features/dashboard/case-dashboard";
-import { WORKSPACE_NAVIGATION } from "../../../components/shell";
 import { applyCaseCommand, createInitialCaseState } from "../../../lib/state";
 
 const NOW = "2026-07-24T00:00:00.000Z";
@@ -32,12 +31,12 @@ describe("fast-track Case Dashboard", () => {
     render(<CaseDashboard initialState={createInitialCaseState(NOW)} />);
 
     expect(
-      screen.getByRole("heading", { level: 1, name: /Open cases and workflow readiness/i }),
+      screen.getByRole("heading", { level: 1, name: /Open cases & readiness/i }),
     ).toBeInTheDocument();
-    expect(screen.getByText(new RegExp(`Only ${PRIMARY_CASE_DISPLAY_ID}`))).toBeInTheDocument();
+    expect(screen.getByText(/Only M\. Chen has a connected functional workspace/i)).toBeInTheDocument();
 
     const workspaceLink = screen.getByRole("link", {
-      name: `Open M. Chen workspace (${PRIMARY_CASE_DISPLAY_ID})`,
+      name: `Open workspace for M. Chen (${PRIMARY_CASE_DISPLAY_ID})`,
     });
     expect(workspaceLink).toHaveAttribute("href", "/case/demo/purpose");
 
@@ -48,21 +47,8 @@ describe("fast-track Case Dashboard", () => {
     for (const label of readOnlyCases) {
       const card = screen.getByRole("article", { name: label });
       expect(within(card).getByText("Read-only")).toBeInTheDocument();
-      expect(within(card).getByText("Workspace access disabled")).toBeInTheDocument();
+      expect(within(card).getByText("Workspace unavailable")).toBeInTheDocument();
       expect(within(card).queryByRole("link")).not.toBeInTheDocument();
-    }
-
-    const destinations = screen.getByRole("navigation", {
-      name: "M. Chen workspace destinations",
-    });
-    expect(within(destinations).getByText("Open any workspace screen")).toBeInTheDocument();
-    expect(
-      within(destinations).queryByText("Open any connected workspace view"),
-    ).not.toBeInTheDocument();
-    for (const destination of WORKSPACE_NAVIGATION) {
-      expect(
-        within(destinations).getByRole("link", { name: destination.label }),
-      ).toHaveAttribute("href", destination.href);
     }
   });
 
@@ -77,32 +63,26 @@ describe("fast-track Case Dashboard", () => {
 
     render(<CaseDashboard initialState={state} />);
 
-    expect(screen.getByText("Documents selected").nextElementSibling).toHaveTextContent(
+    const card = screen.getByRole("link", {
+      name: `Open workspace for M. Chen (${PRIMARY_CASE_DISPLAY_ID})`,
+    });
+    expect(within(card).getByText("Documents").nextElementSibling).toHaveTextContent(
       String(summary.documentCount),
     );
-    expect(screen.getByText("Pending review").nextElementSibling).toHaveTextContent(
-      String(summary.pendingReviewCount),
-    );
-    expect(screen.getByText("Open evidence gaps").nextElementSibling).toHaveTextContent(
-      String(summary.openGapCount),
-    );
-    expect(screen.getByText("Analysis").nextElementSibling).toHaveTextContent(
+    expect(within(card).getByText("Analysis").nextElementSibling).toHaveTextContent(
       summary.analysisStatus,
     );
-    expect(screen.getByText("Export gate").nextElementSibling).toHaveTextContent(
-      summary.exportStatus,
+    expect(within(card).getByText("Review").nextElementSibling).toHaveTextContent(
+      `${summary.pendingReviewCount} pending`,
     );
-    expect(screen.getByText("Open urgent needs").nextElementSibling).toHaveTextContent(
+    expect(within(card).getByText("Urgent needs").nextElementSibling).toHaveTextContent(
       String(summary.openUrgentNeedCount),
     );
-    expect(screen.getByText("Pending interview questions").nextElementSibling).toHaveTextContent(
-      String(summary.pendingInterviewQuestionCount),
+    expect(within(card).getByText("Evidence gaps").nextElementSibling).toHaveTextContent(
+      String(summary.openGapCount),
     );
-    expect(screen.getByText("Open tasks").nextElementSibling).toHaveTextContent(
+    expect(within(card).getByText("Tasks").nextElementSibling).toHaveTextContent(
       String(summary.openTaskCount),
-    );
-    expect(screen.getByText("Referral plans").nextElementSibling).toHaveTextContent(
-      String(summary.referralPlanCount),
     );
   });
 
@@ -132,6 +112,11 @@ describe("fast-track Case Dashboard", () => {
 
     render(<CaseDashboard initialState={changed.state} />);
 
-    expect(screen.getByText("Analysis").nextElementSibling).toHaveTextContent("Needs rerun");
+    const card = screen.getByRole("link", {
+      name: `Open workspace for M. Chen (${PRIMARY_CASE_DISPLAY_ID})`,
+    });
+    expect(within(card).getByText("Analysis").nextElementSibling).toHaveTextContent(
+      "Needs rerun",
+    );
   });
 });

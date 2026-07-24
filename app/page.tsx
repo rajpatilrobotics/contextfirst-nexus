@@ -1,3 +1,4 @@
+import Link from "next/link";
 import {
   ArrowRight,
   Ban,
@@ -5,257 +6,435 @@ import {
   Eye,
   FileText,
   GitBranch,
-  Layers3,
-  LockKeyhole,
+  Layers,
+  Lock,
+  ScrollText,
+  Send,
   ShieldCheck,
+  Sparkles,
 } from "lucide-react";
 import { MarketingShell } from "../components/marketing";
 
-const capabilities = [
-  {
-    icon: FileText,
-    title: "Truthful source health",
-    description:
-      "Every source declares what was processed, what remains unreadable, and which limitations require human attention.",
-  },
-  {
-    icon: Layers3,
-    title: "Structured analysis",
-    description:
-      "Candidate observations retain exact citations, provenance, contradictions, and review status.",
-  },
-  {
-    icon: Compass,
-    title: "Evidence gaps",
-    description:
-      "Missing, conflicting, and insufficient information stays visible instead of becoming a silent conclusion.",
-  },
-  {
-    icon: Eye,
-    title: "Consequential human review",
-    description:
-      "The system organizes and suggests. A qualified practitioner decides what is accepted, changed, or rejected.",
-  },
-  {
-    icon: GitBranch,
-    title: "Dependency-aware context",
-    description:
-      "Withdrawing support invalidates only the reachable downstream record and immediately changes readiness.",
-  },
-  {
-    icon: LockKeyhole,
-    title: "Purpose-bound handoff",
-    description:
-      "The Export Gate fails closed until citation, coverage, privacy, review, and minimum-necessity checks pass.",
-  },
-] as const;
-
-const workflow = [
-  ["Purpose", "Record authority, recipient, jurisdiction, exclusions, and intended handoff."],
-  ["Documents", "Inspect the bundled packet, source health, coverage, and masking."],
-  ["Analysis", "Review source-linked candidate observations and unresolved context."],
-  ["Planning", "Turn confirmed gaps into accountable practitioner actions in a later slice."],
-  ["Review", "Inspect relationships, chronology, limitations, and dependency changes."],
-  ["Export", "Create a full or minimum-necessary handoff only when every gate passes."],
-] as const;
-
-export default function Home() {
+export default function LandingPage() {
   return (
     <MarketingShell>
       <section className="relative overflow-hidden">
         <div
-          aria-hidden="true"
+          aria-hidden
           className="pointer-events-none absolute inset-0 -z-10"
           style={{
             backgroundImage:
-              "radial-gradient(1000px 480px at 10% -10%, color-mix(in oklab, var(--amber) 13%, transparent), transparent 62%), radial-gradient(800px 420px at 96% 12%, color-mix(in oklab, var(--sage) 11%, transparent), transparent 64%)",
+              "radial-gradient(1200px 500px at 15% -10%, color-mix(in oklab, var(--amber) 10%, transparent), transparent 60%), radial-gradient(900px 400px at 95% 10%, color-mix(in oklab, var(--sage) 10%, transparent), transparent 60%)",
           }}
         />
         <div
-          aria-hidden="true"
-          className="cfn-editorial-grid pointer-events-none absolute inset-0 -z-10 opacity-50"
+          aria-hidden
+          className="pointer-events-none absolute inset-0 -z-10 opacity-[0.35]"
+          style={{
+            backgroundImage:
+              "linear-gradient(to right, color-mix(in oklab, var(--border) 60%, transparent) 1px, transparent 1px), linear-gradient(to bottom, color-mix(in oklab, var(--border) 60%, transparent) 1px, transparent 1px)",
+            backgroundSize: "56px 56px",
+            maskImage: "radial-gradient(ellipse at center, black 40%, transparent 75%)",
+          }}
         />
-        <div className="mx-auto grid max-w-7xl gap-12 px-5 py-16 sm:px-8 sm:py-24 lg:grid-cols-[1.14fr_0.86fr] lg:items-center">
-          <div>
-            <p className="inline-flex items-center gap-2 rounded-full border border-[var(--color-border)] bg-[color-mix(in_oklab,var(--color-surface)_78%,transparent)] px-3 py-1 font-mono text-[10px] uppercase tracking-[0.2em] text-[var(--color-ink-muted)]">
-              <span aria-hidden="true" className="h-1.5 w-1.5 rounded-full bg-[var(--amber)]" />
-              For qualified legal and anti-trafficking practitioners
-            </p>
-            <h1 className="mt-6 max-w-4xl font-serif text-4xl leading-[1.06] tracking-tight sm:text-5xl lg:text-6xl">
-              Source-grounded case preparation for{" "}
-              <span className="relative inline-block italic text-[var(--slate-ink)]">
-                forced-criminality
-                <span
-                  aria-hidden="true"
-                  className="absolute inset-x-0 -bottom-1 h-1.5 rounded-full bg-[color-mix(in_oklab,var(--amber)_45%,transparent)]"
-                />
-              </span>{" "}
-              matters.
-            </h1>
-            <p className="mt-6 max-w-2xl text-lg leading-8 text-[var(--color-ink-muted)]">
-              Understand what the fictional case packet documents, what remains uncertain, and
-              what requires human review before a safe handoff.
-            </p>
-            <div className="mt-8 flex flex-wrap items-center gap-3">
-              <a
-                aria-label="Start demonstration"
-                className="cfn-control-target group inline-flex items-center gap-2 rounded-[var(--radius-control)] bg-[var(--color-brand)] px-5 py-3 font-semibold !text-white no-underline shadow-sm hover:bg-[var(--color-brand-hover)] hover:shadow-md"
-                href="/dashboard"
-              >
-                Start demonstration
-                <ArrowRight
-                  aria-hidden="true"
-                  className="transition-transform group-hover:translate-x-0.5"
-                  size={17}
-                />
-              </a>
-              <a
-                className="cfn-control-target inline-flex items-center gap-2 rounded-[var(--radius-control)] border border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-3 font-semibold text-[var(--color-ink)] no-underline hover:bg-[var(--color-surface-subtle)]"
-                href="/trust"
-              >
-                <ShieldCheck aria-hidden="true" size={17} />
-                How safety works
-              </a>
-              <a
-                className="inline-flex min-h-11 items-center px-2 text-sm font-semibold text-[var(--color-ink-muted)] underline-offset-4 hover:text-[var(--color-ink)]"
-                href="/dashboard"
-              >
-                Open case dashboard
-              </a>
-            </div>
-            <p className="mt-5 max-w-xl text-xs leading-5 text-[var(--color-ink-muted)]">
-              The complete judge workflow uses only fictional adult fixture CFN-DEMO-001.
-              Do not upload, paste, or enter real case data.
-            </p>
-          </div>
 
-          <aside className="relative" aria-label="Core product promise">
-            <div
-              aria-hidden="true"
-              className="absolute -inset-5 -z-10 rounded-3xl bg-[color-mix(in_oklab,var(--amber)_12%,transparent)] blur-2xl"
-            />
-            <div className="rounded-2xl border border-[var(--color-border)] bg-[color-mix(in_oklab,var(--color-surface)_92%,transparent)] p-6 shadow-[var(--shadow-elevated)] backdrop-blur">
-              <div className="flex items-baseline justify-between gap-4 font-mono text-[10px] uppercase tracking-[0.18em] text-[var(--color-ink-muted)]">
-                <span>Core promise</span>
-                <span>REF-2024-0047-SYN</span>
+        <div className="mx-auto max-w-7xl px-6 pt-16 pb-20 sm:pt-24">
+          <div className="grid gap-12 lg:grid-cols-[1.15fr_1fr] lg:items-center">
+            <div>
+              <div className="inline-flex items-center gap-2 rounded-full border border-border bg-card/70 px-3 py-1 font-mono text-[10px] uppercase tracking-[0.22em] text-muted-foreground backdrop-blur">
+                <span className="h-1.5 w-1.5 rounded-full bg-[color:var(--amber)]" />
+                For qualified legal &amp; anti-trafficking practitioners
               </div>
-              <blockquote className="mt-4 font-serif text-2xl leading-tight sm:text-[28px]">
-                “Context <em className="not-italic text-[var(--amber)]">before</em> conclusion.”
-              </blockquote>
-              <div className="mt-6 grid gap-2.5 text-sm sm:grid-cols-2">
-                {[
-                  "Exact sources visible",
-                  "Unknown preserved",
-                  "Contradictions retained",
-                  "Human review consequential",
-                  "Replay clearly labelled",
-                  "Export fails closed",
-                ].map((promise) => (
-                  <div
-                    className="rounded-[var(--radius-control)] border border-[var(--color-border)] bg-[var(--color-canvas)] px-3 py-2"
-                    key={promise}
-                  >
-                    {promise}
-                  </div>
-                ))}
+              <h1 className="mt-5 font-serif text-4xl leading-[1.05] tracking-tight sm:text-5xl md:text-6xl">
+                Source-grounded case preparation for{" "}
+                <span className="relative inline-block italic text-[color:var(--slate-ink)]">
+                  forced-criminality
+                  <span
+                    aria-hidden
+                    className="absolute inset-x-0 -bottom-1 h-[6px] rounded-full"
+                    style={{
+                      background:
+                        "color-mix(in oklab, var(--amber) 45%, transparent)",
+                    }}
+                  />
+                </span>{" "}
+                matters.
+              </h1>
+              <p className="mt-6 max-w-xl text-lg leading-relaxed text-muted-foreground">
+                Understand what the case packet documents, what remains uncertain,
+                and what requires human review — before a safe handoff.
+              </p>
+              <div className="mt-8 flex flex-wrap items-center gap-3">
+                <Link
+                  href="/dashboard"
+                  className="group inline-flex items-center gap-2 rounded-md bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground shadow-sm transition hover:bg-primary/90 hover:shadow-md"
+                >
+                  Start demonstration
+                  <ArrowRight className="h-4 w-4 transition group-hover:translate-x-0.5" />
+                </Link>
+                <Link
+                  href="/trust"
+                  className="inline-flex items-center gap-2 rounded-md border border-border bg-card px-4 py-2.5 text-sm transition hover:bg-muted"
+                >
+                  <ShieldCheck className="h-4 w-4" /> View Trust &amp; Safety
+                </Link>
+                <Link
+                  href="/dashboard"
+                  className="text-sm text-muted-foreground underline-offset-4 transition hover:text-foreground hover:underline"
+                >
+                  Open case dashboard →
+                </Link>
               </div>
-              <p className="mt-5 border-t border-[var(--color-border)] pt-4 text-xs leading-5 text-[var(--color-ink-muted)]">
-                A workbench, not an oracle. It does not decide trafficking status,
-                credibility, guilt, eligibility, priority, or case strength.
+              <p className="mt-6 max-w-md text-xs text-muted-foreground">
+                Bundled fictional demonstration. No real case data is included, and no
+                source documents are transmitted externally.
               </p>
             </div>
-          </aside>
-        </div>
-      </section>
 
-      <section className="border-y border-[var(--color-border)] bg-[color-mix(in_oklab,var(--color-surface)_55%,transparent)]">
-        <div className="mx-auto grid max-w-7xl gap-10 px-5 py-14 sm:px-8 md:grid-cols-2">
-          <div>
-            <p className="font-mono text-[11px] uppercase tracking-[0.2em] text-[var(--color-ink-muted)]">
-              Designed for
-            </p>
-            <h2 className="mt-2 text-2xl">Qualified practitioners preparing complex cases.</h2>
-            <p className="mt-4 max-w-xl leading-7 text-[var(--color-ink-muted)]">
-              Legal-aid and defence practitioners, trained NGO caseworkers, victim-support
-              practitioners, supervisors, and designated reviewers.
-            </p>
-          </div>
-          <div>
-            <p className="font-mono text-[11px] uppercase tracking-[0.2em] text-[var(--color-ink-muted)]">
-              Explicitly not
-            </p>
-            <h2 className="mt-2 text-2xl">A hotline, investigation platform, or AI lawyer.</h2>
-            <p className="mt-4 flex max-w-xl items-start gap-2 leading-7 text-[var(--color-ink-muted)]">
-              <Ban aria-hidden="true" className="mt-1 shrink-0 text-[var(--rust)]" size={17} />
-              Not survivor-facing crisis support, automated legal advice, credibility scoring,
-              law-enforcement intake, or a replacement for safeguarding professionals.
-            </p>
-          </div>
-        </div>
-      </section>
-
-      <section className="mx-auto max-w-7xl px-5 py-16 sm:px-8" aria-labelledby="capabilities-heading">
-        <p className="font-mono text-[11px] uppercase tracking-[0.2em] text-[var(--color-ink-muted)]">
-          Core capabilities
-        </p>
-        <h2 className="mt-2 text-3xl" id="capabilities-heading">
-          Six ways the workspace holds context steady.
-        </h2>
-        <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {capabilities.map(({ icon: Icon, title, description }, index) => (
-            <article
-              className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-5 shadow-[0_1px_0_0_var(--color-border)]"
-              key={title}
-            >
-              <div className="flex items-start justify-between">
-                <span className="flex h-10 w-10 items-center justify-center rounded-lg border border-[var(--color-border)] bg-[var(--color-canvas)] text-[var(--slate-ink)]">
-                  <Icon aria-hidden="true" size={18} />
-                </span>
-                <span className="font-mono text-[10px] tracking-[0.16em] text-[var(--color-ink-muted)]">
-                  0{index + 1}
-                </span>
+            <aside className="relative">
+              <div
+                aria-hidden
+                className="absolute -inset-4 -z-10 rounded-3xl opacity-60 blur-2xl"
+                style={{
+                  background:
+                    "color-mix(in oklab, var(--amber) 12%, transparent)",
+                }}
+              />
+              <div className="rounded-2xl border border-border bg-card/90 p-6 shadow-[0_1px_0_0_var(--border),0_20px_60px_-30px_color-mix(in_oklab,var(--ink)_45%,transparent)] backdrop-blur">
+                <div className="flex items-baseline justify-between">
+                  <div className="font-mono text-[10px] uppercase tracking-[0.2em] text-muted-foreground">
+                    Core promise
+                  </div>
+                  <div className="font-mono text-[10px] text-muted-foreground">
+                    REF-2024-0047-SYN
+                  </div>
+                </div>
+                <blockquote className="mt-3 font-serif text-2xl leading-tight sm:text-[26px]">
+                  &ldquo;Context{" "}
+                  <em className="text-[color:var(--amber)] not-italic">before</em>{" "}
+                  conclusion.&rdquo;
+                </blockquote>
+                <div className="mt-5 grid grid-cols-2 gap-2.5 text-xs">
+                  {[
+                    ["Exact sources visible", FileText],
+                    ["Unknown preserved", Eye],
+                    ["Contradictions kept", GitBranch],
+                    ["Human review consequential", ShieldCheck],
+                    ["Machine assistance never silent", Sparkles],
+                    ["Export fails closed", Lock],
+                  ].map(([label, Icon]) => {
+                    const PromiseIcon = Icon as typeof FileText;
+                    return (
+                      <div
+                        key={label as string}
+                        className="flex items-center gap-2 rounded-md border border-border/70 bg-background px-2.5 py-2 transition hover:border-foreground/30"
+                      >
+                        <PromiseIcon className="h-3.5 w-3.5 text-muted-foreground" />
+                        <span>{label as string}</span>
+                      </div>
+                    );
+                  })}
+                </div>
+                <div className="mt-5 border-t border-border pt-3 text-[11px] leading-relaxed text-muted-foreground">
+                  A workbench, not an oracle. The system does not decide trafficking
+                  status, credibility, guilt, or eligibility.
+                </div>
               </div>
-              <h3 className="mt-4 text-lg">{title}</h3>
-              <p className="mt-2 text-sm leading-6 text-[var(--color-ink-muted)]">{description}</p>
+            </aside>
+          </div>
+        </div>
+      </section>
+
+      <section className="border-y border-border bg-card/50">
+        <div className="mx-auto grid max-w-7xl gap-10 px-6 py-14 md:grid-cols-2">
+          <div>
+            <div className="font-mono text-[11px] uppercase tracking-[0.2em] text-muted-foreground">
+              Who it is for
+            </div>
+            <h2 className="mt-2 font-serif text-2xl">
+              Qualified practitioners preparing complex cases.
+            </h2>
+            <ul className="mt-4 space-y-1.5 text-sm text-foreground/90">
+              {[
+                "Legal-aid lawyers & defence practitioners",
+                "Public defenders",
+                "Trained anti-trafficking practitioners",
+                "NGO caseworkers",
+                "Victim-support practitioners",
+                "Supervisors & designated reviewers",
+              ].map((role) => (
+                <li key={role} className="flex items-start gap-2">
+                  <span className="mt-1 h-1 w-1 rounded-full bg-foreground/40" />
+                  <span>{role}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+          <div>
+            <div className="font-mono text-[11px] uppercase tracking-[0.2em] text-muted-foreground">
+              Who it is not for
+            </div>
+            <h2 className="mt-2 font-serif text-2xl">
+              Never used as a hotline, oracle, or investigative tool.
+            </h2>
+            <ul className="mt-4 space-y-1.5 text-sm text-foreground/90">
+              {[
+                "Not a survivor-facing crisis service",
+                "Not a law-enforcement investigation platform",
+                "Not an AI lawyer or legal decision-maker",
+                "Not a credibility or risk-scoring system",
+                "Not a replacement for safeguarding professionals",
+              ].map((boundary) => (
+                <li key={boundary} className="flex items-start gap-2">
+                  <Ban className="mt-0.5 h-3.5 w-3.5 text-[color:var(--rust)]" />
+                  <span>{boundary}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        </div>
+      </section>
+
+      <section className="mx-auto max-w-7xl px-6 py-16">
+        <div className="mb-8 flex items-end justify-between">
+          <div>
+            <div className="font-mono text-[11px] uppercase tracking-[0.2em] text-muted-foreground">
+              Core capabilities
+            </div>
+            <h2 className="mt-2 font-serif text-3xl">
+              Six ways the workspace holds context steady.
+            </h2>
+          </div>
+        </div>
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {[
+            {
+              i: FileText,
+              t: "Truthful Source Health",
+              d: "Every document declares what was extracted, what needed OCR, and which pages remain unreadable or missing. Nothing is silently pretended-processed.",
+            },
+            {
+              i: Layers,
+              t: "Structured Analysis",
+              d: "Candidate observations arrive with exact citations, provenance, contradictions, and dependencies. A suggestion is never a finding.",
+            },
+            {
+              i: Compass,
+              t: "Evidence Gaps",
+              d: "Missing, conflicting, insufficient, and unprocessed evidence become an accountable next-action plan — never used as proof an event did not occur.",
+            },
+            {
+              i: Eye,
+              t: "Trauma-Informed Planning",
+              d: "Draft respectful, non-leading follow-up questions tied to gaps, with sensitivity notes and pause guidance.",
+            },
+            {
+              i: GitBranch,
+              t: "Evidence Integrity Map",
+              d: "See recruitment, movement, control, compelled tasks, alleged conduct, and protection needs — with relationships and limitations exposed.",
+            },
+            {
+              i: Send,
+              t: "Purpose-Bound Handoff",
+              d: "The Export Gate refuses unsafe or excessive disclosure. Handoffs carry declared purpose, minimum scope, and preserved limitations.",
+            },
+          ].map(({ i: Icon, t, d }, index) => (
+            <article
+              key={t}
+              className="group relative overflow-hidden rounded-xl border border-border bg-card p-5 transition duration-200 hover:-translate-y-0.5 hover:border-foreground/25 hover:shadow-[0_12px_30px_-18px_color-mix(in_oklab,var(--ink)_50%,transparent)]"
+            >
+              <div
+                aria-hidden
+                className="absolute inset-x-0 top-0 h-px opacity-0 transition group-hover:opacity-100"
+                style={{
+                  background:
+                    "linear-gradient(to right, transparent, color-mix(in oklab, var(--amber) 60%, transparent), transparent)",
+                }}
+              />
+              <div className="flex items-start justify-between">
+                <div className="flex h-9 w-9 items-center justify-center rounded-lg border border-border bg-background text-[color:var(--slate-ink)]">
+                  <Icon className="h-4.5 w-4.5" />
+                </div>
+                <div className="font-mono text-[10px] tracking-[0.16em] text-muted-foreground">
+                  0{index + 1}
+                </div>
+              </div>
+              <h3 className="mt-4 font-serif text-lg">{t}</h3>
+              <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{d}</p>
             </article>
           ))}
         </div>
       </section>
 
-      <section className="border-t border-[var(--color-border)] bg-[color-mix(in_oklab,var(--color-surface)_55%,transparent)]">
-        <div className="mx-auto max-w-7xl px-5 py-16 sm:px-8">
-          <p className="font-mono text-[11px] uppercase tracking-[0.2em] text-[var(--color-ink-muted)]">
-            Six-stage workflow
-          </p>
-          <h2 className="mt-2 text-3xl">From stated purpose to safe handoff.</h2>
-          <ol className="mt-8 grid gap-3 sm:grid-cols-2 lg:grid-cols-6">
-            {workflow.map(([stage, description], index) => (
-              <li
-                className="rounded-lg border border-[var(--color-border)] bg-[var(--color-canvas)] p-4"
-                key={stage}
-              >
-                <div className="flex items-center gap-2">
-                  <span className="flex h-7 w-7 items-center justify-center rounded-full bg-[var(--color-brand)] font-mono text-[10px] text-white">
-                    {index + 1}
-                  </span>
-                  <span className="font-serif text-lg">{stage}</span>
-                </div>
-                <p className="mt-3 text-xs leading-5 text-[var(--color-ink-muted)]">{description}</p>
+      <section className="border-t border-border bg-card/50">
+        <div className="mx-auto max-w-7xl px-6 py-16">
+          <div className="mb-10">
+            <div className="font-mono text-[11px] uppercase tracking-[0.2em] text-muted-foreground">
+              Six-stage workflow
+            </div>
+            <h2 className="mt-2 font-serif text-3xl">
+              From packet to purpose-bound handoff.
+            </h2>
+          </div>
+          <ol className="relative grid gap-3 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6">
+            <div
+              aria-hidden
+              className="pointer-events-none absolute left-0 right-0 top-[22px] hidden h-px lg:block"
+              style={{
+                background:
+                  "linear-gradient(to right, transparent, var(--border) 8%, var(--border) 92%, transparent)",
+              }}
+            />
+            {["Purpose", "Documents", "Analysis", "Planning", "Review", "Export"].map(
+              (stage, index) => (
+                <li
+                  key={stage}
+                  className="relative rounded-lg border border-border bg-background p-4 transition hover:border-foreground/25"
+                >
+                  <div className="flex items-center gap-2">
+                    <span className="relative z-10 flex h-7 w-7 items-center justify-center rounded-full bg-primary font-mono text-[10px] text-primary-foreground ring-4 ring-[color:var(--background)]">
+                      {index + 1}
+                    </span>
+                    <span className="font-serif text-lg">{stage}</span>
+                  </div>
+                  <p className="mt-2 text-xs leading-relaxed text-muted-foreground">
+                    {
+                      [
+                        "Record the authorized purpose and acknowledgements.",
+                        "Declare what each source actually documents.",
+                        "Review candidate observations with citations and limitations.",
+                        "Plan interviews, referrals, and tasks — trauma-informed.",
+                        "Inspect the Evidence Integrity Map and timeline.",
+                        "Pass the Export Gate — or don’t, and see why.",
+                      ][index]
+                    }
+                  </p>
+                </li>
+              ),
+            )}
+          </ol>
+        </div>
+      </section>
+
+      <section className="mx-auto grid max-w-7xl gap-6 px-6 py-16 md:grid-cols-2">
+        <div className="rounded-xl border border-border bg-card p-6">
+          <div className="flex items-center gap-2">
+            <span className="h-1.5 w-1.5 rounded-full bg-[color:var(--sage)]" />
+            <div className="font-mono text-[11px] uppercase tracking-[0.2em] text-muted-foreground">
+              Assists with
+            </div>
+          </div>
+          <ul className="mt-3 space-y-2 text-sm">
+            {[
+              "Organizing source-linked candidate observations",
+              "Suggesting evidence gaps and follow-up actions",
+              "Supporting chronology organization",
+              "Identifying possible contradictions for review",
+            ].map((item) => (
+              <li key={item} className="flex items-start gap-2">
+                <span className="mt-1.5 h-1 w-1 rounded-full bg-[color:var(--sage)]" />
+                <span>{item}</span>
               </li>
             ))}
-          </ol>
-          <div className="mt-10 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-6 text-center">
-            <p className="font-serif text-2xl">Explore the complete fictional M. Chen workflow.</p>
-            <p className="mx-auto mt-2 max-w-2xl text-sm leading-6 text-[var(--color-ink-muted)]">
-              The Dashboard separates the one functional judge case from read-only case summaries.
-            </p>
-            <a
-              className="mt-5 inline-flex min-h-11 items-center gap-2 rounded-[var(--radius-control)] bg-[var(--color-brand)] px-5 py-3 font-semibold !text-white no-underline hover:bg-[var(--color-brand-hover)]"
+          </ul>
+        </div>
+        <div className="rounded-xl border border-border bg-card p-6">
+          <div className="flex items-center gap-2">
+            <span className="h-1.5 w-1.5 rounded-full bg-[color:var(--rust)]" />
+            <div className="font-mono text-[11px] uppercase tracking-[0.2em] text-muted-foreground">
+              Prohibited from
+            </div>
+          </div>
+          <ul className="mt-3 space-y-2 text-sm">
+            {[
+              "Determining trafficking status",
+              "Judging credibility or guilt",
+              "Determining legal eligibility",
+              "Recommending prosecution or sentence",
+              "Replacing practitioner judgment",
+            ].map((item) => (
+              <li key={item} className="flex items-start gap-2">
+                <Ban className="mt-0.5 h-3.5 w-3.5 text-[color:var(--rust)]" />
+                <span>{item}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      </section>
+
+      <section className="border-y border-border bg-background">
+        <div className="mx-auto grid max-w-7xl gap-6 px-6 py-10 md:grid-cols-4">
+          {[
+            [
+              ShieldCheck,
+              "Human oversight",
+              "A machine suggestion never silently becomes a finding.",
+            ],
+            [
+              FileText,
+              "Source citations",
+              "Every material observation links to an exact page.",
+            ],
+            [
+              ScrollText,
+              "Synthetic evaluation",
+              "A held-out challenge set with planted errors is shown in Trust & Safety.",
+            ],
+            [
+              Lock,
+              "No external transmission",
+              "The bundled replay does not transmit case sources to a provider.",
+            ],
+          ].map(([Icon, title, description]) => {
+            const TrustIcon = Icon as typeof FileText;
+            return (
+              <div key={title as string} className="flex items-start gap-3">
+                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md border border-border bg-card text-[color:var(--slate-ink)]">
+                  <TrustIcon className="h-4 w-4" />
+                </div>
+                <div>
+                  <div className="font-serif text-base">{title as string}</div>
+                  <div className="text-xs leading-relaxed text-muted-foreground">
+                    {description as string}
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </section>
+
+      <section className="relative overflow-hidden">
+        <div
+          aria-hidden
+          className="pointer-events-none absolute inset-0 -z-10"
+          style={{
+            backgroundImage:
+              "radial-gradient(600px 240px at 50% 20%, color-mix(in oklab, var(--amber) 12%, transparent), transparent 70%)",
+          }}
+        />
+        <div className="mx-auto max-w-3xl px-6 py-20 text-center">
+          <h2 className="font-serif text-4xl leading-tight">
+            Open the workspace on a synthetic case.
+          </h2>
+          <p className="mx-auto mt-4 max-w-xl text-sm leading-relaxed text-muted-foreground">
+            Explore the bundled fictional M. Chen workflow with source-linked
+            observations, visible gaps, human review, and a fail-closed Export Gate.
+          </p>
+          <div className="mt-7 flex flex-wrap justify-center gap-3">
+            <Link
               href="/dashboard"
+              className="group inline-flex items-center gap-2 rounded-md bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground shadow-sm transition hover:bg-primary/90 hover:shadow-md"
             >
-              Open Case Dashboard
-              <ArrowRight aria-hidden="true" size={17} />
-            </a>
+              Enter demonstration
+              <ArrowRight className="h-4 w-4 transition group-hover:translate-x-0.5" />
+            </Link>
+            <Link
+              href="/trust"
+              className="inline-flex items-center gap-2 rounded-md border border-border bg-card px-4 py-2.5 text-sm transition hover:bg-muted"
+            >
+              Read the system card
+            </Link>
           </div>
         </div>
       </section>

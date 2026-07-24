@@ -64,7 +64,7 @@ function SuggestionEditor({
         <div>
           <p className="font-semibold">{MASK_CLASS_LABELS[suggestion.maskClass]}</p>
           <p className="text-xs text-[var(--color-ink-muted)]">
-            <span className="cfn-type-code">{suggestion.segmentId}</span> · currently {suggestion.reviewStatus}
+            <span className="font-mono text-xs">{suggestion.segmentId}</span> · currently {suggestion.reviewStatus}
           </p>
         </div>
         <Button
@@ -162,7 +162,7 @@ function ManualMaskForm({
   return (
     <details className="rounded-[var(--radius-control)] border border-[var(--color-border)] p-4">
       <summary className="cursor-pointer font-semibold">Add a range-based mask</summary>
-      <p className="mt-2 cfn-type-body-small text-[var(--color-ink-muted)]">
+      <p className="mt-2 text-sm leading-5 text-[var(--color-ink-muted)]">
         Select an existing demo segment and character range. Do not enter an identifier or case narrative.
       </p>
       <div className="mt-4 grid gap-3 sm:grid-cols-2">
@@ -275,8 +275,8 @@ export function MaskingReviewPanel({
   return (
     <Card className="grid gap-4 border-0 p-0 shadow-none">
       <div>
-        <h3 className="cfn-type-heading-3">Approve privacy masks</h3>
-        <p className="cfn-type-body-small text-[var(--color-ink-muted)]">
+        <h3 className="font-serif text-lg leading-tight">Approve privacy masks</h3>
+        <p className="text-sm leading-5 text-[var(--color-ink-muted)]">
           Confirm that each detected personal detail should be hidden. The final leak scan runs automatically after approval.
         </p>
       </div>

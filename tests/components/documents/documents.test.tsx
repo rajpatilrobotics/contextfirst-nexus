@@ -464,7 +464,7 @@ describe("TASK-019 intake, coverage, and containment", () => {
       await screen.findByRole("heading", { name: "PDF text prepared locally" }),
     ).toBeInTheDocument();
     expect(screen.getByText("Case note")).toBeInTheDocument();
-    expect(screen.getByText(/Uploaded PDF/)).toBeInTheDocument();
+    expect(screen.getAllByText(/Uploaded PDF/).length).toBeGreaterThan(0);
     expect(screen.queryByText(/select all seven/i)).not.toBeInTheDocument();
     expect(screen.queryByText(/Analysis is not connected/i)).not.toBeInTheDocument();
     expect(screen.getByText(/Coverage check/)).toBeInTheDocument();

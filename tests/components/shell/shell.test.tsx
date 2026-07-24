@@ -213,11 +213,9 @@ describe("TASK-017 landing boundary screen", () => {
       }),
     ).toBeInTheDocument();
     expect(screen.getByText(/Qualified practitioners preparing complex cases/i)).toBeInTheDocument();
-    expect(screen.getByText(/fictional adult fixture CFN-DEMO-001/i)).toBeInTheDocument();
-    expect(
-      screen.getByText(/does not decide trafficking status, credibility, guilt, eligibility/i),
-    ).toBeInTheDocument();
-    expect(screen.getByText(/Not survivor-facing crisis support/i)).toBeInTheDocument();
+    expect(screen.getByText(/REF-2024-0047-SYN/i)).toBeInTheDocument();
+    expect(screen.getByText(/A workbench, not an oracle/i)).toBeInTheDocument();
+    expect(screen.getByText(/Not a survivor-facing crisis service/i)).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Start demonstration" })).toHaveAttribute(
       "href",
       "/dashboard",
@@ -227,11 +225,11 @@ describe("TASK-017 landing boundary screen", () => {
     for (const link of dashboardLinks) {
       expect(link).toHaveAttribute("href", "/dashboard");
     }
-    expect(screen.getByRole("link", { name: "How safety works" })).toHaveAttribute(
+    expect(screen.getByRole("link", { name: "View Trust & Safety" })).toHaveAttribute(
       "href",
       "/trust",
     );
-    expect(screen.getByText(/Do not upload, paste, or enter real case data/i)).toBeInTheDocument();
+    expect(screen.getByText(/Do not enter real case data/i)).toBeInTheDocument();
   });
 });
 
@@ -246,7 +244,7 @@ describe("TASK-017 case shell", () => {
     expect(screen.getByText(SYNTHETIC_BANNER_TEXT)).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Skip to case workspace" })).toHaveAttribute("href", "#case-workspace");
     expect(screen.getByText("REF-2024-0047-SYN")).toBeInTheDocument();
-    expect(screen.getByText("CFN-DEMO-001")).toBeInTheDocument();
+    expect(screen.getByText(/Canonical case/i)).toHaveTextContent("CFN-DEMO-001");
     expect(screen.getByText("Current section").nextElementSibling).toHaveTextContent("Analysis");
     expect(screen.getByLabelText(/Case status: Draft/i)).toBeInTheDocument();
     expect(screen.getByText("Analysis status").nextElementSibling).toHaveTextContent("Not started");
@@ -261,14 +259,14 @@ describe("TASK-017 case shell", () => {
         .getAllByRole("listitem")
         .map((item) => item.textContent?.replace(/\s+/g, " ").trim()),
     ).toEqual([
-      "1PurposeIn progress",
-      "2DocumentsNot started",
-      "3AnalysisNot started",
-      "4PlanningNot started",
-      "5ReviewNot started",
-      "6ExportNot started",
+      "1Purpose, active",
+      "2Documents, pending",
+      "3Analysis, pending",
+      "4Planning, pending",
+      "5Review, pending",
+      "6Export, pending",
     ]);
-    expect(within(tracker).getByRole("listitem", { current: "step" })).toHaveTextContent(
+    expect(within(tracker).getByRole("link", { current: "step" })).toHaveTextContent(
       "Analysis",
     );
     expect(
@@ -282,7 +280,7 @@ describe("TASK-017 case shell", () => {
     ).toBeTruthy();
     const links = within(nav).getAllByRole("link");
     expect(links.map((link) => link.getAttribute("href"))).toEqual(
-      WORKSPACE_NAVIGATION.map((item) => item.href),
+      WORKSPACE_NAVIGATION.filter((item) => item.id !== "trust").map((item) => item.href),
     );
     expect(within(nav).getByRole("link", { name: "Structured Analysis" })).toHaveAttribute(
       "aria-current",
@@ -489,7 +487,7 @@ describe("TASK-017 case shell", () => {
     });
     expect(onNavigate).toHaveBeenCalledWith("/case/demo/purpose");
     expect(routerPush).not.toHaveBeenCalled();
-    expect(screen.getByRole("status")).toHaveTextContent("Case reset to the demo start.");
+    expect(screen.getByText("Case reset to the demo start.")).toBeInTheDocument();
     expect(screen.getByText("Analysis status").nextElementSibling).toHaveTextContent("Not started");
     expect(JSON.parse(window.sessionStorage.getItem("contextfirst-nexus.case-state.v1") ?? "{}")).toMatchObject({
       caseRevision: 0,
@@ -568,16 +566,16 @@ describe("TASK-017 case shell", () => {
     const workspaceNavigation = screen.getByRole("navigation", {
       name: "Case workspace",
     });
-    expect(within(workspaceNavigation).getByRole("link", { name: "Documents & Source Health" })).toHaveAttribute(
+    expect(within(workspaceNavigation).getByRole("link", { name: "Documents" })).toHaveAttribute(
       "href",
-      "/case/demo/intake",
+      "/case/demo/documents",
     );
-    expect(within(workspaceNavigation).getByRole("link", { name: "Documents & Source Health" })).toHaveAttribute(
+    expect(within(workspaceNavigation).getByRole("link", { name: "Documents" })).toHaveAttribute(
       "aria-current",
       "page",
     );
     expect(screen.getByRole("region", { name: "Six-stage case progress" })).toBeInTheDocument();
-    for (const item of WORKSPACE_NAVIGATION.filter((entry) => entry.href !== null)) {
+    for (const item of WORKSPACE_NAVIGATION.filter((entry) => entry.id !== "trust")) {
       expect(within(workspaceNavigation).getByRole("link", { name: item.label })).toBeInTheDocument();
     }
   });

@@ -1,6 +1,53 @@
 @import "tailwindcss";
 
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+
+  --font-sans: var(--font-cfn-sans), "IBM Plex Sans", ui-sans-serif, system-ui, sans-serif;
+  --font-serif: var(--font-cfn-display), "Libre Baskerville", ui-serif, Georgia, serif;
+  --font-mono: var(--font-cfn-mono), "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-ring-offset-background: var(--background);
+
+  --color-ink: var(--ink);
+  --color-paper: var(--paper);
+  --color-parchment: var(--parchment);
+  --color-amber: var(--amber);
+  --color-amber-foreground: var(--amber-foreground);
+  --color-sage: var(--sage);
+  --color-sage-foreground: var(--sage-foreground);
+  --color-rust: var(--rust);
+  --color-rust-foreground: var(--rust-foreground);
+  --color-slate-ink: var(--slate-ink);
+  --color-rule: var(--rule);
+}
+
 :root {
+  --radius: 0.5rem;
   --font-sans: var(--font-cfn-sans), "IBM Plex Sans", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   --font-display: var(--font-cfn-display), "Libre Baskerville", ui-serif, Georgia, Cambria, "Times New Roman", serif;
   --font-mono: var(--font-cfn-mono), "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
@@ -12,8 +59,31 @@
   --slate-ink: oklch(0.38 0.03 265);
   --rule: oklch(0.85 0.012 85);
   --amber: oklch(0.68 0.115 65);
+  --amber-foreground: var(--ink);
   --sage: oklch(0.62 0.075 145);
+  --sage-foreground: var(--ink);
   --rust: oklch(0.52 0.14 40);
+  --rust-foreground: var(--parchment);
+
+  --background: var(--paper);
+  --foreground: var(--ink);
+  --card: var(--parchment);
+  --card-foreground: var(--ink);
+  --popover: var(--parchment);
+  --popover-foreground: var(--ink);
+  --primary: var(--ink);
+  --primary-foreground: oklch(0.98 0.005 85);
+  --secondary: oklch(0.92 0.008 85);
+  --secondary-foreground: var(--ink);
+  --muted: oklch(0.92 0.008 85);
+  --muted-foreground: oklch(0.42 0.02 265);
+  --accent: oklch(0.9 0.02 65);
+  --accent-foreground: var(--ink);
+  --destructive: var(--rust);
+  --destructive-foreground: var(--rust-foreground);
+  --border: var(--rule);
+  --input: var(--rule);
+  --ring: var(--amber);
 
   --color-canvas: var(--paper);
   --color-surface: var(--parchment);
@@ -57,18 +127,28 @@
 }
 
 * {
+  border-color: var(--color-border);
   box-sizing: border-box;
 }
 
-html,
+html {
+  overflow-x: hidden;
+  font-family: var(--font-sans);
+}
+
 body {
+  --font-sans: var(--font-cfn-sans), "IBM Plex Sans", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --font-serif: var(--font-cfn-display), "Libre Baskerville", ui-serif, Georgia, serif;
+  --font-display: var(--font-cfn-display), "Libre Baskerville", ui-serif, Georgia, Cambria, "Times New Roman", serif;
+  --font-mono: var(--font-cfn-mono), "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+
   min-height: 100%;
   margin: 0;
-  background: var(--color-canvas);
-  color: var(--color-ink);
+  overflow-x: hidden;
+  background-color: var(--color-background);
+  color: var(--color-foreground);
   font-family: var(--font-sans);
-  font-size: 16px;
-  line-height: 24px;
+  font-feature-settings: "ss01", "cv11";
   text-rendering: optimizeLegibility;
 }
 
@@ -76,21 +156,14 @@ h1,
 h2,
 h3,
 .font-serif {
-  font-family: var(--font-display);
+  font-family: var(--font-serif);
   letter-spacing: -0.01em;
 }
 
-button,
-input,
-select,
-textarea {
-  font: inherit;
-}
-
-a {
-  color: var(--color-link);
-  text-decoration: underline;
-  text-underline-offset: 3px;
+code,
+kbd,
+.font-mono {
+  font-family: var(--font-mono);
 }
 
 ::selection {

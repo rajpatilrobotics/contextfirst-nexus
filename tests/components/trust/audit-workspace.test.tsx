@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it } from "vitest";
 import { CaseStateProvider } from "../../../components/shell";
@@ -18,7 +18,19 @@ describe("canonical Audit Trail destination", () => {
     expect(
       screen.getByRole("heading", { level: 1, name: "Audit Trail" }),
     ).toBeInTheDocument();
-    expect(screen.getByText(`Showing ${state.audit.length} of ${state.audit.length} canonical events`)).toBeInTheDocument();
+    const filterToolbar = screen.getByRole("region", { name: "Audit filters" });
+    expect(within(filterToolbar).getByRole("searchbox")).toBeInTheDocument();
+    expect(within(filterToolbar).getByLabelText("Actor")).toBeInTheDocument();
+    expect(
+      within(filterToolbar).getByText(
+        `Showing ${state.audit.length} of ${state.audit.length} canonical events`,
+      ),
+    ).toBeInTheDocument();
+    expect(
+      within(filterToolbar).getByText(
+        /this explanatory browser-session record is not a forensic or tamper-evident audit log/i,
+      ),
+    ).toBeInTheDocument();
     expect(screen.queryByText("N-01")).not.toBeInTheDocument();
 
     await user.selectOptions(screen.getByLabelText("Actor"), "fixture_reviewer");

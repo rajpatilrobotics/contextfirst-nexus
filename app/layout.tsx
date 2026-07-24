@@ -40,8 +40,10 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
-      <body className={`${sansFont.variable} ${displayFont.variable} ${monoFont.variable}`}>
+    <html className="overflow-x-hidden" lang="en">
+      <body
+        className={`${sansFont.variable} ${displayFont.variable} ${monoFont.variable} overflow-x-hidden`}
+      >
         {children}
       </body>
     </html>
