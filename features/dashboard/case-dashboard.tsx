@@ -79,6 +79,11 @@ export function CaseDashboard() {
   const completePurposeCount = registry.cases.filter(
     (record) => record.purposeBrief?.status === "complete",
   ).length;
+  const documentCount = registry.cases.reduce(
+    (total, record) =>
+      total + (record.documentPacket?.documents.length ?? 0),
+    0,
+  );
 
   return (
     <>
@@ -93,8 +98,8 @@ export function CaseDashboard() {
             </h1>
             <p className="mt-2 max-w-2xl text-sm text-muted-foreground">
               Create and reopen independent fictional cases stored only in this
-              browser. Purpose Brief is connected; later stages are not yet available
-              for created cases.
+              browser. Purpose Brief and browser-local Documents are connected;
+              analysis and later stages are not yet available for created cases.
             </p>
           </div>
           <button
@@ -121,7 +126,7 @@ export function CaseDashboard() {
             label="Purpose complete"
             value={completePurposeCount}
           />
-          <SummaryMetric label="Documents" value="Unavailable" />
+          <SummaryMetric label="Documents" value={documentCount} />
           <SummaryMetric label="Analysis" value="Unavailable" />
           <SummaryMetric label="Planning" value="Unavailable" />
           <SummaryMetric label="Export" value="Unavailable" />
@@ -200,7 +205,13 @@ export function CaseDashboard() {
                     </div>
                     <div>
                       <dt className="text-muted-foreground">Documents</dt>
-                      <dd>Not available</dd>
+                      <dd>
+                        {record.documentPacket
+                          ? `${record.documentPacket.documents.length} source${record.documentPacket.documents.length === 1 ? "" : "s"}`
+                          : record.purposeBrief
+                            ? "Ready for intake"
+                            : "Complete Purpose first"}
+                      </dd>
                     </div>
                     <div>
                       <dt className="text-muted-foreground">Analysis &amp; export</dt>

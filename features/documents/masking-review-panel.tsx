@@ -1,6 +1,15 @@
 "use client";
 
+import {
+  CheckCircle2,
+  CircleDashed,
+  Download,
+  LoaderCircle,
+  ShieldCheck,
+  TriangleAlert,
+} from "lucide-react";
 import { useState } from "react";
+import { Chip } from "../../components/lovable/nexus-ui";
 import type { CaseCommand, MaskClass, MaskingReview } from "../../lib/contracts";
 import {
   DEFAULT_REPLACEMENT_TOKENS,
@@ -245,14 +254,19 @@ export function MaskingReviewPanel({
   review,
   segmentIds,
   disabled = false,
+  visualSelectionAvailable = false,
   onReview,
   onRemove,
   onAdd,
   onComplete,
+  onDownloadSanitizedPdf,
+  onDownloadVisualSanitizedPdf,
+  sanitizedPdfState = "idle",
 }: {
   review: MaskingReview;
   segmentIds: string[];
   disabled?: boolean;
+  visualSelectionAvailable?: boolean;
   onReview: (
     maskId: string,
     reviewStatus: MaskReviewStatus,
@@ -261,6 +275,9 @@ export function MaskingReviewPanel({
   onRemove: (maskId: string) => void;
   onAdd: (input: ManualMaskInput) => void;
   onComplete: () => void;
+  onDownloadSanitizedPdf?: () => void;
+  onDownloadVisualSanitizedPdf?: () => void;
+  sanitizedPdfState?: "idle" | "generating_text" | "generating_visual";
 }) {
   const pendingCount = review.suggestions.filter(
     (suggestion) => suggestion.reviewStatus === "pending",
@@ -271,6 +288,186 @@ export function MaskingReviewPanel({
   const hasProcessedSegments = segmentIds.length > 0;
   const readyToComplete =
     hasProcessedSegments && pendingCount === 0 && rejectedCount === 0;
+  const unresolvedCount = pendingCount + rejectedCount;
+
+  if (visualSelectionAvailable) {
+    const scanPassed =
+      review.reviewStatus === "approved" &&
+      review.leakScanStatus === "passed" &&
+      review.failedClasses.length === 0;
+    const scanFailed =
+      review.leakScanStatus === "failed" ||
+      review.failedClasses.length > 0;
+    const statusIcon = scanPassed ? (
+      <CheckCircle2
+        aria-hidden="true"
+        className="h-4 w-4 shrink-0 text-[color:var(--sage)]"
+      />
+    ) : scanFailed || unresolvedCount > 0 ? (
+      <TriangleAlert
+        aria-hidden="true"
+        className="h-4 w-4 shrink-0 text-[color:var(--rust)]"
+      />
+    ) : (
+      <CircleDashed
+        aria-hidden="true"
+        className="h-4 w-4 shrink-0 text-[color:var(--amber)]"
+      />
+    );
+    const statusCopy = !hasProcessedSegments
+      ? "Process or restore the PDF packet before running the privacy check."
+      : unresolvedCount > 0
+        ? `Resolve ${pendingCount} pending and ${rejectedCount} needing-correction mask${unresolvedCount === 1 ? "" : "s"} first.`
+        : scanFailed
+          ? "The local scan still finds a supported identifier pattern. Add or correct its mask, then run the check again."
+          : scanPassed
+            ? "Passed and saved for the current packet. Changing a mask or replacing a PDF invalidates this result."
+            : review.suggestions.length === 0
+              ? "No supported pattern was found automatically. Complete a page-by-page visual review before approving."
+              : "Every recorded mask is reviewed. Run the final browser-local privacy check.";
+
+    return (
+      <section
+        aria-labelledby="privacy-gate-heading"
+        className="rounded-xl border border-border bg-card px-3 py-2.5"
+      >
+        <div className="flex flex-wrap items-center gap-3">
+          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-[color-mix(in_oklab,var(--amber)_42%,transparent)] bg-[color-mix(in_oklab,var(--amber)_12%,transparent)]">
+            <ShieldCheck
+              aria-hidden="true"
+              className="h-4 w-4 text-[color:var(--amber)]"
+            />
+          </span>
+
+          <div className="min-w-[13rem] flex-1">
+            <div className="flex flex-wrap items-baseline gap-x-2">
+              <h3
+                className="font-serif text-base leading-tight"
+                id="privacy-gate-heading"
+              >
+                Final privacy check
+              </h3>
+              <p className="text-[10px] leading-4 text-muted-foreground">
+                Validate decisions and scan the masked text locally.
+              </p>
+            </div>
+          </div>
+
+          <div
+            aria-label="Privacy check status"
+            className="flex flex-wrap items-center gap-1.5"
+            role="status"
+          >
+            <Chip tone="mute">
+              {review.suggestions.length} suggestion
+              {review.suggestions.length === 1 ? "" : "s"}
+            </Chip>
+            <Chip tone={unresolvedCount > 0 ? "rust" : "sage"}>
+              {unresolvedCount > 0
+                ? `${unresolvedCount} unresolved`
+                : "Review complete"}
+            </Chip>
+            <Chip tone={scanPassed ? "sage" : scanFailed ? "rust" : "amber"}>
+              Scan{" "}
+              {scanPassed
+                ? "passed"
+                : scanFailed
+                  ? "needs attention"
+                  : "not run"}
+            </Chip>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-1.5">
+            {scanPassed && onDownloadSanitizedPdf ? (
+              <Button
+                className="!min-h-0 !rounded-md !px-3 !py-1.5 !text-xs !shadow-none"
+                disabled={disabled || sanitizedPdfState !== "idle"}
+                onClick={onDownloadSanitizedPdf}
+                variant="secondary"
+              >
+                {sanitizedPdfState === "generating_text" ? (
+                  <LoaderCircle
+                    aria-hidden="true"
+                    className="mr-1.5 h-3.5 w-3.5 animate-spin"
+                  />
+                ) : (
+                  <Download
+                    aria-hidden="true"
+                    className="mr-1.5 h-3.5 w-3.5"
+                  />
+                )}
+                {sanitizedPdfState === "generating_text"
+                  ? "Preparing PDF"
+                  : "Download sanitized text PDF"}
+              </Button>
+            ) : null}
+            {scanPassed && onDownloadVisualSanitizedPdf ? (
+              <Button
+                className="!min-h-0 !rounded-md !px-3 !py-1.5 !text-xs !shadow-none"
+                disabled={disabled || sanitizedPdfState !== "idle"}
+                onClick={onDownloadVisualSanitizedPdf}
+                variant="secondary"
+              >
+                {sanitizedPdfState === "generating_visual" ? (
+                  <LoaderCircle
+                    aria-hidden="true"
+                    className="mr-1.5 h-3.5 w-3.5 animate-spin"
+                  />
+                ) : (
+                  <Download
+                    aria-hidden="true"
+                    className="mr-1.5 h-3.5 w-3.5"
+                  />
+                )}
+                {sanitizedPdfState === "generating_visual"
+                  ? "Flattening pages"
+                  : "Download visual sanitized PDF"}
+              </Button>
+            ) : null}
+            <Button
+              className="!min-h-0 !rounded-md !px-3 !py-1.5 !text-xs !shadow-none"
+              disabled={disabled || !readyToComplete}
+              onClick={onComplete}
+              variant="primary"
+            >
+              {!hasProcessedSegments
+                ? "Restore PDFs first"
+                : unresolvedCount > 0
+                  ? `Review ${unresolvedCount} mask${unresolvedCount === 1 ? "" : "s"}`
+                  : scanPassed
+                    ? "Run check again"
+                    : "Approve privacy check"}
+            </Button>
+          </div>
+        </div>
+
+        <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 border-t border-border/70 pt-2 text-[11px] leading-4">
+          {statusIcon}
+          <p className="min-w-[16rem] flex-1 text-muted-foreground">
+            {statusCopy}
+            {scanPassed && onDownloadSanitizedPdf
+              ? " The sanitized text derivative does not alter the original or preserve its exact visual layout. The visual derivative preserves page appearance as flattened images with approved black masks; review either file before sharing."
+              : ""}
+          </p>
+          <details>
+            <summary className="cursor-pointer whitespace-nowrap font-semibold text-foreground">
+              Checked identifier types
+            </summary>
+            <ul
+              aria-label="Declared supported mask classes"
+              className="mt-2 flex flex-wrap gap-1.5"
+            >
+              {SUPPORTED_MASK_CLASSES.map((maskClass) => (
+                <li key={maskClass}>
+                  <Chip tone="mute">{MASK_CLASS_LABELS[maskClass]}</Chip>
+                </li>
+              ))}
+            </ul>
+          </details>
+        </div>
+      </section>
+    );
+  }
 
   return (
     <Card className="grid gap-4 border-0 p-0 shadow-none">
@@ -294,8 +491,18 @@ export function MaskingReviewPanel({
         >
           <p>
             {hasProcessedSegments
-              ? "No supported personal-detail pattern was detected. You can still add a range-based mask; approving this check will run the deterministic leak scan."
+              ? visualSelectionAvailable
+                ? "No supported pattern was found automatically. This does not mean the PDF contains no personal information. Review every page in the masked preview and select any personal detail the local detector missed."
+                : "No supported personal-detail pattern was detected. You can still add a range-based mask; approving this check will run the deterministic leak scan."
               : "Process the PDFs locally before completing human masking review."}
+          </p>
+        </Alert>
+      ) : visualSelectionAvailable ? (
+        <Alert title="Review masks on the PDF" tone="neutral">
+          <p>
+            Use the colored overlays in the masked preview to approve, correct,
+            or remove all {review.suggestions.length} suggestion(s). Select
+            visible PDF text to add anything the local detector missed.
           </p>
         </Alert>
       ) : (
@@ -312,7 +519,9 @@ export function MaskingReviewPanel({
         </ul>
       )}
 
-      <ManualMaskForm disabled={disabled} onAdd={onAdd} segmentIds={segmentIds} />
+      {visualSelectionAvailable ? null : (
+        <ManualMaskForm disabled={disabled} onAdd={onAdd} segmentIds={segmentIds} />
+      )}
 
       <details>
         <summary className="cursor-pointer text-sm font-semibold text-[var(--color-brand)]">

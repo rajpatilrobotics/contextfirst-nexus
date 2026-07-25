@@ -17,6 +17,7 @@
     "eval": "node scripts/run-evaluation.mjs",
     "measure:performance": "node scripts/measure-performance.mjs",
     "assets:pdfjs": "node scripts/copy-pdfjs-assets.mjs",
+    "assets:ocr": "node scripts/copy-tesseract-assets.mjs",
     "build": "next build",
     "start": "next start",
     "verify": "npm run typecheck && npm run lint && npm run test:unit && npm run test:contracts && npm run test:components && npm run build"
@@ -25,6 +26,7 @@
     "@google/genai": "2.11.0",
     "@mistralai/mistralai": "2.4.1",
     "@react-pdf/renderer": "4.5.1",
+    "@tesseract.js-data/eng": "1.0.0",
     "lucide-react": "1.24.0",
     "next": "16.2.10",
     "openai": "6.47.0",
@@ -32,10 +34,12 @@
     "react": "19.2.7",
     "react-dom": "19.2.7",
     "server-only": "0.0.1",
+    "tesseract.js": "7.0.0",
     "zod": "4.4.3"
   },
   "devDependencies": {
     "@axe-core/playwright": "4.12.1",
+    "@playwright/test": "1.61.1",
     "@tailwindcss/postcss": "4.3.2",
     "@testing-library/jest-dom": "6.9.1",
     "@testing-library/react": "16.3.2",
@@ -43,7 +47,6 @@
     "@types/node": "26.1.1",
     "@types/react": "19.2.17",
     "@types/react-dom": "19.2.3",
-    "@playwright/test": "1.61.1",
     "eslint": "10.7.0",
     "eslint-config-next": "16.2.10",
     "jsdom": "29.1.1",

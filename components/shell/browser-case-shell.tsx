@@ -76,7 +76,11 @@ export function BrowserCaseShell({
       >
         Skip to case workspace
       </a>
-      <SyntheticBanner compact />
+      <SyntheticBanner
+        compact
+        detail="— use synthetic or authorized public data only. Files stay in this browser and are not sent to an AI provider."
+        label="Browser-local demonstration"
+      />
       <header className="border-b border-border bg-card/60">
         <div className="mx-auto flex flex-wrap items-center justify-between gap-3 px-6 py-3">
           <div className="flex items-center gap-4">

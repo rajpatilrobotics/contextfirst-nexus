@@ -1,13 +1,49 @@
 export {
+  clippedPdfTextItemRect,
+  pdfTextItemRect,
+  rangesIntersect,
+  type MaskPlacementRect,
+  type PdfViewportLike,
+} from "./mask-geometry";
+export {
+  retryEmbeddedTextPage,
+} from "./page-recovery";
+export {
+  buildVerifiedOcrPage,
+  recognizePdfPageLocally,
+  type BrowserOcrProgress,
+} from "./browser-ocr";
+export {
+  DOCUMENT_INGESTION_MANIFEST_VERSION,
+  buildDocumentIngestionManifest,
+  createSafeIntegrityReport,
+  normalizePdfRuntimeMetadata,
+  type DocumentIngestionManifest,
+  type DuplicateRelation,
+  type PageFingerprintRecord,
+  type PdfRuntimeMetadata,
+} from "./ingestion-manifest";
+export {
+  prepareAnalysisCorpus,
+  searchAnalysisCorpus,
+  type AnalysisCorpus,
+  type AnalysisCorpusEntry,
+  type AnalysisCorpusResult,
+  type AnalysisCorpusSearchResult,
+} from "./analysis-corpus";
+export {
   CfnDemoPdfSourceService,
   CFN_DEMO_PDF_ALLOWLIST,
   LOCAL_PDF_SELECTION_LIMITS,
   buildCoverageSummary,
   buildPageRecord,
+  applyVerifiedOcrPage,
   detectExactCfnDemoPdfPacket,
   inspectLocalPdfFiles,
   inspectLocalPdfSelection,
+  indexPdfTextItems,
   processLocalPdfSources,
+  readBrowserPdfTextItems,
   isExactCfnDemoPdfSelection,
   normalizeForSegmentMatch,
   pageIssueFor,
@@ -25,16 +61,31 @@ export {
   type LocalPdfInspection,
   type LocalPdfInspectionFile,
   type LocalPdfInspectionResult,
+  type LocalPdfProcessingOptions,
+  type VerifiedOcrPage,
   type LocalDocumentRecord,
   type LocalPdfDocumentServiceResult,
   type LocalPdfSelectionIssue,
   type LocalPdfSelectionIssueCode,
   type LocalPdfSelectionValidation,
+  type IndexedPdfTextItem,
   type PdfDocumentLike,
   type PdfDocumentSource,
   type PdfJsRuntimeLike,
   type PdfLoadingTaskLike,
   type PdfPageLike,
+  type PdfTextItem,
   type VerifiedCfnDemoPdfFile,
   type ValidatedLocalPdfFile,
 } from "./pdf-source-service";
+export {
+  prepareSanitizedTextPacket,
+  type SanitizedTextDocument,
+  type SanitizedTextPacket,
+  type SanitizedTextPacketResult,
+  type SanitizedTextPage,
+} from "./sanitized-document";
+export {
+  renderFlattenedSanitizedPdf,
+  type FlattenedSanitizedPdfResult,
+} from "./flattened-sanitized-pdf";

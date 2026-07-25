@@ -89,7 +89,7 @@ function displayFileName(name: string) {
     .trim();
 }
 
-function issueMessage(issue: LocalPdfSelectionIssue) {
+export function localPdfSelectionIssueMessage(issue: LocalPdfSelectionIssue) {
   const messages: Record<LocalPdfSelectionIssue["code"], string> = {
     empty_selection: "Choose at least one PDF.",
     too_many_files: "Choose no more than 25 PDFs at once.",
@@ -227,7 +227,11 @@ export function PdfSelectionPanel({
         current.map((document) => {
           const issue = issueByName.get(document.file.name);
           return issue
-            ? { ...document, stage: "error", error: issueMessage(issue) }
+            ? {
+                ...document,
+                stage: "error",
+                error: localPdfSelectionIssueMessage(issue),
+              }
             : document;
         }),
       );

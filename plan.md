@@ -1,3 +1,591 @@
+# Lovable Documents density correction, 2026-07-25
+
+**Implementation status:** Complete locally and uncommitted. The two packet
+tools now live as compact Source Quality disclosures; focused tests, typecheck,
+production build, diff check, and same-state 1440 × 900 design QA passed.
+
+## 1. Goal
+
+Restore the approved Lovable Documents composition after adding the new
+packet-integrity and analysis-input capabilities.
+
+## 2. Problem
+
+Packet Integrity and Analysis Input Preview currently render as two large
+permanent cards below the Lovable document list/detail composition. They add
+excessive height, duplicate stat-card styling, and visually turn the page into
+a dashboard.
+
+## 3. Proposed solution
+
+- Keep the default Documents view ending with Lovable’s packet/detail card.
+- Move both packet-level tools into compact, discoverable disclosures inside
+  the existing Source Quality tab.
+- Preserve every metric, search, download, state, and canonical calculation.
+- Match existing Lovable borders, typography, spacing, icons, and responsive
+  behavior; change presentation only.
+
+## 4. Files to change
+
+- `features/documents/browser-case-documents-workspace.tsx`
+- `features/documents/document-cards.tsx`
+- the two packet-tool presentation components and focused tests
+- `design-qa.md`
+
+## 5. Step by step tasks
+
+1. Add a Source Quality extension slot to the existing document card.
+2. Convert Packet Integrity and Analysis Input Preview to compact embedded
+   disclosures.
+3. Remove their permanent full-width placement below the document card.
+4. Capture the same 1440×900 Documents state and compare it with the approved
+   Lovable reference.
+
+## 6. Acceptance criteria
+
+- Default Document Health composition matches Lovable’s hierarchy and density.
+- Packet tools do not occupy permanent page height.
+- Both tools remain keyboard-accessible and fully functional.
+- No document, masking, OCR, integrity, analysis-input, or persistence logic
+  changes.
+
+## 7. Testing plan
+
+- Focused Documents component tests, typecheck, build, and diff check.
+- Same-state 1440×900 Chrome capture and blocking design QA.
+
+## 8. Open questions
+
+- None. The approved Lovable Documents reference is available locally and is
+  the visual source of truth.
+
+# Documents ingestion hardening program, 2026-07-25
+
+**Implementation status:** Complete locally and uncommitted. Focused Documents
+and browser-case tests, typecheck, production build, diff check, and Chrome
+smokes for real image-only OCR, human verification, reload recovery, final
+privacy approval, and visual sanitized-PDF generation passed on 2026-07-25.
+
+## 1. Goal
+
+Turn browser-created case ingestion into a robust, inspectable local pipeline:
+
+- deterministic packet/file/page integrity and duplicate diagnostics;
+- PDF metadata and encryption/password diagnostics;
+- bounded page-level retry instead of unnecessary full-packet replacement;
+- real browser-worker OCR for image-only English pages;
+- a downloadable technical integrity report;
+- a visually flattened sanitized PDF built from approved mask geometry.
+
+## 2. Problem
+
+The current flow has real PDF.js extraction, health, masking, source
+classification, approved-corpus inspection, and a sanitized text derivative.
+It still cannot OCR scans, distinguish duplicate evidence, expose useful
+embedded PDF metadata, retry one page, download a reproducibility report, or
+produce a visual sanitized copy with irreversible raster masks.
+
+These are related ingestion concerns. Implementing them as independent local
+widgets would duplicate PDF loading and create inconsistent readiness rules.
+
+## 3. Proposed solution
+
+Build one session-local `DocumentIngestionManifest` projection over the
+current packet, runtime files, PDF.js extraction result, OCR results, metadata,
+and approved masking state.
+
+### Integrity and duplicates
+
+- Reuse saved SHA-256 file fingerprints for exact-file duplicates.
+- Hash normalized extracted page text for exact repeated-page diagnostics.
+- Add deterministic token-shingle similarity for advisory near-duplicate
+  pages, with a conservative threshold and no automatic deletion.
+- Keep every record visible; diagnostics never decide evidentiary weight.
+
+### Metadata and encryption
+
+- Use PDF.js `getMetadata`, `getPermissions`, and document loading state.
+- Display sanitized technical metadata fields as unverified embedded metadata.
+- Detect password-required documents and offer a session-only password retry.
+- Never persist, log, or transmit passwords.
+
+### OCR and page recovery
+
+- Pin `tesseract.js@7.0.0` and `@tesseract.js-data/eng@1.0.0`.
+- Self-host the browser worker, LSTM core variants, and English trained data.
+- Rasterize only selected image-only/failed pages with PDF.js, reuse one OCR
+  worker per job, and terminate it after the bounded job.
+- Mark OCR output provisional, show confidence, and require explicit human
+  verification before it becomes an available segment.
+- Retry a selected page while preserving successful page results.
+- Do not claim handwriting, table structure, language coverage beyond English,
+  or accuracy guarantees.
+
+### Integrity report
+
+- Generate a JSON technical report entirely in the browser from safe metadata,
+  fingerprints, page states, duplicate relations, OCR status, masking
+  revision, and processing versions.
+- Exclude extracted text, OCR text, passwords, PDF bytes, blob URLs, and user
+  search terms.
+
+### Flattened visual sanitized PDF
+
+- Reload the real local PDF with PDF.js.
+- Render each page to a canvas, calculate masks from the same canonical
+  character ranges and indexed PDF text geometry used by Masked Preview, and
+  paint opaque masks directly onto the raster canvas.
+- Build a new image-only PDF with the existing `@react-pdf/renderer`.
+- Fail closed unless the current packet’s masking review and leak scan pass
+  and every approved mask can be placed.
+- State that rasterization removes selectable source text but does not prove
+  that the human reviewer found every personal detail.
+
+## 4. Files to change
+
+- `package.json`, `package-lock.json`
+- `plan.md`, `decision-log.md`
+- local OCR asset-copy script and pinned public runtime assets
+- focused helpers under `lib/documents/` for manifest, duplicate analysis,
+  metadata, OCR, report, page recovery, and flattened export
+- current dynamic Documents workspace/cards/masked-preview components
+- browser-case packet schema only for safe retry/OCR verification metadata
+  that must survive reload; never persist extracted/OCR text
+- focused unit/component/browser tests
+
+## 5. Step by step tasks
+
+1. Freeze shared manifest contracts and safe failure states.
+2. Add exact and advisory duplicate diagnostics with deterministic tests.
+3. Add PDF metadata/password diagnostics and session-only unlock handling.
+4. Add bounded page retry and OCR worker pipeline with provisional/human-
+   verified states.
+5. Feed verified OCR segments through the existing mask invalidation and
+   analysis-input preparation boundaries.
+6. Add the safe integrity-report download.
+7. Extract shared mask-geometry helpers and add flattened visual export.
+8. Integrate compactly into Document Health, Source Quality, Masking Status,
+   and packet-level controls without redesigning the Lovable layout.
+9. Verify leakage, cleanup, reload, failure, duplicate, OCR, and export paths.
+
+## 6. Acceptance criteria
+
+- Exact duplicates are detected from current fingerprints; repeated pages are
+  derived from current normalized text and never invented.
+- Near-duplicate warnings are advisory and explain their deterministic basis.
+- Metadata is labelled embedded/unverified and passwords never persist.
+- One failed or image-only page can be retried without discarding successful
+  pages.
+- OCR performs real English recognition in a browser worker, shows confidence,
+  remains provisional until human verification, and never leaves the browser.
+- The integrity report contains no source/OCR text or secrets.
+- Flattened export contains original page imagery plus approved opaque masks,
+  has no selectable source-text layer, and refuses incomplete placement.
+- Existing extraction, original preview, masking, sanitized text derivative,
+  source classification, persistence, and legacy demo behavior continue.
+
+## 7. Testing plan
+
+- Focused manifest/duplicate/metadata/report/OCR/page-retry/mask-geometry unit
+  tests.
+- Focused dynamic Documents interaction, persistence, password, and cleanup
+  component tests.
+- Typecheck, one production build, `git diff --check`.
+- Chrome smoke with text-native, duplicate, image-only, and approved-mask
+  PDFs; no real personal data.
+
+## 8. Open questions
+
+- OCR is English-only in this slice. Other languages require separately pinned
+  trained data and explicit UI selection.
+- Encrypted PDFs can be unlocked only for the current session; passwords are
+  intentionally never retained.
+- Near-duplicate similarity is a navigation warning, not a credibility,
+  authenticity, or evidentiary-weight conclusion.
+
+# Persistent source classification, 2026-07-25
+
+## 1. Goal
+
+Let a practitioner classify each uploaded PDF using the existing canonical
+document source types so later analysis can distinguish communications,
+travel records, practitioner notes, proceedings, financial records, and other
+source roles.
+
+## 2. Problem
+
+Every browser-created PDF currently remains `other` / “Uploaded PDF” even when
+the practitioner knows its source role. Extraction quality is real, but the
+packet loses useful human-supplied source context that Structured Analysis
+will need.
+
+## 3. Proposed solution
+
+- Add a compact source-classification control to each dynamic document’s
+  Source Quality tab.
+- Persist the selected value through the existing validated browser-case
+  document packet; add no new domain field or parallel local state.
+- Keep classification explicitly practitioner-supplied and separate from
+  authenticity, credibility, or legal-strength claims.
+- Surface the current source type and classified-document count in the
+  Analysis Input Preview and its exact search results.
+- Preserve extraction, masking, privacy approval, PDF bytes, and legacy demo
+  behavior.
+
+## 4. Files to change
+
+- `plan.md`
+- `features/documents/document-cards.tsx`
+- `features/documents/browser-case-documents-workspace.tsx`
+- `features/documents/analysis-input-preview.tsx`
+- `lib/documents/analysis-corpus.ts`
+- focused Documents, persistence, and corpus tests
+
+## 5. Step by step tasks
+
+1. Add a dynamic-only source-type selector using the existing contract enum.
+2. Save the selected type through the current validated packet persistence.
+3. Reset the edit buffer when the selected document changes.
+4. Add source-type context to the approved analysis corpus and search results.
+5. Verify case isolation, reload persistence, failed saves, and unchanged
+   legacy behavior.
+
+## 6. Acceptance criteria
+
+- Saving a source classification updates only the selected current-case
+  document.
+- The classification survives navigation and reload.
+- Switching documents never carries an unsaved classification draft across
+  records.
+- Analysis Input Preview uses the current persisted classification.
+- The UI never implies that classification proves provenance or credibility.
+
+## 7. Testing plan
+
+- Focused DocumentCards selector and cross-record-buffer tests.
+- Focused browser-case persistence and analysis-corpus tests.
+- Typecheck, production build, `git diff --check`, and one Chrome smoke.
+
+## 8. Open questions
+
+- No decision is required. `other` remains the truthful default until a
+  practitioner explicitly supplies a more specific source role.
+
+# Browser-local Analysis Input Preview, 2026-07-25
+
+## 1. Goal
+
+Let the practitioner inspect the exact sanitized browser-local corpus that is
+ready to become Structured Analysis input, before dynamic-case analysis is
+connected.
+
+## 2. Problem
+
+Documents currently proves extraction, masking, and privacy readiness, but it
+does not summarize what usable redacted material exists across the packet.
+The practitioner cannot search the approved corpus by exact document/page
+citation or see which extracted segments are evidence-eligible versus
+instruction-like advisory material.
+
+## 3. Proposed solution
+
+- Build a fail-closed analysis-corpus projection from the current extracted
+  segments and canonical approved masking state.
+- Reuse the existing redaction/transmission-readiness checks; never create a
+  weaker competing definition.
+- Show real document, page, segment, word, character, eligibility, and
+  instruction-advisory counts.
+- Add local search over sanitized text with exact document/page/segment
+  citations and bounded snippets.
+- Keep raw text, extracted text, search queries, and results out of persistent
+  browser metadata.
+- State clearly that this is an input preview and that Structured Analysis for
+  browser-created cases is still unavailable.
+
+## 4. Files to change
+
+- `plan.md`
+- one pure analysis-corpus helper under `lib/documents/`
+- one compact Documents component under `features/documents/`
+- `features/documents/browser-case-documents-workspace.tsx`
+- focused corpus and Documents component tests
+
+## 5. Step by step tasks
+
+1. Build and test a canonical redacted corpus model with fail-closed source
+   mapping and deterministic metrics.
+2. Add deterministic bounded full-text search over that safe model.
+3. Render a compact Lovable-style packet summary and expandable search.
+4. Connect it only when current runtime files and the saved privacy result
+   match.
+5. Verify invalidation, privacy blocking, citation accuracy, and no raw-value
+   leakage.
+
+## 6. Acceptance criteria
+
+- No corpus text appears before the current masking review and leak scan pass.
+- Every displayed snippet is redacted text derived from a current canonical
+  segment.
+- Every result has its real document, page, and segment citation.
+- Metrics derive from current packet data and never use fixture counts.
+- Instruction-like and evidence-only material is visibly distinguished.
+- The UI does not claim that dynamic Structured Analysis can start.
+
+## 7. Testing plan
+
+- Focused unit tests for readiness, redaction, metrics, citations, search, and
+  source mismatch.
+- Focused component tests for blocked, ready, search-empty, and result states.
+- Typecheck, production build, `git diff --check`, and one Chrome smoke.
+
+## 8. Open questions
+
+- No decision is required for this slice. The preview is session-only because
+  persisting extracted or redacted source text in localStorage would weaken
+  the current privacy boundary.
+
+# Browser-local sanitized derivative and detector hardening, 2026-07-25
+
+## 1. Goal
+
+Add one real post-review outcome to Documents: after the current packet passes
+the canonical masking review and deterministic leak scan, the practitioner can
+download a new browser-local PDF containing only the approved redacted
+extracted text.
+
+## 2. Problem
+
+The working masked preview is useful for review, but the original PDF remains
+unchanged and there is no downloadable sanitized artifact. The current local
+identifier detector is deliberately limited and should recognize a few more
+common labelled formats without pretending to provide OCR or comprehensive
+PII detection.
+
+## 3. Proposed solution
+
+- Reuse the installed PDF renderer to create a clearly labelled **sanitized
+  text derivative** from canonical redacted segments only.
+- Fail closed unless the current masking review is approved, the current leak
+  scan passed, and every effective mask validates against the current
+  extracted segments.
+- Generate and download the PDF only in the browser; do not persist, upload,
+  log, or transmit the generated bytes or object URL.
+- State truthfully that this derivative does not preserve the original visual
+  layout and may omit pages that had no extractable text.
+- Extend only conservative deterministic patterns such as labelled
+  passport/account variants, IBAN-like values, and labelled written-form dates
+  of birth. All findings remain pending human review.
+
+## 4. Files to change
+
+- `plan.md`
+- `features/documents/browser-case-documents-workspace.tsx`
+- `features/documents/masking-review-panel.tsx`
+- one small sanitized-PDF renderer/model under `features/documents/` or
+  `lib/documents/`
+- `lib/redaction/index.ts`
+- focused Documents and redaction tests
+
+## 5. Step by step tasks
+
+1. Build and test a fail-closed sanitized-document model from current
+   canonical segments and masking state.
+2. Render that safe model as a PDF with the existing pinned renderer.
+3. Add a compact post-pass download action to the final privacy-check row.
+4. Revoke the temporary download URL immediately after use.
+5. Harden conservative deterministic patterns and add focused tests.
+
+## 6. Acceptance criteria
+
+- No download is available before the current privacy review and leak scan
+  pass.
+- The generated PDF contains approved replacement labels and never contains
+  the corresponding raw masked values.
+- The UI calls it a sanitized text derivative and explains its layout/OCR
+  limitations.
+- Generated bytes and object URLs remain browser-session-only.
+- Detector additions remain deterministic, conservative, and human-reviewed.
+
+## 7. Testing plan
+
+- Focused sanitized-model, renderer, Documents UI, and redaction tests.
+- `npm run typecheck`, one production build, and `git diff --check`.
+- One Chrome smoke: approved masks → passed privacy check → download sanitized
+  text PDF.
+
+## 8. Open questions
+
+- OCR, a shared database, and a visually flattened copy of original page
+  artwork remain separate future work; this slice will not misrepresent the
+  text derivative as any of those features.
+
+# Interactive browser-local masked preview, 2026-07-25
+
+## Approved layout and detector correction
+
+- Give the masked PDF the full available document width so a normal page is
+  visible without the permanent review sidebar squeezing it.
+- Move the compact **Review visible text** controls below the PDF, with the
+  active selection/review actions and accessible mask list arranged
+  responsively.
+- Replace fixture-shaped passport, account, and date detection with
+  label-aware deterministic patterns that work on arbitrary embedded-text
+  PDFs. Keep automatic findings pending until a human approves them.
+- Keep names and ambiguous identifiers manually selectable; never claim
+  complete PII detection, OCR support, or irreversible PDF sanitization.
+
+## Approved compact privacy-gate correction
+
+- Preserve the real browser-local approval path: validate every mask decision,
+  build redacted text, run the deterministic leak scan, and persist the
+  resulting review/scan state in the independent case packet.
+- Replace the oversized generic **Approve privacy masks** card with a compact
+  Lovable-style final-check row using the existing editorial tokens, chips,
+  status icons, concise blocked/ready copy, and one clear action.
+- Fail visibly when browser persistence fails; never show a successful privacy
+  result unless the updated packet was actually saved.
+- Add focused dynamic-case tests for blocked pending masks, passed zero-result
+  scans, failed leak scans, persistence across remount, and storage failure.
+
+## 1. Goal
+
+Turn Masking Status into a clear, judge-ready visual workflow for any
+browser-local PDF that contains extractable text:
+
+- show the selected PDF as a scrollable masked preview;
+- place real overlays over detected or manually selected text;
+- let the practitioner review masks directly from the preview;
+- preserve the original PDF unchanged and separately revealable;
+- keep all PDF bytes, text, and masking work inside the browser.
+
+## 2. Problem
+
+The current masking engine can detect narrow deterministic patterns, store
+canonical character-range decisions, build redacted extracted text, and run a
+local leak scan. Its UI exposes segment IDs and numeric character offsets,
+however, and Document View only shows the original PDF. A practitioner cannot
+see where masks land on a page or select missed text naturally.
+
+Selecting an identifier class currently changes only the replacement token; it
+does not find or visually hide matching content. Person names cannot be
+reliably inferred from arbitrary documents without a human decision or a
+separate named-entity model. Scanned/image-only pages contain no selectable
+text and require OCR, which this demonstration intentionally does not provide.
+
+## 3. Proposed solution
+
+Use the already installed and pinned PDF.js display API. For every readable
+page, render the PDF canvas plus a coordinate-aligned text/interaction layer.
+Build a deterministic index that maps the same normalized page text used by
+the canonical masking engine to PDF.js text items and page rectangles.
+
+Render canonical masking suggestions as visual overlays:
+
+- pending suggestions use a review color;
+- approved/edited masks use an opaque privacy overlay and readable label;
+- rejected items remain clearly unresolved;
+- selecting an overlay opens compact approve, edit-type, or remove actions.
+
+Replace the primary numeric-offset workflow with direct visible-text
+selection. The selected page text and its exact canonical range become a
+normal `MaskSuggestion`; all approvals, invalidation, leak scanning, and
+redacted-text generation continue through the existing masking model.
+Retain the offset form only as a collapsed advanced fallback if needed.
+
+Improve deterministic detection for common international email, telephone,
+date, passport-like, and account-like formats without claiming comprehensive
+PII recognition or credibility. Names and ambiguous addresses remain
+human-selected unless a known sensitive-term list is explicitly available.
+No live AI, server upload, OCR, permanent PDF rewriting, or new dependency is
+introduced.
+
+## 4. Files to change
+
+- `features/documents/document-cards.tsx`
+- `features/documents/masking-review-panel.tsx`
+- `features/documents/browser-case-documents-workspace.tsx`
+- A small focused browser-local PDF mask-preview helper under
+  `features/documents/` or `lib/documents/`
+- `lib/documents/pdf-source-service.ts` only if a shared text-index utility is
+  required to guarantee canonical offset parity
+- `lib/redaction/index.ts` only for carefully tested deterministic-pattern
+  coverage improvements
+- Focused Documents, redaction, masking, preview, and cleanup tests
+
+The existing dirty multi-case and Documents worktree must be preserved. No
+legacy `/case/demo` behavior, Masking contracts, downstream safety rule, or
+unrelated route will be redesigned.
+
+## 5. Step by step tasks
+
+1. Extract one shared page-text indexing rule so PDF text, character offsets,
+   and visual PDF.js items cannot silently disagree.
+2. Add a scrollable Masked Preview using the existing session/IndexedDB-backed
+   `File`, PDF.js canvas rendering, and coordinate-aligned overlay layer.
+3. Display pending, approved, edited, rejected, and selected mask states with
+   deterministic styling, page labels, counts, and an accessible textual
+   equivalent.
+4. Add mouse and keyboard selection of visible extracted text, followed by a
+   compact identifier-class and replacement confirmation.
+5. Connect visual approve/edit/remove/add actions to the existing canonical
+   masking mutations; never create parallel preview-only decisions.
+6. Keep Original PDF as an explicit separate view and clearly explain that
+   Masked Preview is a browser-local working projection, not a permanently
+   sanitized PDF.
+7. Show safe per-page limitations for image-only, failed, or unsupported text
+   geometry, and never draw a mask where placement cannot be verified.
+8. Verify multiple PDFs, reload restoration, mask invalidation, privacy scan,
+   responsive layout, keyboard operation, and object/render-task cleanup.
+
+## 6. Acceptance criteria
+
+- Every successfully opened embedded-text PDF can render a scrollable masked
+  preview from its real browser-local bytes.
+- Every visible overlay is derived from a canonical current-document mask
+  range; no fixture boxes or invented content appear.
+- Selecting visible text can create a pending mask without entering segment
+  IDs or numeric offsets.
+- Approve, edit, remove, and final privacy-check actions update the existing
+  masking state and survive navigation/reload according to current browser
+  persistence.
+- Multiple packet documents show only their own pages and masks.
+- Approved masks visibly obscure the selected text; Original PDF remains
+  available separately and unchanged.
+- Automatic detection is explicitly described as limited and deterministic.
+  The UI never claims that all names or identifiers were found.
+- Image-only/scanned pages say that OCR is required and unavailable; they do
+  not show fabricated text or overlays.
+- PDF bytes and extracted text never enter localStorage, logs, a provider, or
+  the network.
+- Existing Lovable layout, four-tab structure, responsive behavior, canonical
+  leak scan, `/case/demo` workflow, and safety rules remain intact.
+
+## 7. Testing plan
+
+- Focused unit tests for text-item-to-canonical-range mapping, coordinate
+  conversion, multi-item masks, overlap, and expanded deterministic patterns.
+- Focused component tests for masked rendering states, visible-text selection,
+  canonical actions, document switching, keyboard operation, limitations, and
+  cleanup.
+- Existing focused Documents and masking regression tests.
+- `npm run typecheck`, one `npm run build`, and `git diff --check`.
+- One Chrome judge smoke with at least two real PDFs:
+  upload → Masking Status → inspect automatic overlays → select missed text →
+  approve → run privacy check → reload → reopen masked preview.
+
+## 8. Open questions
+
+- No user decision is required for the first slice: approved masks will use an
+  opaque dark overlay with a short category label, while pending suggestions
+  remain visibly highlighted.
+- “Works with any random PDF” means any valid PDF that PDF.js can open and
+  whose pages contain an embedded text layer. Scanned/image-only, encrypted,
+  corrupt, or unusually encoded PDFs must fail visibly and safely rather than
+  pretending masking succeeded.
+- This is a visual and text-projection masking workflow, not irreversible PDF
+  sanitization. Generating a downloadable permanently redacted PDF and adding
+  OCR remain separate, higher-risk phases.
+
 # Real case entry and multi-case foundation, 2026-07-25
 
 ## 1. Goal

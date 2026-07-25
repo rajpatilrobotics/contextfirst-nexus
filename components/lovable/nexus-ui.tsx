@@ -62,7 +62,15 @@ export function Chip({
   );
 }
 
-export function SyntheticBanner({ compact = false }: { compact?: boolean }) {
+export function SyntheticBanner({
+  compact = false,
+  detail = "— not real case data. No documents were uploaded, analyzed, or transmitted.",
+  label = "Synthetic training fixture",
+}: {
+  compact?: boolean;
+  detail?: string;
+  label?: string;
+}) {
   return (
     <div
       role="status"
@@ -72,10 +80,8 @@ export function SyntheticBanner({ compact = false }: { compact?: boolean }) {
       )}
     >
       <AlertTriangle className="h-3.5 w-3.5 shrink-0" aria-hidden />
-      <span className="font-medium">Synthetic training fixture</span>
-      <span className="text-muted-foreground">
-        — not real case data. No documents were uploaded, analyzed, or transmitted.
-      </span>
+      <span className="font-medium">{label}</span>
+      <span className="text-muted-foreground">{detail}</span>
     </div>
   );
 }

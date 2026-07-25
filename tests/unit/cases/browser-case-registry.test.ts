@@ -71,6 +71,23 @@ describe("browser-local case registry", () => {
     });
   });
 
+  it("restores legacy browser-created cases with an empty document packet", () => {
+    const created = addCase(
+      createEmptyBrowserCaseRegistry(),
+      "REF-2026-0102-SYN",
+      "LEGACY",
+    );
+    const legacy = JSON.parse(JSON.stringify(created.registry)) as {
+      cases: Array<Record<string, unknown>>;
+    };
+    delete legacy.cases[0].documentPacket;
+
+    const restored = restoreBrowserCaseRegistry(JSON.stringify(legacy));
+
+    expect(restored.ok).toBe(true);
+    expect(restored.registry.cases[0]?.documentPacket).toBeNull();
+  });
+
   it("saves Purpose only to its matching case and survives serialization", () => {
     const first = addCase(
       createEmptyBrowserCaseRegistry(),

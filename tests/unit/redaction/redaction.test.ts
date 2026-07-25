@@ -84,17 +84,99 @@ describe("redaction detection", () => {
     });
   });
 
+  it("detects conservative labelled variants and IBAN-like values for human review", () => {
+    const rawText =
+      "Passport no: AB-123456. IBAN GB82 WEST 1234 5698 7654 32. Date of birth: 25 July 1992.";
+    const source = segment("D01-P1-S02", rawText);
+
+    const suggestions = detectMaskSuggestions([source]);
+
+    expect(
+      suggestions.map((suggestion) => ({
+        maskClass: suggestion.maskClass,
+        text: rawText.slice(suggestion.originalStart, suggestion.originalEnd),
+        reviewStatus: suggestion.reviewStatus,
+      })),
+    ).toEqual(
+      expect.arrayContaining([
+        {
+          maskClass: "passport",
+          text: "AB-123456",
+          reviewStatus: "pending",
+        },
+        {
+          maskClass: "bank_account",
+          text: "GB82 WEST 1234 5698 7654 32",
+          reviewStatus: "pending",
+        },
+        {
+          maskClass: "date_of_birth",
+          text: "25 July 1992",
+          reviewStatus: "pending",
+        },
+      ]),
+    );
+  });
+
   it("does not claim person-name detection without supplied sensitive terms", () => {
     const suggestions = detectMaskSuggestions([segment("D01-P1-S01", "Maya K. wrote a note.")]);
 
     expect(suggestions.some((suggestion) => suggestion.maskClass === "person_name")).toBe(false);
   });
 
+  it("detects common international email and separated phone formats without a fixture allowlist", () => {
+    const rawText =
+      "Contact reviewer@support.in or call +91 98765 43210 for the browser-local demonstration.";
+    const suggestions = detectMaskSuggestions([
+      segment("D01-P1-S01", rawText),
+    ]);
+
+    expect(
+      suggestions.find((suggestion) => suggestion.maskClass === "email"),
+    ).toMatchObject({
+      originalStart: rawText.indexOf("reviewer@support.in"),
+      originalEnd:
+        rawText.indexOf("reviewer@support.in") +
+        "reviewer@support.in".length,
+    });
+    expect(
+      suggestions.find((suggestion) => suggestion.maskClass === "phone"),
+    ).toMatchObject({
+      originalStart: rawText.indexOf("+91 98765 43210"),
+      originalEnd:
+        rawText.indexOf("+91 98765 43210") + "+91 98765 43210".length,
+    });
+  });
+
+  it("detects labelled passport, account, and birth-date values without masking their labels", () => {
+    const rawText =
+      "Passport No: AB1234567; Account number: 1234-5678-9012; DOB: 25/07/1992; address 42 MG Road.";
+    const suggestions = detectMaskSuggestions([
+      segment("D01-P1-S01", rawText),
+    ]);
+    const detectedValues = suggestions.map((suggestion) => ({
+      maskClass: suggestion.maskClass,
+      value: rawText.slice(
+        suggestion.originalStart,
+        suggestion.originalEnd,
+      ),
+    }));
+
+    expect(detectedValues).toEqual(
+      expect.arrayContaining([
+        { maskClass: "passport", value: "AB1234567" },
+        { maskClass: "bank_account", value: "1234-5678-9012" },
+        { maskClass: "date_of_birth", value: "25/07/1992" },
+        { maskClass: "address", value: "42 MG Road" },
+      ]),
+    );
+  });
+
   it("avoids near-match and ordinary-date classification outside the declared support", () => {
     const suggestions = detectMaskSuggestions([
       segment(
         "D01-P1-S01",
-        "Near matches maya.k@example, X000000, 2025550147, 123456789, and event date 2025-03-14.",
+        "Near matches maya.k@example, X0000007, 2025550147, 123456789012, and event date 2025-03-14.",
       ),
     ]);
 
@@ -213,7 +295,7 @@ describe("review, approval, and invalidation", () => {
 
 describe("redacted derivatives and browser-local mapping", () => {
   it("creates a derivative, preserves source text, and maps before, inside, and after replacements", () => {
-    const rawText = "A Maya K. B X0000007 C";
+    const rawText = "A Maya K. B passport X0000007 C";
     const source = segment("D01-P1-S01", rawText);
     const approvedSuggestions = approveAll(
       detectMaskSuggestions([source], { sensitiveTerms: ["Maya K."] }),
@@ -223,7 +305,9 @@ describe("redacted derivatives and browser-local mapping", () => {
 
     expect(source.rawText).toBe(rawText);
     expect(redacted.rawText).toBe(rawText);
-    expect(redacted.redactedText).toBe("A [Person name masked] B [Passport masked] C");
+    expect(redacted.redactedText).toBe(
+      "A [Person name masked] B passport [Passport masked] C",
+    );
     expect(redacted.map.entries).toHaveLength(2);
 
     expect(mapOriginalOffsetToRedacted(redacted.map, 1)).toEqual({ kind: "point", offset: 1 });
@@ -298,7 +382,7 @@ describe("redacted derivatives and browser-local mapping", () => {
 describe("provider and safe-share leak scans", () => {
   it("returns safe class and range metadata without echoing leaked values", () => {
     const leakedText =
-      "Provider payload still includes Maya K., maya.k@example.test, +1 202-555-0147, X0000007, 000123456789, 18 Example Lane, Sample City, and 1997-08-14.";
+      "Provider payload still includes Maya K., maya.k@example.test, +1 202-555-0147, passport X0000007, account 000123456789, address 18 Example Lane, Sample City, and DOB 1997-08-14.";
 
     const result = scanProviderPayload(leakedText, { sensitiveTerms: ["Maya K."] });
 

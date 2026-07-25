@@ -2009,9 +2009,21 @@ export const FixtureProcessingResultSchema = strict({
 });
 
 export const LocalDocumentProcessingResultSchema = strict({
-  caseId: z.literal("CFN-DEMO-001"),
+  caseId: IdSchemas.caseId,
   fixtureVersion: literalVersion,
   documentSetDigest: sha256,
+  fileMetadata: z
+    .array(
+      strict({
+        documentId: IdSchemas.documentId,
+        fileName: nonEmptyString,
+        byteLength: positiveInteger,
+        sha256,
+      }),
+    )
+    .min(1)
+    .max(25)
+    .optional(),
   documents: z.array(DocumentRecordSchema).min(1).max(25),
   segments: z.array(SourceSegmentSchema).min(1),
   coverage: CoverageSummarySchema,

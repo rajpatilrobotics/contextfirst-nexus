@@ -1,6 +1,10 @@
 import { z } from "zod";
 import {
   CasePurposeBriefSchema,
+  CoverageSummarySchema,
+  DocumentRecordSchema,
+  MaskingReviewSchema,
+  ProcessingStageSchema,
   type CasePurposeBrief,
 } from "../contracts";
 
@@ -15,6 +19,77 @@ const DisplayReferenceSchema = z
 const PersonAliasSchema = z.string().trim().min(1).max(80);
 const PractitionerNameSchema = z.string().trim().min(1).max(80);
 const TimestampSchema = z.string().datetime({ offset: true });
+const Sha256Schema = z.string().regex(/^[a-f0-9]{64}$/);
+
+export const BrowserCaseDocumentPacketSchema = z
+  .strictObject({
+    schemaVersion: z.literal("1.0.0"),
+    caseId: BrowserCaseIdSchema,
+    documentSetDigest: Sha256Schema,
+    fileMetadata: z
+      .array(
+        z.strictObject({
+          documentId: z.string().regex(/^D\d{2}$/),
+          fileName: z.string().trim().min(1).max(255),
+          byteLength: z.number().int().positive(),
+          sha256: Sha256Schema,
+        }),
+      )
+      .min(1)
+      .max(25),
+    documents: z.array(DocumentRecordSchema).min(1).max(25),
+    coverage: CoverageSummarySchema,
+    processing: z.array(ProcessingStageSchema),
+    masking: MaskingReviewSchema,
+    ocrVerifications: z
+      .array(
+        z.strictObject({
+          documentId: z.string().regex(/^D\d{2}$/),
+          pageNumber: z.number().int().positive(),
+          method: z.union([
+            z.literal("ocr"),
+            z.literal("embedded_text_retry"),
+          ]),
+          language: z.literal("eng").nullable(),
+          engineVersion: z.union([
+            z.literal("tesseract.js-7.0.0"),
+            z.literal("pdfjs-6.1.200"),
+          ]),
+          verifiedAt: TimestampSchema,
+        }),
+      )
+      .max(500)
+      .default([]),
+    contentPersistence: z.union([
+      z.literal("metadata_only_reselection_required"),
+      z.literal("browser_indexeddb"),
+    ]),
+    updatedAt: TimestampSchema,
+  })
+  .superRefine((packet, context) => {
+    if (
+      packet.documents.some((document) => document.caseId !== packet.caseId)
+    ) {
+      context.addIssue({
+        code: "custom",
+        message: "Document packet contains a record from another case.",
+        path: ["documents"],
+      });
+    }
+    const documentIds = packet.documents.map((document) => document.id);
+    if (
+      packet.fileMetadata.length !== packet.documents.length ||
+      packet.fileMetadata.some(
+        (file, index) => file.documentId !== documentIds[index],
+      )
+    ) {
+      context.addIssue({
+        code: "custom",
+        message: "Document metadata does not match the packet.",
+        path: ["fileMetadata"],
+      });
+    }
+  });
 
 export const BrowserCaseRecordSchema = z
   .strictObject({
@@ -26,6 +101,7 @@ export const BrowserCaseRecordSchema = z
     createdAt: TimestampSchema,
     updatedAt: TimestampSchema,
     purposeBrief: CasePurposeBriefSchema.nullable(),
+    documentPacket: BrowserCaseDocumentPacketSchema.nullable(),
   })
   .superRefine((record, context) => {
     if (record.purposeBrief && record.purposeBrief.caseId !== record.id) {
@@ -33,6 +109,13 @@ export const BrowserCaseRecordSchema = z
         code: "custom",
         message: "Purpose Brief belongs to a different case.",
         path: ["purposeBrief", "caseId"],
+      });
+    }
+    if (record.documentPacket && record.documentPacket.caseId !== record.id) {
+      context.addIssue({
+        code: "custom",
+        message: "Document packet belongs to a different case.",
+        path: ["documentPacket", "caseId"],
       });
     }
   });
@@ -66,6 +149,9 @@ export const BrowserCaseRegistrySchema = z
   });
 
 export type BrowserCaseRecord = z.infer<typeof BrowserCaseRecordSchema>;
+export type BrowserCaseDocumentPacket = z.infer<
+  typeof BrowserCaseDocumentPacketSchema
+>;
 export type BrowserCaseRegistry = z.infer<typeof BrowserCaseRegistrySchema>;
 
 export type BrowserStorage = Pick<Storage, "getItem" | "setItem">;
@@ -96,7 +182,19 @@ export function restoreBrowserCaseRegistry(serialized: string | null):
   }
 
   try {
-    const parsed = BrowserCaseRegistrySchema.safeParse(JSON.parse(serialized));
+    const raw = JSON.parse(serialized) as unknown;
+    const withDocumentDefaults =
+      raw && typeof raw === "object" && Array.isArray((raw as { cases?: unknown }).cases)
+        ? {
+            ...raw,
+            cases: (raw as { cases: unknown[] }).cases.map((record) =>
+              record && typeof record === "object" && !("documentPacket" in record)
+                ? { ...record, documentPacket: null }
+                : record,
+            ),
+          }
+        : raw;
+    const parsed = BrowserCaseRegistrySchema.safeParse(withDocumentDefaults);
     if (!parsed.success) {
       return {
         ok: false,
@@ -211,6 +309,7 @@ export function createBrowserCase(
     createdAt: now,
     updatedAt: now,
     purposeBrief: null,
+    documentPacket: null,
   });
   if (!record.success || registry.cases.some((item) => item.id === record.data.id)) {
     return {
@@ -256,6 +355,46 @@ export function saveBrowserCasePurpose(
   });
   if (!nextRegistry.success) {
     return { ok: false, reason: "The Purpose Brief did not pass case validation." };
+  }
+  return {
+    ok: true,
+    registry: nextRegistry.data,
+    record: nextRegistry.data.cases[index],
+  };
+}
+
+export function saveBrowserCaseDocumentPacket(
+  registry: BrowserCaseRegistry,
+  caseId: string,
+  packet: BrowserCaseDocumentPacket,
+):
+  | { ok: true; registry: BrowserCaseRegistry; record: BrowserCaseRecord }
+  | { ok: false; reason: string } {
+  const index = registry.cases.findIndex((record) => record.id === caseId);
+  if (index < 0) {
+    return { ok: false, reason: "This browser-local case no longer exists." };
+  }
+  if (packet.caseId !== caseId) {
+    return { ok: false, reason: "The document packet belongs to another case." };
+  }
+
+  const parsedPacket = BrowserCaseDocumentPacketSchema.safeParse(packet);
+  if (!parsedPacket.success) {
+    return { ok: false, reason: "The document packet did not pass validation." };
+  }
+
+  const cases = [...registry.cases];
+  cases[index] = {
+    ...cases[index],
+    documentPacket: parsedPacket.data,
+    updatedAt: parsedPacket.data.updatedAt,
+  };
+  const nextRegistry = BrowserCaseRegistrySchema.safeParse({
+    ...registry,
+    cases,
+  });
+  if (!nextRegistry.success) {
+    return { ok: false, reason: "The document packet could not be saved." };
   }
   return {
     ok: true,

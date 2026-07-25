@@ -142,32 +142,72 @@ type SegmentInput = Pick<SourceSegment, "id" | "rawText">;
 type PatternDetector = {
   maskClass: Exclude<MaskClass, "person_name">;
   pattern: RegExp;
+  accept?: (value: string) => boolean;
+  captureGroup?: number;
 };
 
 const PATTERN_DETECTORS: PatternDetector[] = [
   {
     maskClass: "email",
-    pattern: /\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.(?:test|org|com|net)\b/g,
+    pattern: /\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,63}\b/g,
   },
   {
     maskClass: "phone",
-    pattern: /(?:\+1\s*)?\b\d{3}-555-\d{4}\b/g,
+    pattern: /(?:\+\d{1,3}[\s.-]?)?(?:\(?\d{2,5}\)?[\s.-]){1,4}\d{3,5}\b/g,
+    accept: (value) => {
+      const digitCount = value.replace(/\D/g, "").length;
+      return digitCount >= 10 && digitCount <= 15;
+    },
   },
   {
     maskClass: "passport",
-    pattern: /\b[A-Z]\d{7}\b/g,
+    pattern:
+      /\bpassport(?:\s+(?:number|no\.?))?\s*[:#-]?\s*([A-Z0-9](?:[A-Z0-9-]{4,14}[A-Z0-9]))\b/gi,
+    captureGroup: 1,
+    accept: (value) => {
+      const compact = value.replace(/[\s-]/g, "");
+      return (
+        compact.length >= 6 &&
+        compact.length <= 12 &&
+        /[A-Z]/i.test(compact) &&
+        /\d/.test(compact)
+      );
+    },
   },
   {
     maskClass: "bank_account",
-    pattern: /\b\d{12}\b/g,
+    pattern: /\b[A-Z]{2}\d{2}(?:\s?[A-Z0-9]){11,30}\b/gi,
+    accept: (value) => {
+      const compact = value.replace(/\s/g, "");
+      return compact.length >= 15 && compact.length <= 34;
+    },
+  },
+  {
+    maskClass: "bank_account",
+    pattern:
+      /\b(?:account|a\/c)(?:\s+(?:number|no\.?))?\s*[:#-]?\s*(\d[\d -]{6,22}\d)\b/gi,
+    captureGroup: 1,
+    accept: (value) => {
+      const digitCount = value.replace(/\D/g, "").length;
+      return digitCount >= 8 && digitCount <= 18;
+    },
   },
   {
     maskClass: "address",
-    pattern: /\b\d{1,5}\s+[A-Z][A-Za-z]+(?:\s+[A-Z][A-Za-z]+)*\s+(?:Lane|Street|Road|Avenue),\s+[A-Z][A-Za-z]+(?:\s+[A-Z][A-Za-z]+)*\b/g,
+    pattern:
+      /\b\d{1,6}\s+(?:[A-Za-z0-9.'-]+\s+){1,6}(?:Street|St|Road|Rd|Avenue|Ave|Lane|Ln|Boulevard|Blvd|Drive|Dr|Court|Ct|Way)\b/gi,
   },
   {
     maskClass: "date_of_birth",
-    pattern: /\b1997-08-14\b/g,
+    pattern:
+      /\b(?:date\s+of\s+birth|dob)\s*[:#-]?\s*((?:19|20)\d{2}[/. -](?:0?[1-9]|1[0-2])[/. -](?:0?[1-9]|[12]\d|3[01])|(?:0?[1-9]|[12]\d|3[01])[/. -](?:0?[1-9]|1[0-2])[/. -](?:19|20)\d{2})\b/gi,
+    captureGroup: 1,
+  },
+  {
+    maskClass: "date_of_birth",
+    pattern:
+      /\b(?:date\s+of\s+birth|dob)\s*[:#-]?\s*((?:0?[1-9]|[12]\d|3[01])\s+(?:Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|Jun(?:e)?|Jul(?:y)?|Aug(?:ust)?|Sep(?:tember)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)\s+(?:19|20)\d{2})\b/gi,
+    captureGroup: 1,
   },
 ];
 
@@ -202,7 +242,14 @@ export function detectMaskSuggestions(
   for (const segment of segments) {
     for (const detector of PATTERN_DETECTORS) {
       suggestions.push(
-        ...detectPattern(segment, detector.maskClass, detector.pattern, "deterministic_pattern"),
+        ...detectPattern(
+          segment,
+          detector.maskClass,
+          detector.pattern,
+          "deterministic_pattern",
+          detector.accept,
+          detector.captureGroup,
+        ),
       );
     }
 
@@ -452,6 +499,8 @@ function detectPattern(
   maskClass: Exclude<MaskClass, "person_name">,
   pattern: RegExp,
   detectionMethod: DetectionMethod,
+  accept?: (value: string) => boolean,
+  captureGroup?: number,
 ): MaskSuggestion[] {
   const suggestions: MaskSuggestion[] = [];
   const detector = new RegExp(pattern.source, pattern.flags);
@@ -460,9 +509,21 @@ function detectPattern(
     if (typeof match.index !== "number") {
       continue;
     }
+    const value = captureGroup ? match[captureGroup] : match[0];
+    if (!value || (accept && !accept(value))) {
+      continue;
+    }
+    const valueOffset = captureGroup ? match[0].indexOf(value) : 0;
+    const originalStart = match.index + valueOffset;
 
     suggestions.push(
-      makeDetectedSuggestion(segment.id, maskClass, match.index, match.index + match[0].length, detectionMethod),
+      makeDetectedSuggestion(
+        segment.id,
+        maskClass,
+        originalStart,
+        originalStart + value.length,
+        detectionMethod,
+      ),
     );
   }
 
@@ -657,6 +718,8 @@ function scanSerializedText(
       detector.maskClass,
       detector.pattern,
       "deterministic_pattern",
+      detector.accept,
+      detector.captureGroup,
     );
     findings.push(
       ...matches.map((match) => ({

@@ -130,17 +130,75 @@ describe("browser-local analysis safety presentation", () => {
         onReview={vi.fn()}
         review={base.masking}
         segmentIds={["D01-P1-S1"]}
+        visualSelectionAvailable
       />,
     );
 
     expect(
-      screen.getByRole("region", { name: "No automatic mask suggestions" }),
-    ).toHaveTextContent(/deterministic leak scan/i);
+      screen.getByRole("heading", { name: "Final privacy check" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(/No supported pattern was found automatically/i),
+    ).toHaveTextContent(/page-by-page visual review/i);
+    expect(
+      screen.getByRole("status", { name: "Privacy check status" }),
+    ).toHaveTextContent(/0 suggestions.*Review complete.*Scan not run/i);
     const approve = screen.getByRole("button", {
-      name: "Approve privacy check and continue",
+      name: "Approve privacy check",
     });
     expect(approve).toBeEnabled();
     await user.click(approve);
     expect(onComplete).toHaveBeenCalledTimes(1);
+  });
+
+  it("offers the sanitized text PDF only after the saved privacy result passed", async () => {
+    const onDownload = vi.fn();
+    const user = userEvent.setup();
+    const base = createInitialCaseState(NOW);
+    const passedReview = {
+      ...base.masking,
+      reviewStatus: "approved" as const,
+      reviewedBy: "current_practitioner" as const,
+      approvedAt: NOW,
+      leakScanStatus: "passed" as const,
+    };
+
+    const { rerender } = render(
+      <MaskingReviewPanel
+        onAdd={vi.fn()}
+        onComplete={vi.fn()}
+        onDownloadSanitizedPdf={onDownload}
+        onRemove={vi.fn()}
+        onReview={vi.fn()}
+        review={base.masking}
+        segmentIds={["D01-P1-S1"]}
+        visualSelectionAvailable
+      />,
+    );
+
+    expect(
+      screen.queryByRole("button", { name: "Download sanitized text PDF" }),
+    ).not.toBeInTheDocument();
+
+    rerender(
+      <MaskingReviewPanel
+        onAdd={vi.fn()}
+        onComplete={vi.fn()}
+        onDownloadSanitizedPdf={onDownload}
+        onRemove={vi.fn()}
+        onReview={vi.fn()}
+        review={passedReview}
+        segmentIds={["D01-P1-S1"]}
+        visualSelectionAvailable
+      />,
+    );
+
+    expect(
+      screen.getByText(/does not alter the original or preserve its exact visual layout/i),
+    ).toBeInTheDocument();
+    await user.click(
+      screen.getByRole("button", { name: "Download sanitized text PDF" }),
+    );
+    expect(onDownload).toHaveBeenCalledTimes(1);
   });
 });

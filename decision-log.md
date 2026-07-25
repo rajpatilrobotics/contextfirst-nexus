@@ -26,6 +26,26 @@ Changing a frozen decision requires:
 
 ## 3. Frozen product decisions
 
+### DEC-046: Browser-local ingestion hardening
+
+- Date: 2026-07-25
+- Status: Accepted for implementation
+- Decision: Extend browser-created case Documents with one fail-closed
+  browser-local ingestion manifest covering deterministic duplicate
+  diagnostics, unverified embedded PDF metadata, session-only password retry,
+  bounded English OCR, page-level recovery, a text-free integrity report, and
+  a visually flattened masked-PDF derivative. Pin `tesseract.js@7.0.0` and
+  `@tesseract.js-data/eng@1.0.0`; self-host their browser runtime assets. OCR
+  text remains provisional until human verification. No password, PDF bytes,
+  extracted text, OCR text, blob URL, or search query enters localStorage,
+  logs, or a provider.
+- Reason: These capabilities strengthen the technical ingestion boundary
+  without requiring Structured Analysis, while keeping limitations and human
+  responsibility visible.
+- Authority: Direct user approval on 2026-07-25, `plan.md`, official
+  Tesseract.js API/local-installation documentation, and PDF.js API
+  documentation.
+
 ### DEC-001: Track and product focus
 
 - Date: 2026-07-15

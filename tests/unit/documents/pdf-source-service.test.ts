@@ -11,6 +11,7 @@ import {
   buildPageRecord,
   detectExactCfnDemoPdfPacket,
   inspectLocalPdfSelection,
+  indexPdfTextItems,
   normalizeForSegmentMatch,
   pageIssueFor,
   processLocalPdfSources,
@@ -197,6 +198,29 @@ function makeRuntime(overrides: Record<string, string> = {}) {
 }
 
 describe("flexible browser-local PDF intake", () => {
+  it("indexes normalized PDF text with stable canonical character ranges", () => {
+    const indexed = indexPdfTextItems([
+      {
+        str: "  Contact ",
+        transform: [1, 0, 0, 1, 10, 20],
+        width: 40,
+        height: 10,
+      },
+      { str: "reviewer@support.in", transform: [1, 0, 0, 1, 55, 20], width: 90, height: 10 },
+      { str: "   " },
+    ]);
+
+    expect(indexed.text).toBe("Contact reviewer@support.in");
+    expect(indexed.items).toMatchObject([
+      { text: "Contact", originalStart: 0, originalEnd: 7 },
+      {
+        text: "reviewer@support.in",
+        originalStart: 8,
+        originalEnd: 27,
+      },
+    ]);
+  });
+
   const pdfBytes = new Uint8Array([37, 80, 68, 70, 45, 49]);
 
   it("accepts one ordinary PDF without requiring the seven-file demo packet", async () => {
@@ -370,10 +394,14 @@ describe("flexible browser-local PDF intake", () => {
       { loadError: true },
     ]);
 
-    const result = await processLocalPdfSources([first, second], async () => fake.runtime);
+    const result = await processLocalPdfSources(
+      [first, second],
+      async () => fake.runtime,
+      "CFN-CASE-PDF-ALPHA",
+    );
 
     expect(result).toMatchObject({
-      caseId: "CFN-DEMO-001",
+      caseId: "CFN-CASE-PDF-ALPHA",
       fixtureVersion: "1.0.0",
       documents: [
         {
@@ -397,6 +425,25 @@ describe("flexible browser-local PDF intake", () => {
       selectedSegmentIds: ["D01-P1-S1"],
     });
     expect(result.documentSetDigest).toMatch(/^[a-f0-9]{64}$/);
+    expect(result.fileMetadata).toEqual([
+      {
+        documentId: "D01",
+        fileName: "interview-notes.pdf",
+        byteLength: first.size,
+        sha256: expect.stringMatching(/^[a-f0-9]{64}$/),
+      },
+      {
+        documentId: "D02",
+        fileName: "scanned-appendix.pdf",
+        byteLength: second.size,
+        sha256: expect.stringMatching(/^[a-f0-9]{64}$/),
+      },
+    ]);
+    expect(
+      result.documents.every(
+        (document) => document.caseId === "CFN-CASE-PDF-ALPHA",
+      ),
+    ).toBe(true);
     expect(result.segments).toEqual([
       expect.objectContaining({
         id: "D01-P1-S1",
@@ -411,7 +458,7 @@ describe("flexible browser-local PDF intake", () => {
     expect(result.coverage).toMatchObject({
       expectedDocuments: 2,
       processedDocuments: 1,
-      expectedPages: 4,
+      expectedPages: 3,
       availablePages: 1,
       hasConsequentialOpenIssue: true,
     });
@@ -423,11 +470,92 @@ describe("flexible browser-local PDF intake", () => {
     expect(result.processing).toContainEqual(
       expect.objectContaining({ name: "text_extraction", status: "warning" }),
     );
+    expect(result.documents[1].pages[0]).toMatchObject({
+      expected: false,
+      availability: "extraction_failed",
+      failureCode: "EXTRACTION_FAILED",
+    });
     expect(JSON.stringify(result)).not.toContain("arrayBuffer");
     expect(JSON.stringify(result)).not.toContain("Uint8Array");
     expect(result.documents.every((document) => !("file" in document))).toBe(true);
     expect(fake.cleanedPages).toEqual([1, 2, 3]);
     expect(fake.destroyedTasks).toEqual([0, 1]);
+  });
+
+  it("reports embedded PDF metadata as unverified technical facts", async () => {
+    const runtime: PdfJsRuntimeLike = {
+      getDocument() {
+        return {
+          promise: Promise.resolve({
+            numPages: 1,
+            async getMetadata() {
+              return {
+                info: {
+                  PDFFormatVersion: "1.7",
+                  Title: "Declared title",
+                  Author: "Declared author",
+                },
+              };
+            },
+            async getPermissions() {
+              return [4, 8];
+            },
+            async getPage() {
+              return {
+                async getTextContent() {
+                  return { items: [{ str: "Readable text" }] };
+                },
+              };
+            },
+          }),
+        };
+      },
+    };
+    const result = await processLocalPdfSources(
+      [makeFile("metadata.pdf", pdfBytes)],
+      async () => runtime,
+      "CFN-CASE-METADATA",
+    );
+
+    expect(result.runtimeMetadata).toEqual([
+      expect.objectContaining({
+        documentId: "D01",
+        pdfFormatVersion: "1.7",
+        title: "Declared title",
+        author: "Declared author",
+        pageCount: 1,
+        encryptionStatus: "not_encrypted",
+        permissionFlags: [4, 8],
+      }),
+    ]);
+  });
+
+  it("fails closed on a password-protected PDF without retaining the password", async () => {
+    const inputs: PdfDocumentSource[] = [];
+    const runtime: PdfJsRuntimeLike = {
+      getDocument(input) {
+        inputs.push(input);
+        const error = new Error("Password required");
+        error.name = "PasswordException";
+        return { promise: Promise.reject(error) };
+      },
+    };
+    const result = await processLocalPdfSources(
+      [makeFile("protected.pdf", pdfBytes)],
+      async () => runtime,
+      "CFN-CASE-PROTECTED",
+      { passwordsByFileName: { "protected.pdf": "session-only-password" } },
+    );
+
+    expect(result.runtimeMetadata).toEqual([
+      expect.objectContaining({
+        documentId: "D01",
+        pageCount: null,
+        encryptionStatus: "password_required",
+      }),
+    ]);
+    expect(JSON.stringify(result)).not.toContain("session-only-password");
+    expect(inputs[0]).toMatchObject({ password: "session-only-password" });
   });
 
   it("keeps instruction-like readable text as evidence without selecting it for candidates", async () => {

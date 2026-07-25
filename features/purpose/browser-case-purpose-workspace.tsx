@@ -185,9 +185,9 @@ export function BrowserCasePurposeWorkspace({ caseId }: { caseId: string }) {
             </span>
           </div>
           <DemoOnlyNotice>
-            Purpose persists in this browser. Documents opens with an empty source
-            list; upload and processing are not connected yet. Analysis and later
-            stages remain unavailable.
+            Purpose persists in this browser. Documents supports browser-local PDF
+            intake, text-layer extraction, source health, and masking. Analysis and
+            later stages remain unavailable.
           </DemoOnlyNotice>
         </section>
 

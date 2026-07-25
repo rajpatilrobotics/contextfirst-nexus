@@ -29,6 +29,10 @@ describe("browser-local Case Dashboard", () => {
       await screen.findByRole("heading", { level: 3, name: "No cases yet" }),
     ).toBeInTheDocument();
     expect(screen.getByText("Open cases").nextElementSibling).toHaveTextContent("0");
+    expect(screen.getByText("Documents").nextElementSibling).toHaveTextContent("0");
+    expect(
+      screen.getByText(/Purpose Brief and browser-local Documents are connected/i),
+    ).toBeInTheDocument();
     expect(screen.queryByText(/M\. Chen|A\. Okafor|R\. Salazar/)).not.toBeInTheDocument();
     expect(
       screen.queryByRole("link", { name: /Open workspace/i }),
