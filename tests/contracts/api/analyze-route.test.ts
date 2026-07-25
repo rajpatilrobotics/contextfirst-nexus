@@ -129,6 +129,15 @@ describe("TASK-038 /api/analyze contract", () => {
 
     expect(trustData.systemCard.liveAnalysisEnabled).toBe(apiBody.liveAnalysisEnabled);
     expect(trustData.systemCard.providers).toEqual(apiBody.options);
+    expect(trustData.systemCard.knownLimitations).toContain(
+      "Bundled PDFs and browser-local embedded-text PDF uploads are supported. Scanned or image-only PDFs require OCR, which is unavailable in this demonstration. Uploaded files are not transmitted to an AI provider.",
+    );
+    expect(trustData.systemCard.knownLimitations).not.toContain(
+      "One English fictional adult fixture and bundled text PDFs only; no OCR or arbitrary upload.",
+    );
+    expect(trustData.systemCard.unsupportedDocumentTypes).not.toContain(
+      "Arbitrary uploads",
+    );
   });
 
   it("rejects cross-origin POST before provider work", async () => {

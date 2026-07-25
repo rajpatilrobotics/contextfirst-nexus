@@ -62,7 +62,7 @@ const KNOWN_FAILURE_MODES = [
 
 const KNOWN_LIMITATIONS = [
   "Working fictional-data hackathon prototype; no real-case or production assurance.",
-  "One English fictional adult fixture and bundled text PDFs only; no OCR or arbitrary upload.",
+  "Bundled PDFs and browser-local embedded-text PDF uploads are supported. Scanned or image-only PDFs require OCR, which is unavailable in this demonstration. Uploaded files are not transmitted to an AI provider.",
   "No domestic legal verification, multilingual assurance, chain of custody, production authentication, or durable case store.",
   "Provider terms and availability can change; no provider setting is described as guaranteed zero retention.",
   "Demo evaluation evidence does not establish real-world effectiveness.",
@@ -130,7 +130,7 @@ export function getTrustPageData(): TrustPageData {
     humanReviewRequirements: HUMAN_REVIEW_REQUIREMENTS,
     knownFailureModes: KNOWN_FAILURE_MODES,
     unsupportedJurisdictions: ["All real domestic jurisdictions require independent local legal verification."],
-    unsupportedDocumentTypes: ["Scanned or image-only PDFs", "Audio", "Video", "Arbitrary uploads"],
+    unsupportedDocumentTypes: ["Scanned or image-only PDFs", "Audio", "Video"],
     unsupportedUserGroups: ["Survivor self-service", "Children", "Public or unauthenticated real-case users"],
     knownLimitations: KNOWN_LIMITATIONS,
     fixtureCount: 1,

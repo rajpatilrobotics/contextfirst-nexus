@@ -262,7 +262,7 @@ export function DocumentCards({
               type="button"
             >
               <UploadCloud className="h-3.5 w-3.5" />
-              Add source
+              Open source intake
             </button>
           </div>
           <ul>
@@ -356,7 +356,7 @@ export function DocumentCards({
                 type="button"
               >
                 <RefreshCw className="h-3.5 w-3.5" />
-                Retry extraction
+                Open processing controls
               </button>
               <button
                 className="inline-flex items-center gap-1.5 rounded-md border border-border px-2.5 py-1 text-xs hover:bg-muted"
@@ -364,7 +364,7 @@ export function DocumentCards({
                 type="button"
               >
                 <UploadCloud className="h-3.5 w-3.5" />
-                Replace
+                Replace via source intake
               </button>
             </div>
           </header>

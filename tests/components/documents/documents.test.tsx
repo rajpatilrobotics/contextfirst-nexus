@@ -273,6 +273,12 @@ describe("TASK-019 intake, coverage, and containment", () => {
     expect(
       screen.getByText(/7 PDFs opened successfully.*1 expected limitation/i),
     ).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Open source intake" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Open processing controls" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Replace via source intake" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Add source" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Retry extraction" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Replace" })).not.toBeInTheDocument();
     expect(screen.queryByRole("textbox", { name: /case|narrative|identifier/i })).not.toBeInTheDocument();
     expect(document.body).not.toHaveTextContent(/synthetic/i);
     expect(document.body).not.toHaveTextContent(/gpt-|gemini-|mistral-|\bmodel\b/i);

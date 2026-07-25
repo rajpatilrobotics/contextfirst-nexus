@@ -200,6 +200,11 @@ describe("planning workspaces", () => {
     renderWorkspace(<TasksPreview />);
 
     expect(screen.getByRole("heading", { name: "Case Tasks" })).toBeInTheDocument();
+    const filters = screen.getByRole("group", { name: "Task filters" });
+    expect(within(filters).queryByRole("button", { name: "Export blockers" })).not.toBeInTheDocument();
+    for (const filter of ["All", "My tasks", "Due soon", "Overdue", "Waiting", "Safety-related", "Completed"]) {
+      expect(within(filters).getByRole("button", { name: filter })).toBeInTheDocument();
+    }
     const createTask = screen.getByRole("heading", { name: "Create task" }).closest("aside");
     if (!createTask) throw new Error("create-task panel missing");
     await user.type(within(createTask).getByLabelText("Title"), "Check manual provider verification");

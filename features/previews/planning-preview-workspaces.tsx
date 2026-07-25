@@ -1209,7 +1209,6 @@ export function TasksPreview() {
     }
     if (filter === "Overdue") return dueAt !== null && dueAt < now && !["completed", "cancelled"].includes(task.status);
     if (filter === "Waiting") return task.status === "waiting";
-    if (filter === "Export blockers") return false;
     if (filter === "Safety-related") return task.origin === "urgent_need";
     if (filter === "Completed") return task.status === "completed";
     return true;
@@ -1255,7 +1254,7 @@ export function TasksPreview() {
         title="Case Tasks"
       />
       <div className="flex flex-wrap gap-1" role="group" aria-label="Task filters">
-        {["All", "My tasks", "Due soon", "Overdue", "Waiting", "Export blockers", "Safety-related", "Completed"].map((value) => (
+        {["All", "My tasks", "Due soon", "Overdue", "Waiting", "Safety-related", "Completed"].map((value) => (
           <button
             aria-pressed={filter === value}
             className={`rounded-full border px-2 py-0.5 text-[11px] ${filter === value ? "border-[color:var(--amber)] bg-[color-mix(in_oklab,var(--amber)_15%,transparent)]" : "border-border hover:bg-muted"}`}
