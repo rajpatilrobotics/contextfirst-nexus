@@ -2,7 +2,13 @@ import Link from "next/link";
 import type { ReactNode } from "react";
 import { ShieldCheck } from "lucide-react";
 
-export function MarketingShell({ children }: { children: ReactNode }) {
+export function MarketingShell({
+  children,
+  landing = false,
+}: {
+  children: ReactNode;
+  landing?: boolean;
+}) {
   return (
     <div className="min-h-screen overflow-x-hidden bg-background text-foreground">
       <a
@@ -23,30 +29,25 @@ export function MarketingShell({ children }: { children: ReactNode }) {
             </span>
           </Link>
           <nav aria-label="Primary" className="flex shrink-0 items-center gap-1 text-sm">
-            <Link
-              href="/dashboard"
-              className="hidden rounded px-3 py-1.5 text-muted-foreground hover:text-foreground sm:inline-flex"
-            >
-              Case Dashboard
-            </Link>
+            {!landing ? (
+              <Link
+                href="/dashboard"
+                className="hidden rounded px-3 py-1.5 text-muted-foreground hover:text-foreground sm:inline-flex"
+              >
+                Case Dashboard
+              </Link>
+            ) : null}
             <Link
               href="/trust"
-              className="hidden rounded px-3 py-1.5 text-muted-foreground hover:text-foreground sm:inline-flex"
+              className="rounded px-3 py-1.5 text-muted-foreground hover:text-foreground"
             >
               Trust &amp; Safety
-            </Link>
-            <Link
-              href="/dashboard"
-              className="inline-flex items-center gap-1.5 rounded-md bg-primary px-3 py-1.5 text-primary-foreground hover:bg-primary/90 sm:ml-2"
-            >
-              <span className="sm:hidden">Start demo</span>
-              <span className="hidden sm:inline">Start Demonstration</span>
             </Link>
           </nav>
         </div>
         <div className="border-t border-[color-mix(in_oklab,var(--amber)_40%,transparent)] bg-[color-mix(in_oklab,var(--amber)_10%,transparent)] px-6 py-1 text-center text-[11px] text-foreground/80">
-          Bundled fictional adult fixture only. Do not enter real case data. No source
-          documents are transmitted externally.
+          Browser-local fictional demonstration only. Do not enter real or private case
+          data. No source documents are transmitted externally.
         </div>
       </header>
       <main id="main-content">{children}</main>
@@ -56,7 +57,7 @@ export function MarketingShell({ children }: { children: ReactNode }) {
             <div className="font-serif text-lg">ContextFirst Nexus</div>
             <p className="mt-2 text-muted-foreground">
               A source-grounded case-preparation workspace for qualified practitioners.
-              Bundled fictional demonstration.
+              Browser-local fictional demonstration.
             </p>
           </div>
           <div className="flex flex-col gap-1 text-muted-foreground">
@@ -66,9 +67,11 @@ export function MarketingShell({ children }: { children: ReactNode }) {
             >
               <ShieldCheck className="h-3.5 w-3.5" /> Trust &amp; Safety
             </Link>
-            <Link href="/dashboard" className="hover:text-foreground">
-              Case Dashboard
-            </Link>
+            {!landing ? (
+              <Link href="/dashboard" className="hover:text-foreground">
+                Case Dashboard
+              </Link>
+            ) : null}
             <span className="mt-3 font-mono text-[11px] uppercase tracking-[0.18em]">
               Demonstration build · 2026
             </span>

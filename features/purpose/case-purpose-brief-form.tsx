@@ -28,9 +28,11 @@ type FormErrors = Record<string, string>;
 
 export type CasePurposeBriefFormProps = {
   analysisOption: ProviderOptionProjection | null;
+  caseId?: string;
   initialBrief?: CasePurposeBrief | null;
   disabled?: boolean;
   onSave: (brief: CasePurposeBrief) => Promise<string | null> | string | null;
+  purposeBriefId?: string;
 };
 
 const excludedDecisionLabels: Record<ExcludedDecision, string> = {
@@ -49,9 +51,11 @@ function initialExcluded(brief?: CasePurposeBrief | null) {
 
 export function CasePurposeBriefForm({
   analysisOption,
+  caseId = "CFN-DEMO-001",
   initialBrief = null,
   disabled = false,
   onSave,
+  purposeBriefId = "PURPOSE-CFN-DEMO-001",
 }: CasePurposeBriefFormProps) {
   const [practitionerRole, setPractitionerRole] = useState(initialBrief?.practitionerRole ?? "");
   const [organizationType, setOrganizationType] = useState(initialBrief?.organizationType ?? "");
@@ -161,9 +165,9 @@ export function CasePurposeBriefForm({
       acknowledgedAt: now,
     };
     const candidate = {
-      id: initialBrief?.id ?? "PURPOSE-CFN-DEMO-001",
+      id: initialBrief?.id ?? purposeBriefId,
       schemaVersion: "1.0.0" as const,
-      caseId: "CFN-DEMO-001",
+      caseId,
       revision: (initialBrief?.revision ?? 0) + 1,
       status: "complete" as const,
       practitionerRole,

@@ -203,7 +203,7 @@ beforeEach(() => {
 });
 
 describe("TASK-017 landing boundary screen", () => {
-  it("presents purpose, audience, synthetic-only boundary, prohibited decisions, and demo links", () => {
+  it("presents one centered demonstration action and secondary Trust navigation", () => {
     render(<Home />);
 
     expect(
@@ -216,20 +216,20 @@ describe("TASK-017 landing boundary screen", () => {
     expect(screen.getByText(/REF-2024-0047-SYN/i)).toBeInTheDocument();
     expect(screen.getByText(/A workbench, not an oracle/i)).toBeInTheDocument();
     expect(screen.getByText(/Not a survivor-facing crisis service/i)).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Start demonstration" })).toHaveAttribute(
-      "href",
-      "/dashboard",
-    );
-    const dashboardLinks = screen.getAllByRole("link", { name: /Open case dashboard/i });
-    expect(dashboardLinks.length).toBeGreaterThan(0);
-    for (const link of dashboardLinks) {
-      expect(link).toHaveAttribute("href", "/dashboard");
-    }
-    expect(screen.getByRole("link", { name: "View Trust & Safety" })).toHaveAttribute(
-      "href",
-      "/trust",
-    );
-    expect(screen.getByText(/Do not enter real case data/i)).toBeInTheDocument();
+    const demonstrationLinks = screen.getAllByRole("link", {
+      name: "Start Demonstration",
+    });
+    expect(demonstrationLinks).toHaveLength(1);
+    expect(demonstrationLinks[0]).toHaveAttribute("href", "/dashboard");
+    expect(
+      screen.queryByRole("link", { name: /Open case dashboard/i }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.getAllByRole("link", { name: /Trust & Safety/i }).length,
+    ).toBeGreaterThan(0);
+    expect(
+      screen.getAllByText(/Do not enter real or private case data/i).length,
+    ).toBeGreaterThan(0);
   });
 });
 

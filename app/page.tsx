@@ -1,6 +1,5 @@
 import Link from "next/link";
 import {
-  ArrowRight,
   Ban,
   Compass,
   Eye,
@@ -17,7 +16,7 @@ import { MarketingShell } from "../components/marketing";
 
 export default function LandingPage() {
   return (
-    <MarketingShell>
+    <MarketingShell landing>
       <section className="relative overflow-hidden">
         <div
           aria-hidden
@@ -64,30 +63,9 @@ export default function LandingPage() {
                 Understand what the case packet documents, what remains uncertain,
                 and what requires human review — before a safe handoff.
               </p>
-              <div className="mt-8 flex flex-wrap items-center gap-3">
-                <Link
-                  href="/dashboard"
-                  className="group inline-flex items-center gap-2 rounded-md bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground shadow-sm transition hover:bg-primary/90 hover:shadow-md"
-                >
-                  Start demonstration
-                  <ArrowRight className="h-4 w-4 transition group-hover:translate-x-0.5" />
-                </Link>
-                <Link
-                  href="/trust"
-                  className="inline-flex items-center gap-2 rounded-md border border-border bg-card px-4 py-2.5 text-sm transition hover:bg-muted"
-                >
-                  <ShieldCheck className="h-4 w-4" /> View Trust &amp; Safety
-                </Link>
-                <Link
-                  href="/dashboard"
-                  className="text-sm text-muted-foreground underline-offset-4 transition hover:text-foreground hover:underline"
-                >
-                  Open case dashboard →
-                </Link>
-              </div>
               <p className="mt-6 max-w-md text-xs text-muted-foreground">
-                Bundled fictional demonstration. No real case data is included, and no
-                source documents are transmitted externally.
+                Browser-local fictional demonstration. Do not enter real or private
+                case data, and no source documents are transmitted externally.
               </p>
             </div>
 
@@ -141,6 +119,14 @@ export default function LandingPage() {
                 </div>
               </div>
             </aside>
+          </div>
+          <div className="mt-10 flex justify-center">
+            <Link
+              href="/dashboard"
+              className="inline-flex items-center justify-center rounded-md bg-primary px-5 py-2.5 text-sm font-medium text-primary-foreground shadow-sm transition hover:bg-primary/90 hover:shadow-md"
+            >
+              Start Demonstration
+            </Link>
           </div>
         </div>
       </section>
@@ -415,20 +401,13 @@ export default function LandingPage() {
         />
         <div className="mx-auto max-w-3xl px-6 py-20 text-center">
           <h2 className="font-serif text-4xl leading-tight">
-            Open the workspace on a synthetic case.
+            Begin with an empty browser-local case list.
           </h2>
           <p className="mx-auto mt-4 max-w-xl text-sm leading-relaxed text-muted-foreground">
-            Explore the bundled fictional M. Chen workflow with source-linked
-            observations, visible gaps, human review, and a fail-closed Export Gate.
+            Create a fictional case, record its Purpose Brief, and reopen the
+            independent workspace after navigation or reload.
           </p>
-          <div className="mt-7 flex flex-wrap justify-center gap-3">
-            <Link
-              href="/dashboard"
-              className="group inline-flex items-center gap-2 rounded-md bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground shadow-sm transition hover:bg-primary/90 hover:shadow-md"
-            >
-              Enter demonstration
-              <ArrowRight className="h-4 w-4 transition group-hover:translate-x-0.5" />
-            </Link>
+          <div className="mt-7 flex justify-center">
             <Link
               href="/trust"
               className="inline-flex items-center gap-2 rounded-md border border-border bg-card px-4 py-2.5 text-sm transition hover:bg-muted"

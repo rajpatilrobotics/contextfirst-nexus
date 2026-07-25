@@ -1,3 +1,129 @@
+# Real case entry and multi-case foundation, 2026-07-25
+
+## 1. Goal
+
+Make the first judge-facing flow genuinely usable:
+
+- show exactly one centered **Start Demonstration** action on the landing page;
+- route it to the Case Dashboard;
+- show every available case on the Dashboard;
+- make existing cases open a ContextFirst Nexus workspace;
+- make **New case** create an independent case and open its Purpose Brief.
+
+## 2. Problem
+
+The landing page currently exposes several duplicate Dashboard/demo actions.
+The Dashboard also presents two cases as non-interactive fixtures and its
+**New case** control only opens an unavailable-message modal.
+
+The deeper application is currently built around one canonical internal case,
+`CFN-DEMO-001`, one `/case/demo/*` route family, and one session-storage
+record. M. Chen, A. Okafor, and R. Salazar are static demonstration cards, not
+real case records. They must be removed from the live Dashboard rather than
+being converted into misleading clickable cases.
+
+## 3. Proposed solution
+
+Implement the smallest truthful multi-case foundation while preserving the
+approved Lovable presentation:
+
+- Add a small browser-persistent case registry with independent case IDs,
+  display references, person aliases, assigned practitioners, and timestamps.
+- Do not seed M. Chen, A. Okafor, R. Salazar, or any other static case card.
+  A fresh browser starts with a truthful empty Dashboard.
+- Turn **New case** into a compact creation dialog. Creating a case writes a
+  real local record and immediately routes to its Purpose Brief.
+- Give every created case an independent, editable Purpose Brief using the
+  existing Lovable workspace presentation. Do not copy any fixture documents,
+  analysis, audit, or planning data into it.
+- Keep downstream stages for a new case visibly unavailable until their
+  canonical multi-case contracts are connected in later slices.
+
+The old bundled fixture and `/case/demo/*` implementation may remain
+temporarily as unlinked compatibility code while the real multi-case workflow
+is built. Do not delete those source files during this slice: first remove all
+visible fixture data, migrate required behavior, and prove the real flow works.
+Physical fixture-code deletion is a separate cleanup after it is demonstrably
+unused.
+
+This is a real per-browser workflow: records survive refreshes and browser
+restarts on that device. It is not yet a shared multi-user database; durable
+cross-device accounts and collaboration remain a later backend slice.
+
+## 4. Files to change
+
+- `components/marketing/marketing-shell.tsx`
+- `app/page.tsx`
+- `features/dashboard/case-dashboard.tsx`
+- A small case-registry module under `lib/cases/`
+- Dynamic case Purpose route and bounded workspace components under
+  `app/case/[caseId]/` and `features/purpose/`
+- Focused Landing, Dashboard, case-registry, routing, and Purpose tests
+
+Existing canonical reducer, fixture, replay, PDF, review, export, and audit
+code should not be rewritten in this slice.
+
+## 5. Step by step tasks
+
+1. Remove all duplicate Start Demonstration/Enter Demonstration actions.
+2. Place one Start Demonstration action in a full-width centered hero row and
+   keep Trust & Safety as secondary navigation.
+3. Add a validated, versioned local case registry with safe defaults and
+   fail-closed parsing.
+4. Render only user-created cases from the registry on the Dashboard, with a
+   clear first-run empty state.
+5. Replace the unavailable New Case modal with a minimal validated creation
+   form.
+6. Create the record, close the modal, and navigate directly to its Purpose
+   Brief.
+7. Make every created case card a keyboard-operable link to its correct
+   independent workspace.
+8. Keep legacy demo routes unlinked and isolated while the replacement is
+   completed; never copy legacy fixture data into a created case.
+
+## 6. Acceptance criteria
+
+- Exactly one landing-page action is labelled Start Demonstration.
+- That action opens `/dashboard`.
+- Dashboard is the single case-selection and case-creation entry point.
+- No M. Chen, A. Okafor, R. Salazar, or other static fixture card appears.
+- A fresh browser shows an intentional empty state and a working New Case
+  action.
+- New Case validates required fields, creates a unique record, and opens its
+  Purpose Brief.
+- Newly entered Purpose information survives reload and never appears in a
+  different case.
+- Every Dashboard card represents a case actually created through the product.
+- Unsupported downstream actions for new cases are explicit and disabled,
+  never fake or dead.
+- The Lovable layout, typography, spacing, and responsive behavior are
+  preserved.
+
+## 7. Testing plan
+
+- Focused unit tests for registry creation, persistence, invalid storage, and
+  case isolation.
+- Component tests for exactly one landing CTA, Dashboard case links, validation,
+  creation, and routing.
+- Purpose Brief persistence and cross-case isolation tests.
+- Focused legacy-isolation checks proving fixture data cannot enter created
+  cases.
+- `npm run typecheck`, focused Vitest, `npm run build`, and
+  `git diff --check`.
+- One desktop and mobile browser smoke:
+  Landing → Dashboard → existing case, and
+  Landing → Dashboard → New Case → Purpose Brief → reload.
+
+## 8. Open questions
+
+- “Open a new window” is interpreted as opening the compact New Case dialog
+  inside the current browser tab, then navigating to the workspace after
+  submission. It will not open a separate browser tab.
+- All case names and records in this hackathon deployment remain synthetic.
+- Database, authentication, live collaboration, and cross-device persistence
+  are intentionally outside this first slice and will be selected only after
+  this flow is working.
+
 # Exact Lovable UI transplant correction, 2026-07-24
 
 ## 1. Goal

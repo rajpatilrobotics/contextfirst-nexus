@@ -62,11 +62,20 @@ describe("TASK-039 CasePurposeBriefForm", () => {
       savedBriefs.push(brief);
       return null;
     });
-    render(<CasePurposeBriefForm analysisOption={replayOption()} onSave={onSave} />);
+    render(
+      <CasePurposeBriefForm
+        analysisOption={replayOption()}
+        caseId="CFN-CASE-ALPHA"
+        onSave={onSave}
+        purposeBriefId="PURPOSE-CFN-CASE-ALPHA"
+      />,
+    );
     await completeForm(user);
     await user.click(screen.getByRole("button", { name: "Save Case Purpose Brief" }));
     expect(onSave).toHaveBeenCalledTimes(1);
     const brief = savedBriefs[0];
+    expect(brief.id).toBe("PURPOSE-CFN-CASE-ALPHA");
+    expect(brief.caseId).toBe("CFN-CASE-ALPHA");
     expect(brief.excludedDecisions).toEqual(RequiredExcludedDecisions);
     expect(brief.providerSelection).toMatchObject({
       providerId: "local_replay",

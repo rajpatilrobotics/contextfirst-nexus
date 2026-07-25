@@ -1,0 +1,250 @@
+"use client";
+
+import Link from "next/link";
+import type { ComponentType, ReactNode } from "react";
+import {
+  AlertOctagon,
+  CheckSquare,
+  Clock3,
+  FileText,
+  HandHelping,
+  HelpCircle,
+  Home,
+  MessageSquare,
+  Network,
+  NotebookPen,
+  Search,
+  Send,
+  ShieldCheck,
+  ScrollText,
+} from "lucide-react";
+import { Chip, SyntheticBanner } from "../lovable/nexus-ui";
+import type { BrowserCaseRecord } from "../../lib/cases";
+
+type NavigationIcon = ComponentType<{
+  "aria-hidden"?: boolean | "true";
+  className?: string;
+}>;
+
+const STAGES = [
+  { id: "purpose", label: "Purpose", index: 1 },
+  { id: "documents", label: "Documents", index: 2 },
+  { id: "analysis", label: "Analysis", index: 3 },
+  { id: "planning", label: "Planning", index: 4 },
+  { id: "review", label: "Review", index: 5 },
+  { id: "export", label: "Export", index: 6 },
+] as const;
+
+const DISABLED_NAVIGATION: Array<{
+  group: "Intake" | "Analysis" | "Planning" | "Review" | "Export";
+  icon: NavigationIcon;
+  label: string;
+}> = [
+  { group: "Intake", icon: FileText, label: "Documents" },
+  { group: "Analysis", icon: Search, label: "Structured Analysis" },
+  { group: "Analysis", icon: AlertOctagon, label: "Urgent Needs" },
+  { group: "Analysis", icon: HelpCircle, label: "Evidence Gaps" },
+  { group: "Planning", icon: MessageSquare, label: "Interview Planner" },
+  { group: "Planning", icon: HandHelping, label: "Services & Referrals" },
+  { group: "Planning", icon: CheckSquare, label: "Case Tasks" },
+  { group: "Planning", icon: NotebookPen, label: "Notes & Journal" },
+  { group: "Review", icon: Network, label: "Charge–Coercion Nexus" },
+  { group: "Review", icon: Clock3, label: "Timeline" },
+  { group: "Export", icon: Send, label: "Export Gate" },
+  { group: "Export", icon: ScrollText, label: "Audit Trail" },
+];
+
+const GROUPS = ["Intake", "Analysis", "Planning", "Review", "Export"] as const;
+
+export function BrowserCaseShell({
+  children,
+  record,
+}: {
+  children: ReactNode;
+  record: BrowserCaseRecord;
+}) {
+  const purposeComplete = record.purposeBrief?.status === "complete";
+  const purposeHref = `/case/${record.id}/purpose`;
+
+  return (
+    <div className="min-h-screen overflow-x-hidden bg-background text-foreground">
+      <a
+        className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-50 focus:rounded-md focus:bg-card focus:px-4 focus:py-2"
+        href="#case-workspace"
+      >
+        Skip to case workspace
+      </a>
+      <SyntheticBanner compact />
+      <header className="border-b border-border bg-card/60">
+        <div className="mx-auto flex flex-wrap items-center justify-between gap-3 px-6 py-3">
+          <div className="flex items-center gap-4">
+            <Link href="/" className="flex items-baseline gap-2">
+              <span
+                aria-hidden="true"
+                className="inline-block h-2.5 w-2.5 -translate-y-0.5 rounded-full bg-[color:var(--amber)]"
+              />
+              <span className="font-serif text-base">
+                ContextFirst{" "}
+                <span className="italic text-muted-foreground">Nexus</span>
+              </span>
+            </Link>
+            <span className="hidden text-border sm:inline">·</span>
+            <div className="hidden text-xs sm:block">
+              <span className="font-mono text-foreground">
+                {record.displayReference}
+              </span>
+              <span className="mx-2 text-border">·</span>
+              <span className="text-muted-foreground">Alias</span>{" "}
+              {record.personAlias}
+              <span className="mx-2 text-border">·</span>
+              <span className="text-muted-foreground">Assigned</span>{" "}
+              {record.assignedPractitioner}
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <Chip tone="mute">Browser local</Chip>
+            <Link
+              className="inline-flex items-center gap-1.5 rounded-md border border-border px-2.5 py-1 text-xs text-muted-foreground hover:text-foreground"
+              href="/dashboard"
+            >
+              <Home className="h-3.5 w-3.5" aria-hidden="true" /> Dashboard
+            </Link>
+            <Link
+              className="inline-flex items-center gap-1.5 rounded-md border border-border px-2.5 py-1 text-xs text-muted-foreground hover:text-foreground"
+              href="/trust"
+            >
+              <ShieldCheck className="h-3.5 w-3.5" aria-hidden="true" /> Trust
+            </Link>
+          </div>
+        </div>
+
+        <section
+          aria-label="Six-stage case progress"
+          className="max-w-full overflow-hidden sm:overflow-x-auto"
+        >
+          <ol className="mx-auto grid grid-cols-3 gap-x-3 gap-y-2 px-6 pb-3 sm:flex sm:w-max sm:min-w-full sm:flex-nowrap sm:items-center sm:gap-2">
+            {STAGES.map((stage, index) => {
+              const current = stage.id === "purpose";
+              const complete = current && purposeComplete;
+              const stageBody = (
+                <>
+                  <span
+                    className={`flex h-6 w-6 items-center justify-center rounded-full border font-mono text-[10px] ${
+                      complete
+                        ? "border-[color:var(--sage)] bg-[color-mix(in_oklab,var(--sage)_20%,transparent)] text-foreground"
+                        : current
+                          ? "border-[color:var(--amber)] bg-[color-mix(in_oklab,var(--amber)_20%,transparent)] text-foreground"
+                          : "border-border text-muted-foreground"
+                    }`}
+                  >
+                    {stage.index}
+                  </span>
+                  <span
+                    className={`font-mono text-[11px] uppercase tracking-[0.14em] ${
+                      current ? "text-foreground" : "text-muted-foreground"
+                    }`}
+                  >
+                    {stage.label}
+                  </span>
+                  <span className="sr-only">
+                    , {current ? (complete ? "completed" : "active") : "unavailable"}
+                  </span>
+                </>
+              );
+              return (
+                <li className="flex min-w-0 items-center gap-2" key={stage.id}>
+                  {current ? (
+                    <Link
+                      aria-current="step"
+                      className="flex items-center gap-2"
+                      href={purposeHref}
+                    >
+                      {stageBody}
+                    </Link>
+                  ) : (
+                    <span
+                      aria-disabled="true"
+                      className="flex cursor-not-allowed items-center gap-2"
+                      title="Not yet available for browser-created cases"
+                    >
+                      {stageBody}
+                    </span>
+                  )}
+                  {index < STAGES.length - 1 ? (
+                    <span
+                      aria-hidden="true"
+                      className="mx-1 hidden h-px w-8 bg-border sm:block"
+                    />
+                  ) : null}
+                </li>
+              );
+            })}
+          </ol>
+        </section>
+      </header>
+
+      <div className="border-b border-border bg-muted/40 px-6 py-2 text-xs text-muted-foreground lg:hidden">
+        Later workspace stages are not yet available for browser-created cases.
+      </div>
+
+      <div className="mx-auto grid grid-cols-1 gap-0 lg:grid-cols-[240px_1fr]">
+        <aside className="border-r border-border bg-card/40 lg:min-h-[calc(100vh-140px)]">
+          <nav aria-label="Case workspace" className="p-3">
+            {GROUPS.map((group) => (
+              <div className="mb-4" key={group}>
+                <div className="mb-1 px-2 font-mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
+                  {group}
+                </div>
+                <ul className="space-y-0.5">
+                  {group === "Intake" ? (
+                    <li>
+                      <Link
+                        aria-current="page"
+                        className="flex items-center gap-2 rounded-md bg-primary px-2 py-1.5 text-sm text-primary-foreground"
+                        href={purposeHref}
+                      >
+                        <FileText
+                          className="h-4 w-4 opacity-80"
+                          aria-hidden="true"
+                        />
+                        <span>Purpose Brief</span>
+                      </Link>
+                    </li>
+                  ) : null}
+                  {DISABLED_NAVIGATION.filter(
+                    (item) => item.group === group,
+                  ).map((item) => {
+                    const Icon = item.icon;
+                    return (
+                      <li key={item.label}>
+                        <span
+                          aria-disabled="true"
+                          className="flex cursor-not-allowed items-center justify-between gap-2 rounded-md px-2 py-1.5 text-sm text-muted-foreground opacity-65"
+                          title="Not yet available for browser-created cases"
+                        >
+                          <span className="flex min-w-0 items-center gap-2">
+                            <Icon
+                              className="h-4 w-4 shrink-0 opacity-80"
+                              aria-hidden="true"
+                            />
+                            <span>{item.label}</span>
+                          </span>
+                          <span className="font-mono text-[8px] uppercase tracking-[0.1em]">
+                            Unavailable
+                          </span>
+                        </span>
+                      </li>
+                    );
+                  })}
+                </ul>
+              </div>
+            ))}
+          </nav>
+        </aside>
+        <main className="min-w-0 px-6 py-6" id="case-workspace">
+          {children}
+        </main>
+      </div>
+    </div>
+  );
+}

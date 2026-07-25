@@ -5,7 +5,7 @@ import { CaseDashboard } from "../../features/dashboard/case-dashboard";
 export const metadata: Metadata = {
   title: "Case Dashboard — ContextFirst Nexus",
   description:
-    "Open the complete fictional M. Chen judge workflow or review clearly labelled read-only case summaries.",
+    "Create and reopen independent fictional browser-local case workspaces.",
 };
 
 export default function DashboardPage() {

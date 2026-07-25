@@ -1,122 +1,101 @@
-import { render, screen, within } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import { render, screen, waitFor } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import { CaseDashboard } from "../../../features/dashboard/case-dashboard";
 import {
-  CaseDashboard,
-  PRIMARY_CASE_DISPLAY_ID,
-  derivePrimaryCaseSummary,
-} from "../../../features/dashboard/case-dashboard";
-import { applyCaseCommand, createInitialCaseState } from "../../../lib/state";
+  BROWSER_CASE_REGISTRY_STORAGE_KEY,
+  createBrowserCase,
+  createEmptyBrowserCaseRegistry,
+  persistBrowserCaseRegistry,
+  restoreBrowserCaseRegistry,
+} from "../../../lib/cases";
 
-const NOW = "2026-07-24T00:00:00.000Z";
+const routerPush = vi.fn();
 
-function checkpointState() {
-  const initial = createInitialCaseState(NOW);
-  const result = applyCaseCommand(initial, {
-    type: "load_demo_checkpoint",
-    meta: {
-      commandId: "cmd-dashboard-checkpoint",
-      idempotencyKey: "idem-dashboard-checkpoint",
-      expectedCaseRevision: initial.caseRevision,
-      actor: "current_practitioner",
-      createdAt: NOW,
-    },
-    checkpointBundleId: "DEMO-CHECKPOINT-REVIEW",
-  });
-  if (!result.ok) throw new Error(result.reason);
-  return result.state;
-}
+vi.mock("next/navigation", () => ({
+  useRouter: () => ({ push: routerPush }),
+}));
 
-describe("fast-track Case Dashboard", () => {
-  it("opens only the M. Chen canonical workspace and keeps secondary cases read-only", () => {
-    render(<CaseDashboard initialState={createInitialCaseState(NOW)} />);
+beforeEach(() => {
+  window.localStorage.clear();
+  routerPush.mockClear();
+});
+
+describe("browser-local Case Dashboard", () => {
+  it("shows a polished empty state without any static fixture cases", async () => {
+    render(<CaseDashboard />);
 
     expect(
-      screen.getByRole("heading", { level: 1, name: /Open cases & readiness/i }),
+      await screen.findByRole("heading", { level: 3, name: "No cases yet" }),
     ).toBeInTheDocument();
-    expect(screen.getByText(/Only M\. Chen has a connected functional workspace/i)).toBeInTheDocument();
-
-    const workspaceLink = screen.getByRole("link", {
-      name: `Open workspace for M. Chen (${PRIMARY_CASE_DISPLAY_ID})`,
-    });
-    expect(workspaceLink).toHaveAttribute("href", "/case/demo/purpose");
-
-    const readOnlyCases = [
-      "REF-2024-0031-SYN, read-only case summary",
-      "REF-2024-0029-SYN, read-only case summary",
-    ];
-    for (const label of readOnlyCases) {
-      const card = screen.getByRole("article", { name: label });
-      expect(within(card).getByText("Read-only")).toBeInTheDocument();
-      expect(within(card).getByText("Workspace unavailable")).toBeInTheDocument();
-      expect(within(card).queryByRole("link")).not.toBeInTheDocument();
-    }
+    expect(screen.getByText("Open cases").nextElementSibling).toHaveTextContent("0");
+    expect(screen.queryByText(/M\. Chen|A\. Okafor|R\. Salazar/)).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("link", { name: /Open workspace/i }),
+    ).not.toBeInTheDocument();
   });
 
-  it("derives primary metrics from canonical case state", () => {
-    const state = checkpointState();
-    const summary = derivePrimaryCaseSummary(state);
+  it("validates the compact form, persists a new independent case, and opens Purpose", async () => {
+    const user = userEvent.setup();
+    render(<CaseDashboard />);
+    await screen.findByRole("heading", { level: 3, name: "No cases yet" });
 
-    expect(summary.documentCount).toBe(state.documents.length);
-    expect(summary.documentCount).toBeGreaterThan(0);
-    expect(summary.pendingReviewCount).toBeGreaterThan(0);
-    expect(summary.analysisStatus).toBe("Prepared checkpoint");
+    await user.click(screen.getByRole("button", { name: "New case" }));
+    await user.click(screen.getByRole("button", { name: "Create case" }));
+    expect(screen.getByRole("alert")).toHaveTextContent(
+      /Enter a REF- case reference/i,
+    );
 
-    render(<CaseDashboard initialState={state} />);
+    await user.type(screen.getByLabelText("Case reference"), "REF-2026-0001-SYN");
+    await user.type(screen.getByLabelText("Person alias"), "J. Example");
+    await user.type(
+      screen.getByLabelText("Assigned practitioner"),
+      "Demo practitioner",
+    );
+    await user.click(screen.getByRole("button", { name: "Create case" }));
 
-    const card = screen.getByRole("link", {
-      name: `Open workspace for M. Chen (${PRIMARY_CASE_DISPLAY_ID})`,
+    await waitFor(() =>
+      expect(routerPush).toHaveBeenCalledWith(
+        expect.stringMatching(/^\/case\/CFN-CASE-[A-Z0-9-]+\/purpose$/),
+      ),
+    );
+    const stored = restoreBrowserCaseRegistry(
+      window.localStorage.getItem(BROWSER_CASE_REGISTRY_STORAGE_KEY),
+    );
+    expect(stored.ok).toBe(true);
+    expect(stored.registry.cases).toHaveLength(1);
+    expect(stored.registry.cases[0]).toMatchObject({
+      displayReference: "REF-2026-0001-SYN",
+      personAlias: "J. Example",
+      assignedPractitioner: "Demo practitioner",
+      purposeBrief: null,
     });
-    expect(within(card).getByText("Documents").nextElementSibling).toHaveTextContent(
-      String(summary.documentCount),
-    );
-    expect(within(card).getByText("Analysis").nextElementSibling).toHaveTextContent(
-      summary.analysisStatus,
-    );
-    expect(within(card).getByText("Review").nextElementSibling).toHaveTextContent(
-      `${summary.pendingReviewCount} pending`,
-    );
-    expect(within(card).getByText("Urgent needs").nextElementSibling).toHaveTextContent(
-      String(summary.openUrgentNeedCount),
-    );
-    expect(within(card).getByText("Evidence gaps").nextElementSibling).toHaveTextContent(
-      String(summary.openGapCount),
-    );
-    expect(within(card).getByText("Tasks").nextElementSibling).toHaveTextContent(
-      String(summary.openTaskCount),
-    );
+    expect(stored.registry.cases[0]).not.toHaveProperty("documents");
+    expect(stored.registry.cases[0]).not.toHaveProperty("analysisRuns");
   });
 
-  it("marks a successful analysis stale after Purpose changes through the canonical command", () => {
-    const checkpoint = checkpointState();
-    if (!checkpoint.purposeBrief) throw new Error("checkpoint purpose missing");
-
-    const changed = applyCaseCommand(checkpoint, {
-      type: "save_purpose",
-      meta: {
-        commandId: "cmd-dashboard-purpose-change",
-        idempotencyKey: "idem-dashboard-purpose-change",
-        expectedCaseRevision: checkpoint.caseRevision,
-        actor: "current_practitioner",
-        createdAt: "2026-07-24T00:01:00.000Z",
+  it("renders browser-persisted cases as clickable independent workspaces", async () => {
+    const created = createBrowserCase(
+      createEmptyBrowserCaseRegistry(),
+      {
+        assignedPractitioner: "Practitioner A",
+        displayReference: "REF-2026-0002-SYN",
+        personAlias: "K. Example",
       },
-      purposeBrief: {
-        ...checkpoint.purposeBrief,
-        revision: checkpoint.purposeBrief.revision + 1,
-        statedPurpose: `${checkpoint.purposeBrief.statedPurpose} Updated for the current handoff.`,
-        updatedAt: "2026-07-24T00:01:00.000Z",
+      {
+        idNonce: "CASE002",
+        now: "2026-07-25T00:00:00.000Z",
       },
-    });
-    if (!changed.ok) throw new Error(changed.reason);
-
-    expect(derivePrimaryCaseSummary(changed.state).analysisStatus).toBe("Needs rerun");
-
-    render(<CaseDashboard initialState={changed.state} />);
-
-    const card = screen.getByRole("link", {
-      name: `Open workspace for M. Chen (${PRIMARY_CASE_DISPLAY_ID})`,
-    });
-    expect(within(card).getByText("Analysis").nextElementSibling).toHaveTextContent(
-      "Needs rerun",
     );
+    if (!created.ok) throw new Error(created.reason);
+    persistBrowserCaseRegistry(window.localStorage, created.registry);
+
+    render(<CaseDashboard />);
+
+    const card = await screen.findByRole("link", {
+      name: "Open workspace for K. Example (REF-2026-0002-SYN)",
+    });
+    expect(card).toHaveAttribute("href", "/case/CFN-CASE-CASE002/purpose");
+    expect(screen.queryByText(/M\. Chen|A\. Okafor|R\. Salazar/)).not.toBeInTheDocument();
   });
 });
