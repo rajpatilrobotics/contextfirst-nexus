@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 import {
   AnalyzeAvailabilityResponseSchema,
@@ -28,6 +29,7 @@ import {
 import { CasePurposeBriefForm } from "./case-purpose-brief-form";
 
 export function BrowserCasePurposeWorkspace({ caseId }: { caseId: string }) {
+  const router = useRouter();
   const [record, setRecord] = useState<BrowserCaseRecord | null>(null);
   const [caseState, setCaseState] = useState<"loading" | "ready" | "missing">(
     "loading",
@@ -86,6 +88,7 @@ export function BrowserCasePurposeWorkspace({ caseId }: { caseId: string }) {
     );
     if (!persisted.ok) return persisted.reason;
     setRecord(saved.record);
+    router.push(`/case/${caseId}/documents`);
     return null;
   }
 
@@ -182,8 +185,9 @@ export function BrowserCasePurposeWorkspace({ caseId }: { caseId: string }) {
             </span>
           </div>
           <DemoOnlyNotice>
-            Purpose persists in this browser. Documents, analysis, planning, review,
-            audit, and export are not yet available for created cases.
+            Purpose persists in this browser. Documents opens with an empty source
+            list; upload and processing are not connected yet. Analysis and later
+            stages remain unavailable.
           </DemoOnlyNotice>
         </section>
 
@@ -195,13 +199,12 @@ export function BrowserCasePurposeWorkspace({ caseId }: { caseId: string }) {
                 {record.displayReference}. Reload or return from the Dashboard to
                 continue editing it.
               </p>
-              <button
-                className="min-h-9 inline-flex shrink-0 cursor-not-allowed items-center justify-center rounded-md border border-border bg-muted px-4 py-2 text-sm font-semibold text-muted-foreground"
-                disabled
-                type="button"
+              <Link
+                className="min-h-9 inline-flex shrink-0 items-center justify-center rounded-md border border-[var(--color-brand)] bg-[var(--color-brand)] px-4 py-2 text-sm font-semibold !text-white hover:bg-[var(--color-brand-hover)]"
+                href={`/case/${record.id}/documents`}
               >
-                Documents unavailable in this slice
-              </button>
+                Continue to Documents
+              </Link>
             </div>
           </Alert>
         ) : null}

@@ -40,7 +40,6 @@ const DISABLED_NAVIGATION: Array<{
   icon: NavigationIcon;
   label: string;
 }> = [
-  { group: "Intake", icon: FileText, label: "Documents" },
   { group: "Analysis", icon: Search, label: "Structured Analysis" },
   { group: "Analysis", icon: AlertOctagon, label: "Urgent Needs" },
   { group: "Analysis", icon: HelpCircle, label: "Evidence Gaps" },
@@ -57,14 +56,17 @@ const DISABLED_NAVIGATION: Array<{
 const GROUPS = ["Intake", "Analysis", "Planning", "Review", "Export"] as const;
 
 export function BrowserCaseShell({
+  activeStage = "purpose",
   children,
   record,
 }: {
+  activeStage?: "documents" | "purpose";
   children: ReactNode;
   record: BrowserCaseRecord;
 }) {
   const purposeComplete = record.purposeBrief?.status === "complete";
   const purposeHref = `/case/${record.id}/purpose`;
+  const documentsHref = `/case/${record.id}/documents`;
 
   return (
     <div className="min-h-screen overflow-x-hidden bg-background text-foreground">
@@ -124,8 +126,11 @@ export function BrowserCaseShell({
         >
           <ol className="mx-auto grid grid-cols-3 gap-x-3 gap-y-2 px-6 pb-3 sm:flex sm:w-max sm:min-w-full sm:flex-nowrap sm:items-center sm:gap-2">
             {STAGES.map((stage, index) => {
-              const current = stage.id === "purpose";
-              const complete = current && purposeComplete;
+              const current = stage.id === activeStage;
+              const complete = stage.id === "purpose" && purposeComplete;
+              const available =
+                stage.id === "purpose" ||
+                (stage.id === "documents" && purposeComplete);
               const stageBody = (
                 <>
                   <span
@@ -147,17 +152,24 @@ export function BrowserCaseShell({
                     {stage.label}
                   </span>
                   <span className="sr-only">
-                    , {current ? (complete ? "completed" : "active") : "unavailable"}
+                    ,{" "}
+                    {complete
+                      ? "completed"
+                      : current
+                        ? "active"
+                        : available
+                          ? "available"
+                          : "unavailable"}
                   </span>
                 </>
               );
               return (
                 <li className="flex min-w-0 items-center gap-2" key={stage.id}>
-                  {current ? (
+                  {available ? (
                     <Link
-                      aria-current="step"
+                      aria-current={current ? "step" : undefined}
                       className="flex items-center gap-2"
-                      href={purposeHref}
+                      href={stage.id === "documents" ? documentsHref : purposeHref}
                     >
                       {stageBody}
                     </Link>
@@ -184,7 +196,8 @@ export function BrowserCaseShell({
       </header>
 
       <div className="border-b border-border bg-muted/40 px-6 py-2 text-xs text-muted-foreground lg:hidden">
-        Later workspace stages are not yet available for browser-created cases.
+        Analysis and later workspace stages are not yet available for
+        browser-created cases.
       </div>
 
       <div className="mx-auto grid grid-cols-1 gap-0 lg:grid-cols-[240px_1fr]">
@@ -197,19 +210,65 @@ export function BrowserCaseShell({
                 </div>
                 <ul className="space-y-0.5">
                   {group === "Intake" ? (
-                    <li>
-                      <Link
-                        aria-current="page"
-                        className="flex items-center gap-2 rounded-md bg-primary px-2 py-1.5 text-sm text-primary-foreground"
-                        href={purposeHref}
-                      >
-                        <FileText
-                          className="h-4 w-4 opacity-80"
-                          aria-hidden="true"
-                        />
-                        <span>Purpose Brief</span>
-                      </Link>
-                    </li>
+                    <>
+                      <li>
+                        <Link
+                          aria-current={
+                            activeStage === "purpose" ? "page" : undefined
+                          }
+                          className={`flex items-center gap-2 rounded-md px-2 py-1.5 text-sm ${
+                            activeStage === "purpose"
+                              ? "bg-primary text-primary-foreground"
+                              : "text-foreground/80 hover:bg-muted"
+                          }`}
+                          href={purposeHref}
+                        >
+                          <FileText
+                            className="h-4 w-4 opacity-80"
+                            aria-hidden="true"
+                          />
+                          <span>Purpose Brief</span>
+                        </Link>
+                      </li>
+                      <li>
+                        {purposeComplete ? (
+                          <Link
+                            aria-current={
+                              activeStage === "documents" ? "page" : undefined
+                            }
+                            className={`flex items-center gap-2 rounded-md px-2 py-1.5 text-sm ${
+                              activeStage === "documents"
+                                ? "bg-primary text-primary-foreground"
+                                : "text-foreground/80 hover:bg-muted"
+                            }`}
+                            href={documentsHref}
+                          >
+                            <FileText
+                              className="h-4 w-4 opacity-80"
+                              aria-hidden="true"
+                            />
+                            <span>Documents</span>
+                          </Link>
+                        ) : (
+                          <span
+                            aria-disabled="true"
+                            className="flex cursor-not-allowed items-center justify-between gap-2 rounded-md px-2 py-1.5 text-sm text-muted-foreground opacity-65"
+                            title="Complete Purpose before opening Documents"
+                          >
+                            <span className="flex items-center gap-2">
+                              <FileText
+                                className="h-4 w-4 opacity-80"
+                                aria-hidden="true"
+                              />
+                              <span>Documents</span>
+                            </span>
+                            <span className="font-mono text-[8px] uppercase tracking-[0.1em]">
+                              Unavailable
+                            </span>
+                          </span>
+                        )}
+                      </li>
+                    </>
                   ) : null}
                   {DISABLED_NAVIGATION.filter(
                     (item) => item.group === group,

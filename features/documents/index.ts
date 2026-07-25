@@ -1,4 +1,5 @@
 export { AnalysisPrerequisites, deriveAnalysisPrerequisites } from "./analysis-prerequisites";
+export { BrowserCaseDocumentsWorkspace } from "./browser-case-documents-workspace";
 export { CoverageManifest } from "./coverage-manifest";
 export { DocumentCards, initialSyntheticDocuments } from "./document-cards";
 export { DocumentsWorkspace } from "./documents-workspace";
