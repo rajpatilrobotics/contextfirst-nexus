@@ -8,6 +8,7 @@ import {
   type CaseCandidate,
   type Citation,
   type EvidenceDependency,
+  type SafeShareRecipientCategory,
 } from "../../contracts";
 import { z } from "zod";
 import {
@@ -27,6 +28,7 @@ export type PostValidationResult = {
 
 export type PostValidationInput = {
   caseId: string;
+  safeShareRecipientCategory?: SafeShareRecipientCategory;
 };
 
 const CREATED_AT = "2026-07-16T00:00:00.000Z" as const;
@@ -107,7 +109,11 @@ export function postValidateAnalysisProposal(
     candidates.push(buildCandidate(candidate, candidateId, runId, sourceDependencies, input));
   }
 
-  return { candidates, citations, quarantined };
+  return {
+    candidates: completeSourceGroundedContextGaps(candidates),
+    citations,
+    quarantined,
+  };
 }
 
 export function assertAnalyzeResponse(value: unknown) {
@@ -145,22 +151,36 @@ function buildCandidate(
     reviewQuestion: candidate.reviewQuestion,
     consequential: candidate.assertionMode === "positive_proposition",
     prohibitedConclusionCheck: "passed" as const,
-    safeShareRecipientCategories: ["legal_aid_team" as const],
+    safeShareRecipientCategories: [
+      input.safeShareRecipientCategory ?? "legal_aid_team",
+    ],
     createdAt: CREATED_AT,
   };
 
   if (candidate.kind === "timeline_event") {
+    const datePrecision =
+      candidate.datePrecision === "day" && !candidate.dateStart
+        ? "unknown"
+        : candidate.datePrecision ?? "unknown";
     return CaseCandidateSchema.parse({
       ...base,
       kind: "timeline_event",
-      datePrecision: "unknown",
-      dateAlternatives: [],
-      actorLabels: [],
+      ...(datePrecision !== "unknown" && candidate.dateStart
+        ? { dateStart: candidate.dateStart }
+        : {}),
+      ...(candidate.dateEnd ? { dateEnd: candidate.dateEnd } : {}),
+      datePrecision,
+      dateAlternatives: candidate.dateAlternatives ?? [],
+      ...(candidate.locationLabel
+        ? { locationLabel: candidate.locationLabel }
+        : {}),
+      actorLabels: candidate.actorLabels ?? [],
     });
   }
   if (candidate.kind === "context_gap") {
     return CaseCandidateSchema.parse({
       ...base,
+      safeShareRecipientCategories: [],
       kind: "context_gap",
       response: null,
       responseStatus: "unanswered",
@@ -173,13 +193,138 @@ function buildCandidate(
       ...base,
       id: `NEXUS-AI-${String(id.match(/\d+$/)?.[0] ?? "1").padStart(4, "0")}`,
       kind: "nexus_relationship",
-      category: "control",
+      category: candidate.nexusCategory ?? inferNexusCategory(candidate),
       requiredDependencyIds: dependencies.map((dependency) => dependency.id),
       childCandidateIds: [],
       relationshipSummary: candidate.proposedText,
     });
   }
   return CaseCandidateSchema.parse({ ...base, kind: candidate.kind });
+}
+
+function completeSourceGroundedContextGaps(
+  candidates: CaseCandidate[],
+): CaseCandidate[] {
+  const representedGapLanes = new Set(
+    candidates.flatMap((candidate) =>
+      candidate.kind === "context_gap" && candidate.lane
+        ? [candidate.lane]
+        : [],
+    ),
+  );
+  const completed = [...candidates];
+  const laneCodes = {
+    trafficking_indicators: "A",
+    non_punishment_relevance: "B",
+    protection_remedy_urgency: "C",
+  } as const;
+  const laneOrder = [
+    "trafficking_indicators",
+    "non_punishment_relevance",
+    "protection_remedy_urgency",
+  ] as const;
+
+  for (const lane of laneOrder) {
+    if (representedGapLanes.has(lane)) continue;
+    const sourceCandidate = candidates.find(
+      (candidate) =>
+        candidate.kind !== "context_gap" &&
+        candidate.kind !== "timeline_event" &&
+        candidate.kind !== "nexus_relationship" &&
+        candidate.lane === lane &&
+        candidate.inclusionStatus === "active" &&
+        candidate.dependencies.some(
+          (dependency) => dependency.kind === "source" && dependency.active,
+        ),
+    );
+    if (!sourceCandidate) continue;
+
+    const sourceDependencies = sourceCandidate.dependencies.flatMap(
+      (dependency, index) =>
+        dependency.kind === "source" && dependency.active
+          ? [
+              {
+                ...dependency,
+                id: `DEP-AI-GAP-${laneCodes[lane]}-${String(index + 1).padStart(2, "0")}`,
+                relationship: "context_only" as const,
+              },
+            ]
+          : [],
+    );
+    if (!sourceDependencies.length) continue;
+
+    const text =
+      `The current source-grounded analysis raises a review question related to “${sourceCandidate.title},” but it does not resolve the surrounding context. This gap is not a finding.`;
+    completed.push(
+      CaseCandidateSchema.parse({
+        id: `CAND-AI-GAP-${laneCodes[lane]}`,
+        revision: 0,
+        caseId: sourceCandidate.caseId,
+        analysisRunId: sourceCandidate.analysisRunId,
+        kind: "context_gap",
+        lane,
+        title: `Context to verify · ${sourceCandidate.title}`,
+        proposedText: text,
+        currentText: text,
+        currentTextOrigin: "ai_suggestion",
+        itemOrigin: "ai_suggestion",
+        assertionMode: "gap",
+        reviewRequirement: "individual",
+        inclusionStatus: "active",
+        supportStatus: "insufficient_evidence",
+        reviewStatus: "pending",
+        dependencies: sourceDependencies,
+        relatedCoverageIssueIds: sourceCandidate.relatedCoverageIssueIds,
+        unknowns: [
+          ...sourceCandidate.unknowns,
+          "The cited source does not itself answer this gap, and missing information must not be treated as negative evidence.",
+        ],
+        reviewQuestion: gapQuestionForLane(lane),
+        consequential: false,
+        prohibitedConclusionCheck: "passed",
+        safeShareRecipientCategories: [],
+        createdAt: sourceCandidate.createdAt,
+        response: null,
+        responseStatus: "unanswered",
+        responseEvidenceNature: "unknown",
+        responseExplanation: null,
+      }),
+    );
+  }
+
+  return completed;
+}
+
+function gapQuestionForLane(
+  lane:
+    | "trafficking_indicators"
+    | "non_punishment_relevance"
+    | "protection_remedy_urgency",
+) {
+  if (lane === "trafficking_indicators") {
+    return "What additional source or practitioner-confirmed context, if any, clarifies how this observation arose and whether the surrounding circumstances change its meaning?";
+  }
+  if (lane === "non_punishment_relevance") {
+    return "What additional source or procedural record, if any, clarifies the reported conduct, pressure, timing, and current proceeding without assuming guilt or eligibility?";
+  }
+  return "What current practitioner-confirmed information, if any, clarifies the support need, urgency, consent, and safe-contact constraints without assuming that a need is established?";
+}
+
+function inferNexusCategory(
+  candidate: ModelAnalysisProposal["candidates"][number],
+) {
+  const text = `${candidate.title} ${candidate.proposedText}`.toLowerCase();
+  if (/recruit|decept|job offer/.test(text)) return "recruitment" as const;
+  if (/mov|travel|transport|accommodation/.test(text)) return "movement" as const;
+  if (/compel|task|conduct|ordered|forced to/.test(text)) return "compelled_tasks" as const;
+  if (/offen[cs]e|arrest|charge|prosecut|timing/.test(text)) return "offence_timing" as const;
+  if (
+    candidate.lane === "protection_remedy_urgency" ||
+    /urgent|safety|protection|remedy/.test(text)
+  ) {
+    return "urgency" as const;
+  }
+  return "control" as const;
 }
 
 function candidateIdFor(ordinal: number, kind: string): string {

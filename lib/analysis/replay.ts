@@ -403,12 +403,13 @@ export function trustedPurposeBrief(actor: "current_practitioner" | "fixture_rev
       "case_priority",
       "prosecution_sentence_or_outcome",
     ],
+    sourceMaterialClassification: "bundled_synthetic_fixture",
     authority: {
       basis: "not_applicable_synthetic_fixture",
       status: "active",
       consentStatus: "not_applicable_synthetic_fixture",
       authorityNotVerifiedAcknowledged: true,
-      syntheticOrHarmlessDataAttested: true,
+      sourceMaterialAttested: true,
     },
     jurisdictionCode: "J-01",
     sourceLanguage: "en",
@@ -417,7 +418,7 @@ export function trustedPurposeBrief(actor: "current_practitioner" | "fixture_rev
     intendedRecipientCategory: "legal_aid_team",
     requestedExport: "full_practitioner_handoff",
     prohibitedDecisionsAcknowledged: true,
-    syntheticDataAcknowledged: true,
+    sourceMaterialBoundaryAcknowledged: true,
     providerSelection: {
       providerId: "local_replay",
       releaseConfigurationId: "prepared-replay-v1",

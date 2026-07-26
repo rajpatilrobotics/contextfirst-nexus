@@ -116,11 +116,18 @@ describe("TASK-015 live analysis orchestration", () => {
     expect(gemini).not.toHaveBeenCalled();
     expect(mistral).not.toHaveBeenCalled();
     expect(response.outcome).toBe("succeeded");
-    expect(response.run?.candidateCount).toBe(1);
+    expect(response.run?.candidateCount).toBe(2);
     expect(response.run?.citationCount).toBe(1);
     expect(response.candidates[0]).toMatchObject({
       analysisRunId: response.run?.id,
       supportStatus: "exact_source_supported",
+    });
+    expect(response.candidates[1]).toMatchObject({
+      id: "CAND-AI-GAP-A",
+      analysisRunId: response.run?.id,
+      kind: "context_gap",
+      responseStatus: "unanswered",
+      consequential: false,
     });
     expect(response.citations[0]).toMatchObject({
       analysisRunId: response.run?.id,
@@ -179,10 +186,15 @@ describe("TASK-015 live analysis orchestration", () => {
     const response = await analyze(validAnalyzeRequest(), { openai });
 
     expect(response.outcome).toBe("succeeded");
-    expect(response.candidates).toHaveLength(1);
+    expect(response.candidates).toHaveLength(2);
     expect(response.candidates[0]?.title).toBe(
       "Trafficking indicator for practitioner review",
     );
+    expect(response.candidates[1]).toMatchObject({
+      id: "CAND-AI-GAP-A",
+      kind: "context_gap",
+      responseStatus: "unanswered",
+    });
     expect(response.quarantined).toEqual([
       {
         id: "QUARANTINE-0002",

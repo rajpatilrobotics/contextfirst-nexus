@@ -26,6 +26,8 @@ function intent(
       practitionerRole: "demo_evaluator",
       jurisdictionCode: "unspecified",
       requestedExport: "full_practitioner_handoff",
+      intendedRecipientCategory: "policy_or_research_summary",
+      sourceMaterialClassification: "user_attested_synthetic",
     },
     documentSetDigest: "a".repeat(64),
     maskingRevision: 2,

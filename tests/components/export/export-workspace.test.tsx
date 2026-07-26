@@ -21,7 +21,7 @@ vi.mock("../../../lib/export/renderers/pdf", () => ({
 
 const REQUIRED_LABELS = [
   "AI-assisted, human-reviewed case-preparation draft.",
-  "Synthetic case.",
+  "Bundled synthetic demonstration.",
   "Not legal advice.",
   "Local legal verification required.",
 ];
@@ -29,7 +29,7 @@ const REQUIRED_LABELS = [
 const EXPECTED_REMEDIATION_DESTINATIONS = {
   PURPOSE_INCOMPLETE: "/case/demo/purpose?exportBlocker=PURPOSE_INCOMPLETE#purpose-form",
   AUTHORITY_INVALID: "/case/demo/purpose?exportBlocker=AUTHORITY_INVALID#authority-attested",
-  DATA_ORIGIN_PROHIBITED: "/case/demo/intake?exportBlocker=DATA_ORIGIN_PROHIBITED#documents",
+  DATA_ORIGIN_PROHIBITED: "/case/demo/purpose?exportBlocker=DATA_ORIGIN_PROHIBITED#source-material-classification",
   REVIEW_INCOMPLETE: "/case/demo/review?exportBlocker=REVIEW_INCOMPLETE#review-workspace",
   CITATION_UNRESOLVED: "/case/demo/review?exportBlocker=CITATION_UNRESOLVED#citations",
   COVERAGE_CONSEQUENTIAL: "/case/demo/intake?exportBlocker=COVERAGE_CONSEQUENTIAL#coverage",
@@ -127,12 +127,107 @@ describe("TASK-022 export gate and workspace", () => {
       expect(section).not.toBeNull();
       expect(within(section!).getByText(`ENTITY-${code}`, { selector: "dd" })).toBeInTheDocument();
       expect(within(section!).getByText(`Remediation for ${code}`)).toBeInTheDocument();
-      expect(within(section!).getByRole("link")).toHaveAttribute(
+      expect(within(section!).getAllByRole("link").at(-1)).toHaveAttribute(
         "href",
         EXPECTED_REMEDIATION_DESTINATIONS[code],
       );
     }
     expect(document.body.innerHTML).not.toContain("/case/demo/documents");
+  });
+
+  it("keeps dynamic-case blocker remediation inside the current case", () => {
+    const state = createReadyState({ createManifest: false });
+    if (!state.exportGate || state.exportGate.status !== "ready") {
+      throw new Error("Missing ready gate fixture.");
+    }
+    const gate: ExportGate = {
+      ...state.exportGate,
+      status: "blocked",
+      freshness: "current",
+      blockers: [{
+        id: "EXPORT-BLOCKER-REVIEW",
+        code: "REVIEW_INCOMPLETE",
+        severity: "blocking",
+        entityIds: ["CAND-DYNAMIC"],
+        message: "Review remains incomplete.",
+        remediation: "Review the candidate.",
+      }],
+    };
+
+    render(
+      <ExportGatePanel
+        caseBasePath="/case/CFN-CASE-DYNAMIC"
+        gate={gate}
+        headingRef={createRef<HTMLHeadingElement>()}
+      />,
+    );
+    expect(screen.getByRole("link", { name: "Return to Analysis" })).toHaveAttribute(
+      "href",
+      "/case/CFN-CASE-DYNAMIC/analysis?exportBlocker=REVIEW_INCOMPLETE#review-workspace",
+    );
+  });
+
+  it("routes each dynamic incomplete review to its exact canonical destination", () => {
+    const state = createGoldenEarlyState();
+    const lane = state.candidates.find(
+      (candidate) =>
+        candidate.kind !== "context_gap" &&
+        candidate.kind !== "timeline_event" &&
+        candidate.kind !== "nexus_relationship",
+    );
+    const gap = state.candidates.find((candidate) => candidate.kind === "context_gap");
+    const timeline = state.candidates.find((candidate) => candidate.kind === "timeline_event");
+    if (!lane || !gap || !timeline) throw new Error("Review route fixtures missing.");
+    const gate: ExportGate = {
+      id: "EXPORT-GATE-DYNAMIC",
+      caseRevision: state.caseRevision,
+      analysisRunId: state.activeAnalysisRunId!,
+      purposeBriefRevision: state.purposeBrief!.revision,
+      maskingRevision: state.masking.revision,
+      guidancePackVersion: state.guidancePack.version,
+      guidancePackDigest: state.guidancePack.digest,
+      rulesetVersion: state.guidancePack.version,
+      exportSelection: {
+        kind: "full_practitioner_handoff",
+        minimumNecessarySelection: null,
+      },
+      exportSelectionDigest: "a".repeat(64),
+      evaluatedAt: "2026-07-16T00:00:00.000Z",
+      reviewedCandidateCount: 3,
+      includedCandidateCount: 0,
+      status: "blocked",
+      freshness: "current",
+      blockers: [{
+        id: "EXPORT-BLOCKER-REVIEW",
+        code: "REVIEW_INCOMPLETE",
+        severity: "blocking",
+        entityIds: [lane.id, gap.id, timeline.id],
+        message: "Review remains incomplete.",
+        remediation: "Review each candidate.",
+      }],
+    };
+
+    render(
+      <ExportGatePanel
+        candidates={state.candidates}
+        caseBasePath="/case/CFN-CASE-DYNAMIC"
+        gate={gate}
+        headingRef={createRef<HTMLHeadingElement>()}
+      />,
+    );
+
+    expect(screen.getByRole("link", { name: new RegExp(`${lane.id}.*Structured Analysis`) })).toHaveAttribute(
+      "href",
+      `/case/CFN-CASE-DYNAMIC/analysis?exportBlocker=REVIEW_INCOMPLETE#candidate-${lane.id}`,
+    );
+    expect(screen.getByRole("link", { name: new RegExp(`${gap.id}.*Evidence Gaps`) })).toHaveAttribute(
+      "href",
+      `/case/CFN-CASE-DYNAMIC/gaps?exportBlocker=REVIEW_INCOMPLETE#candidate-${gap.id}`,
+    );
+    expect(screen.getByRole("link", { name: new RegExp(`${timeline.id}.*Timeline`) })).toHaveAttribute(
+      "href",
+      `/case/CFN-CASE-DYNAMIC/timeline?exportBlocker=REVIEW_INCOMPLETE#candidate-${timeline.id}`,
+    );
   });
 
   it("creates one ready manifest, previews semantic and canonical JSON before PDF, and downloads locally", async () => {
@@ -188,6 +283,47 @@ describe("TASK-022 export gate and workspace", () => {
     await user.click(screen.getByRole("button", { name: "Create reviewed handoff" }));
     expect(await screen.findByText("Included candidate IDs: CAND-TL-ARRIVAL.")).toBeInTheDocument();
     expect(screen.getByText(/Excluded candidate IDs:/)).toBeInTheDocument();
+  });
+
+  it("does not demand impossible individual review for optional informational rows", () => {
+    const safeShare = createSafeShareState();
+    const reviewed = safeShare.candidates.find(
+      (candidate) => candidate.kind === "nexus_relationship",
+    );
+    if (!reviewed) throw new Error("Nexus candidate fixture missing.");
+    const optionalRelationship = {
+      ...reviewed,
+      id: "NEXUS-OPTIONAL-INFORMATIONAL",
+      kind: "nexus_relationship" as const,
+      reviewRequirement: "optional" as const,
+      reviewStatus: "pending" as const,
+    };
+
+    renderWorkspace({
+      ...safeShare,
+      candidates: [...safeShare.candidates, optionalRelationship],
+    });
+
+    expect(
+      screen.queryByRole("checkbox", {
+        name: /NEXUS-OPTIONAL-INFORMATIONAL/,
+      }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.getByText(
+        (_, element) =>
+          element?.tagName === "P" &&
+          Boolean(
+            element.textContent?.includes(
+              "not part of minimum-necessary evidence selection",
+            ) &&
+              element.textContent.includes("no individual review"),
+          ),
+      ),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByText(/NEXUS-OPTIONAL-INFORMATIONAL.*complete human review/i),
+    ).not.toBeInTheDocument();
   });
 
   it("offers handoff-kind changes only through Purpose and never as an export-side switch", () => {

@@ -303,6 +303,29 @@ export function Timeline({
   const cardRefs = useRef<Record<string, HTMLButtonElement | null>>({});
 
   useEffect(() => {
+    function openEventFromHash() {
+      if (typeof window === "undefined") return;
+      const match = /^#candidate-(.+)$/.exec(window.location.hash);
+      if (!match) return;
+      const eventId = decodeURIComponent(match[1]);
+      if (!events.some((event) => event.id === eventId)) return;
+      setFilter("all");
+      setConflictsOnly(false);
+      setPendingOnly(false);
+      setSelectedId(eventId);
+      window.requestAnimationFrame(() => {
+        const target = document.getElementById(`candidate-${eventId}`);
+        if (typeof target?.scrollIntoView === "function") {
+          target.scrollIntoView({ block: "nearest" });
+        }
+      });
+    }
+    openEventFromHash();
+    window.addEventListener("hashchange", openEventFromHash);
+    return () => window.removeEventListener("hashchange", openEventFromHash);
+  }, [events]);
+
+  useEffect(() => {
     if (!filtered.length) {
       if (selectedId !== null) setSelectedId(null);
       return;
@@ -443,6 +466,7 @@ export function Timeline({
                 <li
                   aria-label={`Timeline event: ${event.id}`}
                   className="grid grid-cols-[1fr] gap-3 sm:grid-cols-[8.5rem_1.25rem_1fr] sm:gap-4"
+                  id={`candidate-${event.id}`}
                   key={event.id}
                 >
                   <div className="sm:pt-4 sm:text-right">

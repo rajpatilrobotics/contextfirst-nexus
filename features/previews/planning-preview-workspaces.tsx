@@ -42,6 +42,8 @@ import type {
 } from "../../lib/contracts";
 import {
   derivePlanningDashboardCounts,
+  deriveServiceResourceMatches,
+  deriveUrgentNeedSuggestions,
   serviceProviderDirectory,
   sourceLinkState,
 } from "../../lib/planning";
@@ -243,13 +245,11 @@ function InterviewTrace({
   );
 }
 
-function providerFormat(provider: ServiceProviderDirectoryRecord) {
-  const value = provider.accessibility.toLowerCase();
-  const remote = /remote|video|relay/.test(value);
-  const inPerson = /wheelchair|step-free/.test(value);
-  if (remote && inPerson) return "In-person + remote";
-  if (remote) return "Remote";
-  return "In-person";
+function resourceTypeLabel(resource: ServiceProviderDirectoryRecord) {
+  if (resource.resourceType === "official_directory") return "Official directory";
+  if (resource.resourceType === "official_locator") return "Official locator";
+  if (resource.resourceType === "official_roster") return "Official roster";
+  return "Navigation service";
 }
 
 function ServiceFilterSelect({
@@ -279,15 +279,26 @@ function ServiceFilterSelect({
   );
 }
 
-export function UrgentNeedsPreview() {
+export function UrgentNeedsPreview({
+  owner = "M. Chen",
+}: {
+  owner?: string;
+}) {
   const { state, dispatchCaseCommand } = useCaseState();
   const [category, setCategory] = useState<UrgentNeed["category"]>("emergency_accommodation");
+  const [urgency, setUrgency] = useState<UrgentNeed["urgency"]>("routine");
   const [description, setDescription] = useState("");
   const [safeContact, setSafeContact] = useState("");
   const [nextAction, setNextAction] = useState("");
+  const [linkedCandidateIds, setLinkedCandidateIds] = useState<string[]>([]);
+  const [linkedCitationIds, setLinkedCitationIds] = useState<string[]>([]);
   const [message, setMessage] = useState<string | null>(null);
+  const sourceSuggestions = deriveUrgentNeedSuggestions(state);
   const activeNeeds = state.urgentNeeds.filter(
     (need) => !["resolved", "cancelled"].includes(need.status),
+  );
+  const hasBundledExamples = state.urgentNeeds.some(
+    (need) => need.origin === "bundled_synthetic",
   );
 
   function createNeed() {
@@ -298,12 +309,12 @@ export function UrgentNeedsPreview() {
       input: {
         category,
         description,
-        urgency: "within_72_hours",
-        owner: "M. Chen",
+        urgency,
+        owner,
         safeContactConstraints: safeContact,
         nextAction,
-        linkedCandidateIds: [],
-        linkedCitationIds: [],
+        linkedCandidateIds,
+        linkedCitationIds,
       },
     });
     if (!result.ok) {
@@ -314,7 +325,18 @@ export function UrgentNeedsPreview() {
     setDescription("");
     setSafeContact("");
     setNextAction("");
-    setMessage(`${created?.id ?? "Need"} saved in browser-session case state.`);
+    setLinkedCandidateIds([]);
+    setLinkedCitationIds([]);
+    setMessage(`${created?.id ?? "Need"} saved in browser-local case state.`);
+  }
+
+  function useSuggestion(suggestion: ReturnType<typeof deriveUrgentNeedSuggestions>[number]) {
+    setCategory(suggestion.category);
+    setDescription(suggestion.description);
+    setNextAction(suggestion.nextAction);
+    setLinkedCandidateIds([suggestion.candidateId]);
+    setLinkedCitationIds(suggestion.linkedCitationIds);
+    setMessage("Planning prompt loaded. Confirm the need, urgency, and safe-contact constraints before saving.");
   }
 
   function changeStatus(needId: string, nextStatus: UrgentNeed["status"]) {
@@ -331,7 +353,11 @@ export function UrgentNeedsPreview() {
     <div className="space-y-6">
       <SectionTitle
         actions={<Chip tone="rust">{activeNeeds.length} active urgent {activeNeeds.length === 1 ? "need" : "needs"}</Chip>}
-        description="Review bundled fictional examples and record practitioner-written operational needs. This screen never generates a risk score for a person."
+        description={
+          hasBundledExamples
+            ? "Review bundled fictional examples and record practitioner-written operational needs. This screen never generates a risk score for a person."
+            : "Record practitioner-written operational needs for this browser-local case. This screen never generates a risk score for a person."
+        }
         eyebrow="Stage 3 · Analysis"
         title="Urgent Needs"
       />
@@ -374,6 +400,11 @@ export function UrgentNeedsPreview() {
                 <PlanningField label="Consent / contact restrictions">{need.safeContactConstraints}</PlanningField>
                 <PlanningField label="Required action">{need.nextAction}</PlanningField>
                 <PlanningField label="Follow-up">{need.followUpAt ?? "No follow-up recorded"}</PlanningField>
+                <PlanningField label="Source-linked planning prompt">
+                  {need.linkedCandidateIds.length
+                    ? `${need.linkedCandidateIds.join(", ")} · ${need.linkedCitationIds.length} citation ${need.linkedCitationIds.length === 1 ? "link" : "links"}`
+                    : "None — practitioner-authored without an analysis link"}
+                </PlanningField>
               </dl>
               <div className="mt-4 flex flex-wrap items-center gap-2 border-t border-border pt-3">
                 <button className="inline-flex items-center gap-1.5 rounded-md border border-border px-2.5 py-1 text-xs opacity-60" disabled type="button">
@@ -402,6 +433,28 @@ export function UrgentNeedsPreview() {
         </div>
 
         <aside className="space-y-3">
+          {sourceSuggestions.length ? (
+            <div className="rounded-xl border border-[color-mix(in_oklab,var(--amber)_32%,transparent)] bg-[color-mix(in_oklab,var(--amber)_7%,transparent)] p-4">
+              <h2 className="font-serif text-base">Source-linked planning prompts</h2>
+              <p className="mt-1 text-xs leading-5 text-muted-foreground">
+                These are questions from active Lane C analysis—not confirmed needs, urgency assessments, or recommendations.
+              </p>
+              <div className="mt-3 space-y-2">
+                {sourceSuggestions.map((suggestion) => (
+                  <button
+                    className="w-full rounded-md border border-border bg-background p-2.5 text-left text-xs hover:bg-muted/50"
+                    key={suggestion.id}
+                    onClick={() => useSuggestion(suggestion)}
+                    type="button"
+                  >
+                    <span className="font-medium">{pretty(suggestion.category)}</span>
+                    <span className="mt-1 block text-muted-foreground">{suggestion.candidateId}</span>
+                    <span className="mt-1 block font-medium text-foreground">Use planning prompt</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          ) : null}
           <div className="rounded-xl border border-border bg-card p-4">
             <h2 className="font-mono text-[10px] uppercase tracking-[0.16em] text-muted-foreground">Add a need</h2>
             <label className="mt-2 block text-xs text-muted-foreground">
@@ -412,6 +465,17 @@ export function UrgentNeedsPreview() {
                 value={category}
               >
                 {["emergency_accommodation", "legal_support", "mental_health_support", "interpretation", "documentation", "safe_contact", "other"].map((value) => <option key={value} value={value}>{pretty(value)}</option>)}
+              </select>
+            </label>
+            <label className="mt-2 block text-xs text-muted-foreground">
+              Practitioner-confirmed urgency
+              <select
+                aria-label="Practitioner-confirmed urgency"
+                className="mt-1 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                onChange={(event) => setUrgency(event.currentTarget.value as UrgentNeed["urgency"])}
+                value={urgency}
+              >
+                {["routine", "within_7_days", "within_72_hours", "within_24_hours"].map((value) => <option key={value} value={value}>{pretty(value)}</option>)}
               </select>
             </label>
             <label className="mt-2 block text-xs text-muted-foreground">
@@ -449,14 +513,22 @@ export function UrgentNeedsPreview() {
             </button>
             <PlanningResult message={message} />
           </div>
-          <DemoOnlyNotice>Bundled examples are fictional; practitioner updates remain local browser-session planning records and contact no one.</DemoOnlyNotice>
+          <DemoOnlyNotice>
+            {hasBundledExamples
+              ? "Bundled examples are fictional; practitioner updates remain browser-local planning records and contact no one."
+              : "Practitioner-written needs remain browser-local planning records and contact no one."}
+          </DemoOnlyNotice>
         </aside>
       </div>
     </div>
   );
 }
 
-export function InterviewPlannerPreview() {
+export function InterviewPlannerPreview({
+  evidenceGapsHref = "/case/demo/gaps",
+}: {
+  evidenceGapsHref?: string;
+} = {}) {
   const { state, dispatchCaseCommand } = useCaseState();
   const [statusFilter, setStatusFilter] = useState<"all" | InterviewQuestion["status"]>("all");
   const [gapFilter, setGapFilter] = useState("all");
@@ -501,6 +573,19 @@ export function InterviewPlannerPreview() {
     ),
     [state.interviewQuestions],
   );
+
+  useEffect(() => {
+    const hash = globalThis.location?.hash ?? "";
+    if (!hash.startsWith("#question-")) return;
+    const questionId = decodeURIComponent(hash.slice("#question-".length));
+    if (!state.interviewQuestions.some((question) => question.id === questionId)) {
+      return;
+    }
+    setStatusFilter("all");
+    setGapFilter("all");
+    setDetailView("detail");
+    setSelectedId(questionId);
+  }, [state.interviewQuestions]);
 
   useEffect(() => {
     const nextSignature = JSON.stringify(state.interviewSetup);
@@ -744,7 +829,7 @@ export function InterviewPlannerPreview() {
             {visible.map((question) => {
               const active = selected?.id === question.id;
               return (
-                <li key={question.id}>
+                <li id={`question-${question.id}`} key={question.id}>
                   <button
                     aria-current={active ? "true" : undefined}
                     className={`block w-full border-b border-border/60 p-3 text-left last:border-0 focus-visible:ring-2 focus-visible:ring-ring ${active ? "bg-muted/60" : "hover:bg-muted/40"}`}
@@ -819,7 +904,19 @@ export function InterviewPlannerPreview() {
               </InterviewTrace>
               <InterviewTrace title="C · Evidence and Nexus linkage">
                 <ul className="space-y-1 text-sm">
-                  <li><span className="text-muted-foreground">Evidence Gap:</span> {selected.linkedGapCandidateId ?? "No gap linked"}</li>
+                  <li>
+                    <span className="text-muted-foreground">Evidence Gap:</span>{" "}
+                    {selected.linkedGapCandidateId ? (
+                      <a
+                        className="font-mono font-semibold underline underline-offset-2"
+                        href={`${evidenceGapsHref}#candidate-${selected.linkedGapCandidateId}`}
+                      >
+                        {selected.linkedGapCandidateId}
+                      </a>
+                    ) : (
+                      "No gap linked"
+                    )}
+                  </li>
                   <li><span className="text-muted-foreground">Source type:</span> {pretty(selected.source.sourceType)}</li>
                   <li><span className="text-muted-foreground">Source record:</span> {selected.source.sourceId ?? "Manual planning record"}</li>
                   <li><span className="text-muted-foreground">Source link:</span> {sourceLinkState(state, selected.source)}</li>
@@ -926,6 +1023,8 @@ export function InterviewPlannerPreview() {
 
 export function ServicesPreview() {
   const { state, dispatchCaseCommand } = useCaseState();
+  const resourceMatches = deriveServiceResourceMatches(state);
+  const resources = resourceMatches.map(({ resource }) => resource);
   const categories = ["All", ...new Set(serviceProviderDirectory.map((provider) => provider.category))];
   const [category, setCategory] = useState("All");
   const [query, setQuery] = useState("");
@@ -936,24 +1035,21 @@ export function ServicesPreview() {
   const [hours, setHours] = useState("Any");
   const [eligibility, setEligibility] = useState("Any");
   const [safeMethod, setSafeMethod] = useState("Any");
-  const [selectedId, setSelectedId] = useState<string>(serviceProviderDirectory[0].id);
+  const [selectedId, setSelectedId] = useState<string>(resources[0].id);
   const [consent, setConsent] = useState(false);
   const [safeContact, setSafeContact] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const normalizedQuery = query.trim().toLowerCase();
   const locations = ["Any", ...new Set(serviceProviderDirectory.map((provider) => provider.coverageArea))];
   const languages = ["Any", ...new Set(serviceProviderDirectory.flatMap((provider) => provider.languages))];
-  const visible = serviceProviderDirectory.filter(
+  const visible = resources.filter(
     (provider) =>
       (category === "All" || provider.category === category) &&
       (location === "Any" || provider.coverageArea === location) &&
       (language === "Any" || provider.languages.includes(language)) &&
       (accessibility === "Any" || provider.accessibility.toLowerCase().includes(accessibility.toLowerCase())) &&
-      (format === "Any" || providerFormat(provider) === format) &&
-      (hours === "Any" ||
-        (hours === "24/7" && provider.hours.includes("24/7")) ||
-        (hours === "Weekdays" && /Mon-Fri/i.test(provider.hours)) ||
-        (hours === "Weekends" && /Sat|Sun/i.test(provider.hours))) &&
+      (format === "Any" || resourceTypeLabel(provider) === format) &&
+      (hours === "Any" || provider.hours.toLowerCase().includes(hours.toLowerCase())) &&
       (eligibility === "Any" || provider.eligibilityCaveat.toLowerCase().includes(eligibility.toLowerCase())) &&
       (safeMethod === "Any" || provider.safeContactMethodLabel.toLowerCase().includes(safeMethod.toLowerCase())) &&
       (!normalizedQuery ||
@@ -963,6 +1059,7 @@ export function ServicesPreview() {
           provider.coverageArea,
           provider.languages.join(" "),
           provider.eligibilityCaveat,
+          provider.sourceLabel,
         ].join(" ").toLowerCase().includes(normalizedQuery)),
   );
   const selected = visible.find((provider) => provider.id === selectedId) ?? visible[0] ?? null;
@@ -1053,19 +1150,19 @@ export function ServicesPreview() {
   return (
     <div className="space-y-5">
       <SectionTitle
-        description="Every provider listed here is fictional and clearly marked. The system does not transmit information or contact any provider."
+        description="Browse curated official U.S. resource finders and create consent-confirmed local follow-up plans. The workspace never contacts a service or transmits case information."
         eyebrow="Stage 4 · Planning"
         title="Services & Referrals"
       />
 
-      <section aria-label="Service filters" className="rounded-xl border border-border bg-card p-3">
+      <section aria-label="Resource filters" className="rounded-xl border border-border bg-card p-3">
         <div className="flex flex-wrap items-center gap-2">
           <div className="relative min-w-[200px] flex-1">
             <input
-              aria-label="Search fictional providers"
+              aria-label="Search official resources"
               className="w-full rounded-md border border-input bg-background px-2.5 py-1.5 text-xs placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring"
               onChange={(event) => setQuery(event.currentTarget.value)}
-              placeholder="Search providers…"
+              placeholder="Search official resources…"
               type="search"
               value={query}
             />
@@ -1073,11 +1170,11 @@ export function ServicesPreview() {
           <ServiceFilterSelect label="Category" onChange={setCategory} options={categories} value={category} />
           <ServiceFilterSelect label="Location" onChange={setLocation} options={locations} value={location} />
           <ServiceFilterSelect label="Language" onChange={setLanguage} options={languages} value={language} />
-          <ServiceFilterSelect label="Accessibility" onChange={setAccessibility} options={["Any", "Wheelchair access", "Remote sessions", "Video relay", "Step-free entry"]} value={accessibility} />
-          <ServiceFilterSelect label="Format" onChange={setFormat} options={["Any", "In-person", "Remote", "In-person + remote"]} value={format} />
-          <ServiceFilterSelect label="Hours" onChange={setHours} options={["Any", "24/7", "Weekdays", "Weekends"]} value={hours} />
-          <ServiceFilterSelect label="Eligibility" onChange={setEligibility} options={["Any", "adult", "consent", "practitioner"]} value={eligibility} />
-          <ServiceFilterSelect label="Safe contact" onChange={setSafeMethod} options={["Any", "manual", "consent", "no direct contact", "independently"]} value={safeMethod} />
+          <ServiceFilterSelect label="Accessibility" onChange={setAccessibility} options={["Any", "language", "accommodation", "accessibility"]} value={accessibility} />
+          <ServiceFilterSelect label="Resource type" onChange={setFormat} options={["Any", "Official directory", "Official locator", "Official roster", "Navigation service"]} value={format} />
+          <ServiceFilterSelect label="Hours" onChange={setHours} options={["Any", "online", "vary"]} value={hours} />
+          <ServiceFilterSelect label="Eligibility" onChange={setEligibility} options={["Any", "eligibility", "capacity", "representation"]} value={eligibility} />
+          <ServiceFilterSelect label="Safe use" onChange={setSafeMethod} options={["Any", "manually", "consent", "transmitted"]} value={safeMethod} />
           <button
             className="rounded-md border border-border px-2.5 py-1.5 text-[11px] text-muted-foreground hover:bg-muted disabled:opacity-40"
             disabled={activeFilterCount === 0}
@@ -1091,20 +1188,21 @@ export function ServicesPreview() {
 
       <div className="grid gap-4 lg:grid-cols-[minmax(280px,36%)_1fr]">
         <nav
-          aria-label="Fictional providers"
+          aria-label="Official service resources"
           className="max-h-[70vh] space-y-2 overflow-y-auto pr-1 focus:outline-none"
           onKeyDown={onProviderListKey}
           tabIndex={0}
         >
           {!visible.length ? (
             <div className="rounded-xl border border-dashed border-border bg-card p-6 text-center">
-              <div className="font-serif text-base">No providers match these filters</div>
+              <div className="font-serif text-base">No resources match these filters</div>
               <div className="mt-1 text-xs text-muted-foreground">Try clearing a filter or broadening the search.</div>
               <button className="mt-3 rounded-md border border-border px-3 py-1 text-xs hover:bg-muted" onClick={clearFilters} type="button">Clear filters</button>
             </div>
           ) : null}
           {visible.map((provider) => {
             const isSelected = selected?.id === provider.id;
+            const resourceMatch = resourceMatches.find(({ resource }) => resource.id === provider.id);
             return (
               <button
                 aria-current={isSelected ? "true" : undefined}
@@ -1122,20 +1220,26 @@ export function ServicesPreview() {
                   <span className="shrink-0 rounded-full border border-border px-1.5 py-0.5 font-mono text-[9px] text-muted-foreground">{provider.id}</span>
                 </div>
                 <div className="mt-2 flex flex-wrap gap-1">
-                  <span className="rounded-full border border-border px-1.5 py-0.5 text-[10px] text-muted-foreground">{providerFormat(provider)}</span>
-                  <span className="rounded-full border border-border px-1.5 py-0.5 text-[10px] text-muted-foreground">{provider.hours.includes("24/7") ? "24/7" : provider.hours.split(" ")[0]}</span>
+                  <span className="rounded-full border border-border px-1.5 py-0.5 text-[10px] text-muted-foreground">{resourceTypeLabel(provider)}</span>
+                  <span className="rounded-full border border-border px-1.5 py-0.5 text-[10px] text-muted-foreground">Availability not verified</span>
                   {provider.languages[0] ? <span className="rounded-full border border-border px-1.5 py-0.5 text-[10px] text-muted-foreground">{provider.languages[0]}{provider.languages.length > 1 ? ` +${provider.languages.length - 1}` : ""}</span> : null}
+                  {resourceMatch?.matchedNeedIds.length ? (
+                    <span className="rounded-full border border-[color:var(--sage)] bg-[color-mix(in_oklab,var(--sage)_12%,transparent)] px-1.5 py-0.5 text-[10px] text-[color:var(--sage)]">
+                      Matches {resourceMatch.matchedNeedIds.length} recorded need {resourceMatch.matchedNeedIds.length === 1 ? "category" : "categories"}
+                    </span>
+                  ) : null}
                 </div>
               </button>
             );
           })}
         </nav>
         {selected ? (
-          <article aria-label={`Selected provider: ${selected.name}`} className="min-w-0 rounded-xl border border-border bg-card p-5">
+          <article aria-label={`Selected resource: ${selected.name}`} className="min-w-0 rounded-xl border border-border bg-card p-5">
             <div className="flex flex-wrap items-start justify-between gap-3">
               <div className="min-w-0">
                 <div className="flex flex-wrap items-center gap-2">
-                  <Chip tone="amber">Fictional demonstration provider</Chip>
+                  <Chip tone="sage">Official source verified</Chip>
+                  <Chip tone="amber">Availability not verified</Chip>
                   <span className="font-mono text-[10px] text-muted-foreground">{selected.id}</span>
                 </div>
                 <h2 className="mt-1 font-serif text-2xl">{selected.name}</h2>
@@ -1145,23 +1249,29 @@ export function ServicesPreview() {
             </div>
             <dl className="mt-4 grid gap-x-4 gap-y-2 text-xs sm:grid-cols-2 md:grid-cols-3">
               <PlanningField label="Hours">{selected.hours}</PlanningField>
-              <PlanningField label="Cost">No fee (fictional demo)</PlanningField>
-              <PlanningField label="Support format">{providerFormat(selected)}</PlanningField>
-              <PlanningField label="Languages">{selected.languages.join(", ")}</PlanningField>
+              <PlanningField label="Resource type">{resourceTypeLabel(selected)}</PlanningField>
+              <PlanningField label="Languages">{selected.languages.length ? selected.languages.join(", ") : "Verify with the selected organization"}</PlanningField>
               <PlanningField label="Accessibility">{selected.accessibility}</PlanningField>
               <PlanningField label="Eligibility">{selected.eligibilityCaveat}</PlanningField>
               <PlanningField label="Safe-contact options">{selected.safeContactMethodLabel}</PlanningField>
               <PlanningField label="Location / coverage">{selected.coverageArea}</PlanningField>
-              <PlanningField label="Information source">Bundled fictional provider directory</PlanningField>
-              <PlanningField label="Fixture review date">{selected.fixtureReviewDate}</PlanningField>
+              <PlanningField label="Information source">
+                <a className="font-medium underline underline-offset-2" href={selected.sourceUrl} rel="noreferrer" target="_blank">
+                  {selected.sourceLabel}
+                </a>
+              </PlanningField>
+              <PlanningField label="Source checked">{selected.lastVerifiedDate}</PlanningField>
+              <PlanningField label="Matched practitioner needs">
+                {resourceMatches.find(({ resource }) => resource.id === selected.id)?.matchedNeedIds.join(", ") || "No active matching need recorded"}
+              </PlanningField>
             </dl>
             <div className="mt-4 rounded-md border border-border bg-muted/30 p-3 text-[11px] text-muted-foreground">
-              Availability, eligibility, and capacity are not guaranteed. The system does not transmit information to any provider. Practitioners must verify listing details independently before acting on them.
+              Source verification means the official resource page was checked; it does not verify any listed organization&apos;s availability, eligibility, capacity, quality, or endorsement. Practitioners must verify details independently.
             </div>
             <div className="mt-4 grid gap-3 border-t border-border pt-3">
               <label className="inline-flex items-center gap-2 text-sm" htmlFor={`consent-${selected.id}`}>
                 <input checked={consent} id={`consent-${selected.id}`} onChange={(event) => setConsent(event.currentTarget.checked)} type="checkbox" />
-                <span>Consent confirmed for this synthetic demonstration</span>
+                <span>Consent confirmed for this resource follow-up</span>
               </label>
               <label className="inline-flex items-center gap-2 text-sm">
                 <input checked={safeContact} onChange={(event) => setSafeContact(event.currentTarget.checked)} type="checkbox" />
@@ -1176,22 +1286,30 @@ export function ServicesPreview() {
                   </Select>
                 </label>
               ) : null}
-              <p className="text-xs leading-5 text-muted-foreground">Contact status is always not contacted. Transmission status is always not transmitted. Practitioners must verify independently.</p>
+              <p className="text-xs leading-5 text-muted-foreground">Contact status is always not contacted. Transmission status is always not transmitted. Opening an official source is a manual browser action and sends no case data from this workspace.</p>
               <PlanningResult message={message} />
             </div>
             <div className="mt-3">
-              <DemoOnlyNotice>The provider directory is fictional; referral plans remain local browser-session records and no provider is contacted.</DemoOnlyNotice>
+              <DemoOnlyNotice>
+                Official source links are curated, but current service availability is not verified. Referral plans remain browser-local records; no organization is contacted.
+              </DemoOnlyNotice>
             </div>
           </article>
         ) : (
-          <div className="rounded-xl border border-dashed border-border bg-card p-10 text-center text-sm text-muted-foreground">Select a provider to view details.</div>
+          <div className="rounded-xl border border-dashed border-border bg-card p-10 text-center text-sm text-muted-foreground">Select a resource to view details.</div>
         )}
       </div>
     </div>
   );
 }
 
-export function TasksPreview() {
+export function TasksPreview({
+  evidenceGapsHref = "/case/demo/gaps",
+  owner = "M. Chen",
+}: {
+  evidenceGapsHref?: string;
+  owner?: string;
+} = {}) {
   const { state, dispatchCaseCommand } = useCaseState();
   const [filter, setFilter] = useState("All");
   const [title, setTitle] = useState("");
@@ -1200,7 +1318,7 @@ export function TasksPreview() {
   const visible = state.caseTasks.filter((task) => {
     const dueAt = task.dueDate ? Date.parse(`${task.dueDate}T23:59:59.999Z`) : null;
     const now = Date.now();
-    if (filter === "My tasks") return task.owner === "M. Chen";
+    if (filter === "My tasks") return task.owner === owner;
     if (filter === "Due soon") {
       return dueAt !== null &&
         dueAt >= now &&
@@ -1222,7 +1340,7 @@ export function TasksPreview() {
         kind: "general_task",
         title,
         description,
-        owner: "M. Chen",
+        owner,
         priority: "medium",
       },
     });
@@ -1281,13 +1399,29 @@ export function TasksPreview() {
           </thead>
           <tbody>
             {visible.map((task) => (
-              <tr className="border-t border-border/60 align-top" key={task.id}>
+              <tr
+                className="border-t border-border/60 align-top target:bg-[color-mix(in_oklab,var(--amber)_12%,transparent)]"
+                id={`task-${task.id}`}
+                key={task.id}
+              >
                 <td className="p-3 font-mono text-xs">{task.id}</td>
                 <td className="p-3">
                   <div className="font-medium">{task.title}</div>
                   <div className="text-xs text-muted-foreground">{task.description}</div>
                   <div className="mt-1 text-[11px] text-muted-foreground">
-                    Linked: <span className="font-mono">{task.originId ?? "manual planning record"}</span>
+                    Linked:{" "}
+                    {task.origin === "context_gap" && task.originId ? (
+                      <a
+                        className="font-mono font-semibold underline underline-offset-2"
+                        href={`${evidenceGapsHref}#candidate-${task.originId}`}
+                      >
+                        {task.originId}
+                      </a>
+                    ) : (
+                      <span className="font-mono">
+                        {task.originId ?? "manual planning record"}
+                      </span>
+                    )}
                   </div>
                 </td>
                 <td className="p-3 text-xs">{pretty(task.origin)}</td>

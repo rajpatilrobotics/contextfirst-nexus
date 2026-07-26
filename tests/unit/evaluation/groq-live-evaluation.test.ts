@@ -1,3 +1,7 @@
+/* eslint-disable @typescript-eslint/no-explicit-any --
+ * This opt-in live-evaluation test reconstructs resumable provider evidence
+ * from serialized fixtures whose SDK-shaped payloads are intentionally dynamic.
+ */
 import {
   existsSync,
   mkdirSync,

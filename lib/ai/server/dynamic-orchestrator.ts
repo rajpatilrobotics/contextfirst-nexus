@@ -163,7 +163,11 @@ export async function analyzeDynamicBrowserCase(
     const runId = nextRunId();
     const validated = postValidateAnalysisProposal(
       normalized.proposal,
-      { caseId: canonical.input.intent.caseId },
+      {
+        caseId: canonical.input.intent.caseId,
+        safeShareRecipientCategory:
+          canonical.input.intent.purpose.intendedRecipientCategory,
+      },
       runId,
       canonical.input.sourceContext,
     );

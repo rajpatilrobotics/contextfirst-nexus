@@ -26,6 +26,8 @@ function intent(): BrowserAnalysisIntent {
       practitionerRole: "demo_evaluator",
       jurisdictionCode: "unspecified",
       requestedExport: "full_practitioner_handoff",
+      intendedRecipientCategory: "policy_or_research_summary",
+      sourceMaterialClassification: "user_attested_synthetic",
     },
     documentSetDigest: "a".repeat(64),
     maskingRevision: 2,
@@ -206,10 +208,118 @@ describe("dynamic browser-case managed analysis", () => {
       caseId: "CFN-CASE-DYNAMIC001",
       validationStatus: "exact_match",
     });
+    if (result.outcome !== "succeeded") throw new Error("expected success");
+    expect(
+      result.candidates.find(
+        (candidate) => candidate.kind === "review_lane_item",
+      )?.safeShareRecipientCategories,
+    ).toEqual(["policy_or_research_summary"]);
+    const completedGap = result.candidates.find(
+      (candidate) => candidate.kind === "context_gap",
+    );
+    expect(completedGap).toMatchObject({
+      id: "CAND-AI-GAP-A",
+      lane: "trafficking_indicators",
+      assertionMode: "gap",
+      supportStatus: "insufficient_evidence",
+      responseStatus: "unanswered",
+      consequential: false,
+      safeShareRecipientCategories: [],
+    });
+    expect(completedGap?.dependencies).toEqual([
+      expect.objectContaining({
+        citationId: "CIT-0001-01",
+        kind: "source",
+        relationship: "context_only",
+        active: true,
+      }),
+    ]);
+    expect(completedGap?.reviewQuestion).toMatch(
+      /What additional source or practitioner-confirmed context/i,
+    );
+    expect(result.run.candidateCount).toBe(result.candidates.length);
     expect(mistral).not.toHaveBeenCalled();
     expect(gemini).not.toHaveBeenCalled();
     expect(groq).toHaveBeenCalledTimes(1);
     expect(openai).not.toHaveBeenCalled();
+  });
+
+  it("preserves source-grounded timeline and Nexus metadata from a live result", async () => {
+    const groq = vi.fn().mockResolvedValue({
+      ok: true,
+      proposal: {
+        candidates: [
+          {
+            proposedId: "MODEL-TIMELINE-1",
+            kind: "timeline_event",
+            lane: "trafficking_indicators",
+            title: "Work arrangement recorded",
+            proposedText:
+              "The source records a work arrangement for practitioner review.",
+            assertionMode: "neutral_procedural_fact",
+            reviewQuestion: "What date qualification should the practitioner retain?",
+            citations: [{
+              segmentId: "D01-P1-S01",
+              quotedText:
+                "The approved public source describes a work arrangement for review.",
+              relationship: "supports",
+              evidenceNature: "documented_in_source",
+            }],
+            unknowns: [],
+            dateStart: "2026-07-20",
+            datePrecision: "day",
+            dateAlternatives: [],
+            locationLabel: "Recorded source context",
+            actorLabels: ["Source author"],
+          },
+          {
+            proposedId: "MODEL-NEXUS-1",
+            kind: "nexus_relationship",
+            lane: "trafficking_indicators",
+            title: "Recruitment relationship for review",
+            proposedText:
+              "The source-grounded work arrangement may be relevant to recruitment review.",
+            assertionMode: "neutral_procedural_fact",
+            reviewQuestion: "Does this relationship remain relevant after human review?",
+            citations: [{
+              segmentId: "D01-P1-S01",
+              quotedText:
+                "The approved public source describes a work arrangement for review.",
+              relationship: "context_only",
+              evidenceNature: "documented_in_source",
+            }],
+            unknowns: ["The surrounding recruitment context remains unknown."],
+            nexusCategory: "recruitment",
+          },
+        ],
+      },
+      provenance: provenance("groq"),
+    });
+
+    const result = await analyzeDynamicBrowserCase(intent(), {
+      liveAnalysisEnabled: true,
+      ...enabledCandidates,
+      executors: { groq },
+    });
+
+    expect(result.outcome).toBe("succeeded");
+    if (result.outcome !== "succeeded") return;
+    expect(
+      result.candidates.find((candidate) => candidate.kind === "timeline_event"),
+    ).toMatchObject({
+      dateStart: "2026-07-20",
+      datePrecision: "day",
+      locationLabel: "Recorded source context",
+      actorLabels: ["Source author"],
+    });
+    expect(
+      result.candidates.find((candidate) => candidate.kind === "nexus_relationship"),
+    ).toMatchObject({
+      id: "NEXUS-AI-0002",
+      category: "recruitment",
+      relationshipSummary:
+        "The source-grounded work arrangement may be relevant to recruitment review.",
+    });
   });
 
   it("passes only candidate-eligible sources to the selected provider", async () => {

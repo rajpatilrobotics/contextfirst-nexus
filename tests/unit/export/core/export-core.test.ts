@@ -21,6 +21,7 @@ import {
 } from "../../../../lib/contracts";
 import { cfnDemoFixture } from "../../../../lib/fixtures";
 import { bundledGuidancePack } from "../../../../lib/guidance";
+import { migrateLegacyBrowserSafeShareEligibility } from "../../../../lib/cases/browser-case-analysis-store";
 import { createInitialPlanningState } from "../../../../lib/planning";
 import { LIMITATION_TEXT, assembleCandidates, reviewCandidate } from "../../../../lib/review";
 import { applyCaseCommand } from "../../../../lib/state";
@@ -207,12 +208,13 @@ function baseState(): CaseState {
       supportedWorkflow: "case_preparation_handoff",
       statedPurpose: "Prepare a source-grounded practitioner handoff for the bundled synthetic case.",
       excludedDecisions: [...RequiredExcludedDecisions],
+      sourceMaterialClassification: "bundled_synthetic_fixture",
       authority: {
         basis: "not_applicable_synthetic_fixture",
         status: "active",
         consentStatus: "not_applicable_synthetic_fixture",
         authorityNotVerifiedAcknowledged: true,
-        syntheticOrHarmlessDataAttested: true,
+        sourceMaterialAttested: true,
       },
       jurisdictionCode: "J-01",
       sourceLanguage: "en",
@@ -221,7 +223,7 @@ function baseState(): CaseState {
       intendedRecipientCategory: "legal_aid_team",
       requestedExport: "full_practitioner_handoff",
       prohibitedDecisionsAcknowledged: true,
-      syntheticDataAcknowledged: true,
+      sourceMaterialBoundaryAcknowledged: true,
       providerSelection: {
         providerId: "local_replay",
         releaseConfigurationId: "prepared-replay-v1",
@@ -318,6 +320,71 @@ function baseState(): CaseState {
   };
 }
 
+function browserLocalState(
+  classification:
+    | "user_attested_synthetic"
+    | "user_attested_authorized_public",
+): CaseState {
+  const state = baseState();
+  const purposeId = "PURPOSE-CFN-CASE-EXPORT";
+  const authority =
+    classification === "user_attested_authorized_public"
+      ? {
+          basis: "user_attested_authorized_public_material" as const,
+          consentStatus: "not_applicable_authorized_public_material" as const,
+        }
+      : {
+          basis: "user_attested_synthetic_material" as const,
+          consentStatus: "not_applicable_synthetic_material" as const,
+        };
+  const run = successfulRun();
+  return {
+    ...state,
+    caseId: "CFN-CASE-EXPORT",
+    purposeBrief: {
+      ...state.purposeBrief!,
+      id: purposeId,
+      caseId: "CFN-CASE-EXPORT",
+      sourceMaterialClassification: classification,
+      authority: {
+        ...state.purposeBrief!.authority,
+        ...authority,
+      },
+    },
+    documents: state.documents.map((document) => ({
+      ...document,
+      caseId: "CFN-CASE-EXPORT",
+      dataOrigin: "browser_local" as const,
+      provenanceStatus: "unverified" as const,
+      syntheticLabelPresent: false,
+    })),
+    analysisRuns: [{
+      ...run,
+      checkpointProvenance: null,
+      provider: {
+        ...run.provider,
+        adapterVersion: "browser-deterministic-analysis-v1",
+      },
+      inputState: {
+        ...run.inputState,
+        purposeBriefId: purposeId,
+      },
+    }],
+    candidates: state.candidates.map((candidate) => ({
+      ...candidate,
+      caseId: "CFN-CASE-EXPORT",
+    })),
+    citations: state.citations.map((citation) => ({
+      ...citation,
+      caseId: "CFN-CASE-EXPORT",
+    })),
+    audit: state.audit.map((event) => ({
+      ...event,
+      caseId: "CFN-CASE-EXPORT",
+    })),
+  };
+}
+
 function blockerCodes(state: CaseState, selection: ExportSelection = fullSelection) {
   return evaluateExportGate(state, selection, { now: NOW }).blockers.map((blocker: ExportBlocker) => blocker.code);
 }
@@ -340,6 +407,57 @@ function applyStateCommand(state: CaseState, command: CaseCommand) {
 }
 
 describe("TASK-009 export core", () => {
+  it("migrates only a fresh legacy browser replay to exact-recipient safe-share eligibility", () => {
+    const legacy = browserLocalState("user_attested_authorized_public");
+    const legacyReplay: CaseState = {
+      ...legacy,
+      analysisRuns: legacy.analysisRuns.map((run) => ({
+        ...run,
+        provider: {
+          ...run.provider,
+          adapterVersion: "browser-deterministic-analysis-v2",
+        },
+      })),
+      candidates: legacy.candidates.map((candidate) => ({
+        ...candidate,
+        safeShareRecipientCategories: [],
+      })),
+    };
+
+    const migrated =
+      migrateLegacyBrowserSafeShareEligibility(legacyReplay);
+
+    expect(migrated.analysisRuns[0]?.provider.adapterVersion).toBe(
+      "browser-deterministic-analysis-v3",
+    );
+    expect(
+      migrated.candidates
+        .filter((candidate) => candidate.kind !== "context_gap")
+        .every(
+          (candidate) =>
+            candidate.safeShareRecipientCategories[0] ===
+            legacyReplay.purposeBrief?.intendedRecipientCategory,
+        ),
+    ).toBe(true);
+    expect(
+      migrated.candidates
+        .filter((candidate) => candidate.kind === "context_gap")
+        .every(
+          (candidate) =>
+            candidate.safeShareRecipientCategories.length === 0,
+        ),
+    ).toBe(true);
+
+    const stale = {
+      ...legacyReplay,
+      purposeBrief: {
+        ...legacyReplay.purposeBrief!,
+        revision: legacyReplay.purposeBrief!.revision + 1,
+      },
+    };
+    expect(migrateLegacyBrowserSafeShareEligibility(stale)).toEqual(stale);
+  });
+
   it("creates a deterministic ready manifest from the reviewed synthetic handoff state", () => {
     const state = baseState();
     const gate = evaluateExportGate(state, fullSelection, { now: NOW });
@@ -349,7 +467,7 @@ describe("TASK-009 export core", () => {
     expect(gate).toMatchObject({ status: "ready", freshness: "current", blockers: [] });
     expect(first.labels).toEqual([
       "AI-assisted, human-reviewed case-preparation draft.",
-      "Synthetic case.",
+      "Bundled synthetic demonstration.",
       "Not legal advice.",
       "Local legal verification required.",
     ]);
@@ -361,6 +479,57 @@ describe("TASK-009 export core", () => {
     expect(first.citations.every((citation) => citation.validationStatus === "exact_match" || citation.validationStatus === "manually_resolved")).toBe(true);
     expect(JSON.stringify(first)).not.toContain("rawText");
     expect(JSON.stringify(first)).not.toContain("provider logs");
+  });
+
+  it.each([
+    [
+      "user_attested_synthetic",
+      "Uploaded synthetic or hackathon test material — user-attested, not independently verified.",
+    ],
+    [
+      "user_attested_authorized_public",
+      "Authorized public material — user-attested, not independently verified.",
+    ],
+  ] as const)(
+    "creates a truthful browser-local handoff for %s material",
+    (classification, label) => {
+      const state = browserLocalState(classification);
+      const gate = evaluateExportGate(state, fullSelection, { now: NOW });
+      const manifest = createExportManifest(state, fullSelection, {
+        now: NOW,
+        previousGate: gate,
+      });
+
+      expect(gate).toMatchObject({
+        status: "ready",
+        freshness: "current",
+        blockers: [],
+      });
+      expect(manifest.sourceMaterialClassification).toBe(classification);
+      expect(manifest.purposeSummary.sourceMaterialClassification).toBe(
+        classification,
+      );
+      expect(manifest.labels[1]).toBe(label);
+      expect(JSON.stringify(manifest)).not.toContain('"synthetic":true');
+    },
+  );
+
+  it("fails closed when a browser-local packet is labelled as the bundled fixture", () => {
+    const browserState = browserLocalState("user_attested_synthetic");
+    const state = {
+      ...browserState,
+      purposeBrief: {
+        ...browserState.purposeBrief!,
+        sourceMaterialClassification: "bundled_synthetic_fixture" as const,
+        authority: {
+          ...browserState.purposeBrief!.authority,
+          basis: "not_applicable_synthetic_fixture" as const,
+          consentStatus: "not_applicable_synthetic_fixture" as const,
+        },
+      },
+    };
+
+    expect(blockerCodes(state)).toContain("DATA_ORIGIN_PROHIBITED");
   });
 
   it("reports the exact initial review blockers needed for the demo opening state", () => {
@@ -439,6 +608,34 @@ describe("TASK-009 export core", () => {
     expect(manifest.includedCandidates.map((candidate) => candidate.candidateId)).toEqual(["CAND-CTRL-PASSPORT"]);
     expect(manifest.includedCandidates.map((candidate) => candidate.candidateId)).not.toContain("CAND-TASK-0402");
     expect(manifest.citations.map((citation) => citation.citationId)).not.toContain("CIT-D05-P1-S05");
+  });
+
+  it("fails closed when a minimum-necessary relationship omits an active candidate dependency", () => {
+    const state = {
+      ...baseState(),
+      purposeBrief: {
+        ...baseState().purposeBrief!,
+        requestedExport: "minimum_necessary_safe_share" as const,
+      },
+    };
+    const selection: ExportSelection = {
+      kind: "minimum_necessary_safe_share",
+      minimumNecessarySelection: {
+        confirmed: true,
+        intendedRecipientCategory: "legal_aid_team",
+        selectedCandidateIds: ["NEXUS-COMPELLED-TASKS"],
+        excludedCandidateIds: ["CAND-TASK-0402"],
+      },
+    };
+
+    const gate = evaluateExportGate(state, selection, { now: NOW });
+
+    expect(gate.status).toBe("blocked");
+    expect(
+      gate.blockers.find(
+        (blocker) => blocker.code === "MINIMUM_NECESSITY_UNCONFIRMED",
+      )?.entityIds,
+    ).toContain("CAND-TASK-0402");
   });
 
   it("restores the exact Step 3 gate and manifest after canonical renewed review", () => {

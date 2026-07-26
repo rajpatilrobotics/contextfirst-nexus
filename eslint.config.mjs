@@ -32,7 +32,7 @@ const eslintConfig = [
       "coverage/**",
       "node_modules/**",
       "out/**",
-      "public/vendor/pdfjs/**",
+      "public/vendor/**",
     ],
   },
 ];

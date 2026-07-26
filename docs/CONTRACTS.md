@@ -14,6 +14,26 @@ TASK-039 may auto-bind only the sole selectable local replay release through tho
 
 DEC-046 adds one browser analysis intent, ordered admitted server attempts, safe attempt metadata, one accepted result, no output merging, bounded attempts, forbidden-fallback classifications, exact final provider/release provenance, and replay as a separate local path. The legacy live-selection schemas remain compatibility-only and are not authority for the browser-created-case route.
 
+### 1.2 Browser-created source-material and handoff reconciliation
+
+DEC-053 supersedes the synthetic-only Purpose and export statements below for
+browser-created cases. The bundled `CFN-DEMO-001` route remains a bundled
+synthetic fixture. A browser-created Purpose must instead record exactly one
+`sourceMaterialClassification`:
+
+- `user_attested_synthetic`
+- `user_attested_authorized_public`
+
+Both are practitioner attestations; neither verifies authority, authenticity,
+credibility, or public-source status. Private, confidential, unclassified,
+mixed-origin, or classification-mismatched material is not admitted. A
+browser-created handoff is available only after all existing masking, review,
+citation, coverage, dependency, jurisdiction, freshness, and
+minimum-necessary rules pass. The canonical manifest replaces the former
+unconditional `synthetic: true` claim with the exact source-material
+classification. Semantic, JSON, and PDF projections use the same
+classification-specific label.
+
 ## 2. Versioning rules
 
 Use independent semantic versions for persisted case state, model output, exports, fixtures, prompts, and guidance.

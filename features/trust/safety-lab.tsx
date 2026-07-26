@@ -230,7 +230,9 @@ export function SafetyLab({
 
       <Alert title="Evidence boundary" tone="warning">
         <p className="mt-2">
-          Production evidence currently contains genuine Passed and Not run records only. No measured Failed record is invented. Report generation cannot change runtime admission.
+          Production evidence shows only genuine recorded states. Failed or
+          interrupted observations remain visible, and report generation cannot
+          change runtime admission.
         </p>
       </Alert>
 

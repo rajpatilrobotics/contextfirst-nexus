@@ -58,7 +58,7 @@ export function buildExportDocumentSections(manifest: ExportManifest): readonly 
       items: [
         `Manifest ID: ${manifest.id}. Reviewed-state hash: ${manifest.reviewedStateHash}.`,
         `Case: ${manifest.caseId}; case revision: ${manifest.caseRevision}; generated: ${manifest.generatedAt}.`,
-        `Handoff kind: ${manifest.kind}; synthetic: ${manifest.synthetic}; redaction check: ${manifest.redactionCheck}.`,
+        `Handoff kind: ${manifest.kind}; source material: ${manifest.sourceMaterialClassification}; redaction check: ${manifest.redactionCheck}.`,
         `Purpose: ${manifest.purposeSummary.sanitizedPurpose}`,
         `Recipient category: ${manifest.purposeSummary.intendedRecipientCategory}; jurisdiction: ${manifest.purposeSummary.jurisdictionCode}.`,
         `Excluded decisions: ${manifest.purposeSummary.excludedDecisions.join(", ")}.`,

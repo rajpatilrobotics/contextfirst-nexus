@@ -1,3 +1,869 @@
+# Analysis precision hardening, 2026-07-26
+
+## 1. Goal
+
+Prevent unrelated uploaded material from producing misleading Structured
+Analysis candidates while preserving source-grounded review of relevant case
+material.
+
+## 2. Problem
+
+The browser-local fallback currently treats broad single-word matches such as
+technical uses of `border` as case-review signals. This can create a
+source-grounded but contextually incorrect candidate from technical,
+hackathon, source-code, or résumé PDFs.
+
+## 3. Proposed solution
+
+- Screen each document and segment for strong unrelated-material signals.
+- Require contextual combinations for broad review terms and remove standalone
+  false-positive rules.
+- State the exact matched phrase and the deterministic reason on every local
+  candidate.
+- Present an admitted live provider as the preferred semantic option only
+  after explicit transmission consent, with the hardened browser-local engine
+  retained as a private fallback.
+
+## 4. Files to change
+
+- Browser-local deterministic analysis builder and freshness binding
+- Browser-created Structured Analysis start experience
+- Focused deterministic and Structured Analysis tests
+
+## 5. Step by step tasks
+
+1. [x] Add document and segment scope assessment.
+2. [x] Replace broad matches with contextual review rules.
+3. [x] Add exact trigger phrase and rule rationale to local candidates.
+4. [x] Prefer admitted live analysis without bypassing explicit consent.
+5. [x] Verify unrelated, mixed, and representative synthetic inputs.
+6. [x] Run the representative judge path and release checks.
+
+## 6. Acceptance criteria
+
+- Technical, hackathon, source-code, résumé, and similar unrelated material can
+  truthfully complete with zero candidates.
+- Standalone CSS/security `border` never creates a movement candidate.
+- Broad terms require relevant person, event, location, transport, proceeding,
+  safety, or support context.
+- Every local candidate displays its exact matched phrase and why the rule
+  triggered.
+- Live analysis is the preferred admitted option after explicit consent;
+  browser-local analysis remains available and sends nothing.
+- A representative synthetic case still produces source-grounded candidates
+  across the appropriate lanes.
+
+## 7. Testing plan
+
+- Focused deterministic-analysis and browser-created Structured Analysis tests.
+- Typecheck, production build, `git diff --check`, and one representative
+  browser smoke before release.
+
+## 8. Open questions
+
+- None. Provider availability remains an external runtime condition and must
+  continue to fail closed.
+
+# Truthful minimum-necessary candidate selection, 2026-07-26
+
+## 1. Goal
+
+Keep the safe-share selection aligned with the canonical export projection.
+
+## 2. Problem
+
+Informational Nexus rows are intentionally non-reviewable and are not included
+by the canonical reviewed-candidate export projection, but the UI currently
+tells users to complete an impossible individual review for those rows.
+
+## 3. Proposed solution
+
+Exclude optional informational rows from the selectable evidence list and
+label derived summaries according to dependency review rather than individual
+review. Keep every export gate and manifest rule unchanged.
+
+## 4. Files to change
+
+- Export workspace
+- Focused Export workspace test
+
+## 5. Step by step tasks
+
+1. [x] Align visible selection rows with exportable canonical records.
+2. [x] Add truthful copy for excluded informational rows and derived summaries.
+3. [x] Verify the gate still fails closed.
+
+## 6. Acceptance criteria
+
+- No impossible review instruction appears for optional Nexus rows.
+- Individual evidence still requires accepted or edited review.
+- Rejected evidence remains visibly excluded.
+- Canonical gate, dependency closure, and manifest behavior are unchanged.
+
+## 7. Testing plan
+
+- Focused Export workspace test, typecheck, and `git diff --check`.
+
+## 8. Open questions
+
+- None.
+
+# Structured Analysis review queue, 2026-07-26
+
+## 1. Goal
+
+Make source-grounded candidate review faster without weakening individual
+human decisions or changing canonical evidence logic.
+
+## 2. Problem
+
+The current analysis can produce many legitimate review candidates, but the
+reviewer must manually find the next pending item after every decision.
+
+## 3. Proposed solution
+
+Add compact previous/next pending-candidate controls to the existing Lovable
+master-detail review panel. The controls change only local selection; every
+decision still uses the existing canonical review command.
+
+## 4. Files to change
+
+- Structured Analysis workspace
+- Focused Structured Analysis component test
+
+## 5. Step by step tasks
+
+1. [x] Derive the pending queue from the current visible canonical projection.
+2. [x] Add accessible compact previous/next controls.
+3. [x] Verify navigation does not record or skip a review decision.
+
+## 6. Acceptance criteria
+
+- Queue counts come from current canonical candidates.
+- Navigation never changes review state.
+- Hidden candidates are never displayed.
+- Review decisions remain one-at-a-time canonical commands.
+
+## 7. Testing plan
+
+- Focused Structured Analysis test, typecheck, and `git diff --check`.
+
+## 8. Open questions
+
+- None.
+
+# Submission verification hardening, 2026-07-26
+
+## 1. Goal
+
+Make the repository's official verification command evaluate first-party code
+cleanly without treating copied PDF/OCR runtime assets as application source.
+
+## 2. Problem
+
+Unit, contract, and component tests pass, but lint scans generated vendor
+runtimes under `public/vendor` and reports their minified internals. Four small
+first-party test/application lint findings also remain.
+
+## 3. Proposed solution
+
+- Exclude immutable copied browser runtimes from lint.
+- Fix the small first-party navigation and unused-binding findings.
+- Keep the live-evaluation test's intentionally dynamic SDK fixtures explicitly
+  scoped instead of weakening application lint rules.
+
+## 4. Files to change
+
+- ESLint configuration
+- The affected shell/state files
+- The three affected focused test files
+
+## 5. Step by step tasks
+
+1. [x] Exclude copied vendor runtimes.
+2. [x] Resolve all first-party lint findings.
+3. [x] Run lint, typecheck, focused/full regression checks, build, and diff check.
+
+## 6. Acceptance criteria
+
+- `npm run lint` passes.
+- Generated PDF/OCR runtime files remain unchanged.
+- No application behavior, canonical state, or Lovable presentation changes.
+
+## 7. Testing plan
+
+- Lint, typecheck, existing unit/contract/component suites, build, and
+  `git diff --check`.
+
+## 8. Open questions
+
+- None.
+
+# Minimum-necessary safe-share completion, 2026-07-26
+
+## 1. Goal
+
+Complete the browser-created-case handoff path without weakening the existing
+human-review, source-grounding, privacy, or dependency safeguards.
+
+## 2. Problem
+
+Browser-created analysis currently gives every candidate an empty safe-share
+recipient list, so an otherwise reviewed case can never complete the
+minimum-necessary handoff selected in Purpose.
+
+## 3. Proposed solution
+
+- Bind the Purpose recipient category into the immutable analysis input.
+- Make eligible source-grounded candidates shareable only with that exact
+  recipient category.
+- Keep gaps and unresolved dependency chains fail-closed.
+- Require explicit selection and confirmation before creating one canonical
+  manifest.
+
+## 4. Files to change
+
+- Browser analysis intent and candidate builders
+- Live-result post-validation
+- Export selection and dependency validation
+- Focused analysis/export tests and contract notes
+
+## 5. Step by step tasks
+
+1. [x] Bind the intended recipient category to the analysis run.
+2. [x] Derive exact-category candidate eligibility.
+3. [x] Enforce dependency closure for minimum-necessary selection.
+4. [x] Verify selection, persistence, gate readiness, and handoff projections.
+5. [x] Run focused checks and a short browser-created-case handoff smoke.
+
+## 6. Acceptance criteria
+
+- Eligibility never expands beyond the Purpose recipient.
+- Context gaps remain excluded from minimum-necessary evidence selection.
+- A selected dependency-bearing candidate cannot omit required active sources.
+- Purpose or analysis-input changes invalidate old eligibility and readiness.
+- A fully reviewed eligible selection can create the same canonical handoff
+  across Semantic, JSON, and PDF projections.
+
+## 7. Testing plan
+
+- Focused analysis intent, deterministic/live candidate, export-core, and
+  Export workspace tests; typecheck; production build; `git diff --check`;
+  one browser-created safe-share smoke.
+
+## 8. Open questions
+
+- None for this bounded slice. Provider priority and server persistence remain
+  separately configurable concerns.
+
+# Browser-created case export contract migration, 2026-07-26
+
+## 1. Goal
+
+Allow a fully reviewed browser-created case to produce a truthful local
+handoff when its packet is explicitly attested as synthetic test material or
+authorized public material.
+
+## 2. Problem
+
+The current canonical export contract hard-codes every handoff as a bundled
+synthetic case and blocks every browser-local document. Reusing that label for
+uploaded public material would be false, while keeping every upload blocked
+prevents the completed dynamic workflow from reaching a real handoff.
+
+## 3. Proposed solution
+
+- Add one canonical source-material classification to Purpose.
+- Require explicit synthetic-test or authorized-public attestation.
+- Keep unclassified, mismatched, private, or confidential packets fail-closed.
+- Derive Export Gate readiness, the canonical manifest, and Semantic/JSON/PDF
+  labels from that same classification.
+- Preserve human review, freshness, masking, minimum-necessary, audit, and
+  dependency rules.
+
+## 4. Files to change
+
+- Purpose and shared contracts
+- Browser-case persistence migration
+- Export core, renderers, and presentation copy
+- Focused Purpose, export, persistence, and renderer tests
+- Decision log and contract documentation only where the rule changed
+
+## 5. Step by step tasks
+
+1. [x] Trace Purpose classification, persistence, gate, manifest, and renderers.
+2. [x] Add the canonical classification and backward-compatible restore rules.
+3. [x] Connect Purpose selection and fail-closed export eligibility.
+4. [x] Make every export projection state the correct material classification.
+5. [x] Verify ready and blocked dynamic-case paths plus the legacy demo.
+
+## 6. Acceptance criteria
+
+- Browser-created synthetic or authorized-public packets can become export
+  ready only after all existing canonical gates pass.
+- Every output states its actual attested classification and never calls public
+  material synthetic.
+- Unclassified, mismatched, private, or confidential material remains blocked.
+- Existing browser cases restore safely without losing their Purpose.
+- The bundled demonstration preserves its current behavior.
+- Raw PDFs, unmasked text, planning records, notes, referrals, and provider
+  details remain excluded.
+
+## 7. Testing plan
+
+- Focused Purpose, persistence, export-core, renderer, and Export Gate tests;
+  typecheck; one production build; `git diff --check`; short browser-created
+  case handoff smoke.
+
+## 8. Open questions
+
+- None for this bounded migration. Live provider choice and server persistence
+  remain separate later decisions.
+
+# Review to safe handoff completion, 2026-07-26
+
+## 1. Goal
+
+Complete the browser-created-case review journey so every outstanding candidate
+can be found, decided, traced to its source, and followed through the canonical
+Export Gate and Audit Trail.
+
+## 2. Problem
+
+Structured Analysis, Evidence Gaps, Timeline, Nexus, Export, and Audit are
+connected, but the Export Gate currently sends every incomplete-review blocker
+back to Structured Analysis even when the affected records belong to another
+review destination. Browser-uploaded packets also remain intentionally
+non-exportable under the current synthetic-only manifest contract.
+
+## 3. Proposed solution
+
+- Derive review progress and remediation destinations from current canonical
+  candidates.
+- Link each incomplete candidate to the correct Lovable review screen.
+- Preserve individual human decisions, source citations, dependency
+  recalculation, freshness, Audit events, and fail-closed Export behavior.
+- Keep browser-uploaded packets blocked from handoff until their export
+  classification and manifest labels can be generalized truthfully.
+
+## 4. Files to change
+
+- Export Gate presentation and focused tests
+- Dynamic current-analysis workspace only if a shared review-progress
+  projection is required
+- Plan checkpoint
+
+## 5. Step by step tasks
+
+1. [x] Trace canonical review requirements and current Export Gate blocker output.
+2. [x] Add exact record-kind remediation links for incomplete review items.
+3. [x] Verify decisions persist and immediately update readiness and Audit.
+4. [x] Verify withdrawal and dependency invalidation remain fail-closed.
+5. [x] Verify the canonical manifest remains unavailable for browser-local uploads
+   instead of mislabelling them.
+6. [x] Correct exact Evidence Gap remediation links so they select and reveal
+   the requested canonical gap, matching Analysis, Timeline, and Nexus.
+
+## 6. Acceptance criteria
+
+- Every pending individual-review candidate is visible from Export Gate.
+- Each remediation link opens the correct case-specific destination and record.
+- Review decisions use canonical commands and survive reload.
+- Dependency or freshness changes revoke old readiness.
+- Export remains blocked with truthful data-origin copy for browser uploads.
+- The legacy bundled fixture can still create its existing canonical handoff.
+
+## 7. Testing plan
+
+- Focused Export Gate, review-action, dynamic routing, dependency, and Audit
+  tests; typecheck; build; `git diff --check`; short browser check.
+
+## 8. Open questions
+
+- A later explicit contract migration is required before an uploaded packet can
+  be exported without falsely labelling authorized public material as a
+  synthetic case.
+
+# Evidence Gap to planning completion, 2026-07-26
+
+## 1. Goal
+
+Complete the judge-visible workflow from a real Evidence Gap into Interview
+Planner and Case Tasks, then prove Urgent Needs and Services & Referrals remain
+canonical, persistent, consent-safe, and consequential.
+
+## 2. Problem
+
+Gap actions already create canonical records, but the success links open only
+the destination screen. They do not reliably focus the exact record or expose
+an obvious path back to the source gap. The surrounding planning workflows also
+need an end-to-end runtime check using a browser-created case.
+
+## 3. Proposed solution
+
+- Link successful gap actions to the exact created question or task.
+- Preserve a visible return link from planning records to their source gap.
+- Keep Urgent Needs practitioner-confirmed and separate from AI observations.
+- Keep referral plans consent-confirmed, browser-local, not contacted, and not
+  transmitted.
+- Verify persistence, Dashboard counts, Audit events, and Export invalidation.
+
+## 4. Files to change
+
+- Evidence Gap action presentation
+- Interview Planner and Case Tasks presentation
+- Dynamic planning workspace wiring
+- Focused planning and browser-created-case tests
+
+## 5. Step by step tasks
+
+1. Trace the current commands, reducer, storage, selectors, and export policy.
+2. Add exact-record navigation and source-gap traceability.
+3. Verify Urgent Needs creation and lifecycle.
+4. Verify provider switching, consent, referral status, and no transmission.
+5. Run focused automated checks and a real browser-created-case journey.
+
+## 6. Acceptance criteria
+
+- A successful gap action uses the real created record ID.
+- Interview Planner opens that question and shows its gap/source provenance.
+- Case Tasks scrolls to the created task and preserves its source gap.
+- Reload preserves all created records and lifecycle state.
+- Dashboard, Audit, and Export consequences derive from canonical state.
+- AI suggestions never become practitioner-confirmed needs automatically.
+- Referral plans require both confirmations and never imply contact or
+  transmission.
+
+## 7. Testing plan
+
+- Focused gap, planning-state, dynamic workspace, Dashboard, Audit, and Export
+  tests; typecheck; production build; diff check; browser smoke.
+
+## 8. Open questions
+
+- None. Existing canonical contracts determine the implementation.
+
+# Evidence Gaps completion and live-analysis parity, 2026-07-26
+
+## 1. Goal
+
+Make Evidence Gaps reliably populate from the user’s current approved PDF
+packet for both live-provider and browser-local analysis paths, without static
+or fixture-only gap rows.
+
+## 2. Problem
+
+The browser-local deterministic path now creates source-linked gaps, but a
+successful live-provider result can legitimately contain lane candidates while
+returning no `context_gap` candidates. The Evidence Gaps destination then looks
+empty even when its source candidates expose unresolved context.
+
+## 3. Proposed solution
+
+- Trace the current seven-document result and every admitted analysis path.
+- Preserve model-proposed gaps when they pass canonical validation.
+- Deterministically derive bounded, source-cited gap projections from the
+  current run’s accepted candidate/citation output when the provider omitted
+  necessary gap records.
+- Never infer an answer, allegation, adverse fact, or negative conclusion.
+- Preserve canonical review, response, planning-action, persistence, freshness,
+  audit, dependency, and export behavior.
+
+## 4. Files to change
+
+- Analysis post-validation or canonical result assembly
+- Evidence-gap selectors/presentation only if an empty-state defect exists
+- Focused provider, deterministic-analysis, dynamic-workspace, and gap tests
+
+## 5. Step by step tasks
+
+1. Re-read the Evidence Gaps contract and reproduce the current empty state.
+2. Identify whether the provider omitted gaps or canonical assembly discarded
+   them.
+3. Add one shared bounded source-grounded gap completion rule.
+4. Verify human actions and rerun freshness against the completed output.
+5. Inspect the rendered seven-document experience.
+
+## 6. Acceptance criteria
+
+- Relevant analyzed PDFs produce useful current-run context gaps even when the
+  provider returns only lane candidates.
+- Neutral or irrelevant PDFs do not receive invented gaps.
+- Every gap has a current-run exact citation and active source dependency.
+- Gap wording is neutral, specific, actionable, and clearly not a finding.
+- Gap responses/actions persist and stale runs cannot create new planning work.
+- Zero gaps remains an honest explicit state when no source-grounded unresolved
+  question exists.
+
+## 7. Testing plan
+
+- Focused post-validation/orchestration, deterministic analysis, Evidence Gaps,
+  dynamic persistence, typecheck, build, `git diff --check`, and one browser
+  smoke using the current case.
+
+## 8. Open questions
+
+- None. The current stored analysis and canonical contracts determine the
+  implementation; no new provider or dependency is required.
+
+# Source-grounded planning and real U.S. resource discovery, 2026-07-26
+
+## 1. Goal
+
+Make arbitrary-PDF analysis produce useful, neutral Evidence Gaps and connect
+human-confirmed planning needs to real U.S. service-resource directories.
+
+## 2. Problem
+
+The current gap wording is generic and the Services catalog is fictional.
+Urgent Needs and Interview Planner are canonical and persistent, but their
+human-controlled role is not clear enough.
+
+## 3. Proposed solution
+
+- Create balanced, rule-specific gaps from exact approved source citations.
+- Keep all questions neutral, non-leading, and draft until human review.
+- Replace fictional providers with vetted official U.S. resource finders.
+- Match resources only to practitioner-confirmed active Urgent Needs.
+- Preserve consent, no-contact/no-transmission, local persistence, audit, and
+  export separation.
+
+## 4. Files to change
+
+- Deterministic analysis and focused tests
+- Planning contracts, directory, Services UI, and focused tests
+- Source-register metadata if needed for official-resource provenance
+
+## 5. Step by step tasks
+
+1. Verify official resource sources and limitations.
+2. Strengthen gaps and neutral gap-to-interview wording.
+3. Add source-verified resource records and deterministic need matching.
+4. Connect the existing Lovable Services master-detail UI to those records.
+5. Verify persistence, audit, consent, provider switching, and no transmission.
+
+## 6. Acceptance criteria
+
+- Relevant PDFs create useful source-linked gaps; neutral PDFs invent none.
+- Gaps remain questions, not findings or adverse inference.
+- Services contains no fictional organization or fake availability.
+- Every listing exposes its official source and verification date.
+- Tailoring uses only active practitioner-confirmed Urgent Needs.
+- Saving a plan never contacts or transmits data to a resource.
+
+## 7. Testing plan
+
+- Focused deterministic-analysis, gap-action, planning-state, Services, and
+  dynamic persistence tests; then typecheck, build, and `git diff --check`.
+
+## 8. Open questions
+
+- Live provider admission and live provider availability lookup remain separate
+  future work; neither is required for this safe browser-local slice.
+
+# Source-grounded downstream continuity, 2026-07-26
+
+## 1. Goal
+
+Make arbitrary browser-uploaded PDFs drive the dedicated Evidence Gaps,
+Timeline, and Evidence Integrity Map screens without requiring live-provider
+credits.
+
+## 2. Problem
+
+The deterministic browser analysis created only lane review prompts. When no
+admitted live provider was available, the remaining canonical destinations
+were functional but legitimately empty.
+
+## 3. Proposed solution
+
+Extend the existing deterministic analysis with conservative, source-cited
+context gaps, explicitly dated timeline events, and organizational Nexus
+relationships. Keep each record type in its dedicated Lovable destination and
+never infer a legal conclusion, missing date, or unsupported fact.
+
+## 4. Files to change
+
+- Deterministic analysis, Structured Analysis projection, and focused tests
+
+## 5. Step by step tasks
+
+1. Derive only from readable approved redacted segments.
+2. Require an explicit valid full date for every timeline event.
+3. Build Nexus rows only from matched source-grounded review rules.
+4. Keep gaps, timeline events, and Nexus records out of lane review UI.
+5. Verify citations, persistence, and downstream route projections.
+
+## 6. Acceptance criteria
+
+- Arbitrary readable PDFs can populate all three dedicated destinations.
+- Every derived record has an exact source dependency and citation.
+- Neutral source text produces no invented candidate, date, or relationship.
+- Structured Analysis remains lane-only.
+
+## 7. Testing plan
+
+- Focused deterministic, Structured Analysis, destination, and persistence
+  tests; typecheck, build, `git diff --check`, and route smoke.
+
+## 8. Open questions
+
+- None. Live providers remain optional enhancements behind the same canonical
+  contracts.
+
+# Browser-created Export Gate and Audit Trail, 2026-07-26
+
+## 1. Goal
+
+Complete the browser-created case journey with a canonical fail-closed Export
+Gate and the real case audit history.
+
+## 2. Problem
+
+The export and audit components already use canonical state, but only the
+legacy demo routes expose them and their remediation links point at
+`/case/demo`.
+
+## 3. Proposed solution
+
+- Reuse the current case-scoped state wrapper and existing export/audit UI.
+- Add dynamic routes, stage links, and case-aware export remediation links.
+- Persist readiness evaluation and manifest creation in the same browser case.
+
+## 4. Files to change
+
+- Dynamic Export/Audit routes, shared workspace, shell, export links, and
+  focused tests
+
+## 5. Step by step tasks
+
+1. Add both destinations to the canonical case wrapper.
+2. Enable Export-stage navigation for current successful analyses.
+3. Keep every remediation link inside the current case.
+4. Verify fail-closed readiness, persistence, audit events, and reload.
+
+## 6. Acceptance criteria
+
+- Export cannot bypass canonical blockers and never jumps to the demo fixture.
+- Audit shows the case's real safe canonical events.
+- Refresh preserves evaluated gate and any created manifest.
+
+## 7. Testing plan
+
+- Focused dynamic Export/Audit and existing export tests.
+- Typecheck, build, `git diff --check`, and browser smoke.
+
+## 8. Open questions
+
+- None.
+
+# Browser-created Nexus and Timeline, 2026-07-26
+
+## 1. Goal
+
+Connect the approved Evidence Integrity Map and Timeline to each
+browser-created case's current canonical analysis.
+
+## 2. Problem
+
+Both review destinations already project canonical candidates and handle
+withdrawal, citations, source reveal, qualified dates, and empty/stale states,
+but dynamic case routes are disabled.
+
+## 3. Proposed solution
+
+- Reuse the current case-scoped state wrapper and existing review components.
+- Add dynamic Nexus and Timeline routes and enable Review navigation.
+- Preserve zero-result states when an analysis legitimately produces no Nexus
+  or timeline candidates; never synthesize legal relationships or dates.
+
+## 4. Files to change
+
+- Dynamic review routes, shared case workspace, shell, and focused tests
+
+## 5. Step by step tasks
+
+1. Add both destinations to the canonical wrapper.
+2. Add dynamic routes and Review-stage links.
+3. Verify canonical nodes/events, source actions, stale/empty states, and reload.
+
+## 6. Acceptance criteria
+
+- Current canonical Nexus and timeline records render without fixture copying.
+- Withdrawal and review actions persist to the same case state.
+- Zero-result and stale states remain explicit and fail closed.
+
+## 7. Testing plan
+
+- Focused dynamic Nexus/Timeline and existing canonical review tests.
+- Typecheck, build, `git diff --check`, and browser smoke.
+
+## 8. Open questions
+
+- None. Export Gate and Audit Trail follow.
+
+# Browser-created Services and Notes, 2026-07-26
+
+## 1. Goal
+
+Connect the approved Lovable Services & Referrals and Notes & Journal screens
+to each browser-created case's canonical browser state.
+
+## 2. Problem
+
+The canonical consent-gated referral and practitioner-note commands work in the
+legacy fixture, but their dynamic case routes remain disabled.
+
+## 3. Proposed solution
+
+- Reuse the current case-scoped state wrapper and existing canonical commands.
+- Add dynamic Services and Notes routes and enable their Planning links.
+- Preserve consent, safe-contact, no-contact/no-transmission, note separation,
+  audit events, export exclusion, and reload persistence.
+- Keep the fictional provider directory explicitly unverified; do not imply
+  real availability or provider contact.
+
+## 4. Files to change
+
+- Dynamic case planning routes, shared state workspace, and case shell
+- Focused dynamic referral/note persistence and routing tests
+- Dashboard truth copy only
+
+## 5. Step by step tasks
+
+1. Add the two destinations to the shared canonical wrapper.
+2. Add dynamic routes and shell links.
+3. Verify referral consent and immutable contact/transmission status.
+4. Verify note create/edit/archive persistence and evidence/export separation.
+
+## 6. Acceptance criteria
+
+- Referral plans and notes remain isolated by case and survive reload.
+- Provider switches reset confirmations; saves require both confirmations.
+- Referral records never imply contact or transmission.
+- Notes remain commentary, not evidence, and are excluded from export.
+- Unknown and stale cases fail closed.
+
+## 7. Testing plan
+
+- Focused dynamic destination, referral, note, shell, and persistence tests.
+- Typecheck, production build, `git diff --check`, and browser smoke.
+
+## 8. Open questions
+
+- None. Evidence Integrity Map and Timeline follow this slice.
+
+# Browser-created Interview Planner and Case Tasks, 2026-07-26
+
+## 1. Goal
+
+Connect the approved Lovable Interview Planner and Case Tasks screens to each
+browser-created case's current canonical state.
+
+## 2. Problem
+
+Canonical interview and task commands already exist, and Evidence Gaps can
+create both record types, but their dynamic destinations are still disabled.
+
+## 3. Proposed solution
+
+- Reuse the current case-scoped IndexedDB state wrapper and canonical commands.
+- Add dynamic Interview Planner and Case Tasks routes.
+- Enable only those Planning links after a fresh successful analysis.
+- Preserve case-specific ownership and make gap-action success links navigable.
+- Keep Services, Notes, Review, and Export destinations unavailable.
+
+## 4. Files to change
+
+- Dynamic case planning routes and the shared current-state workspace
+- Browser-created case shell and narrow planning component props
+- Evidence Gaps destination links and focused persistence/routing tests
+
+## 5. Step by step tasks
+
+1. Extend the shared dynamic workspace to render Interview Planner and Tasks.
+2. Add case-specific routes and shell links.
+3. Pass the assigned practitioner into canonical task creation and filtering.
+4. Point canonical gap actions to the new case-specific destinations.
+5. Verify creation, edits, status changes, reload persistence, and safe failures.
+
+## 6. Acceptance criteria
+
+- Interview setup/questions and Case Tasks persist independently per case.
+- Gap-created questions/tasks open their real case-specific destination.
+- Task ownership uses the case's assigned practitioner.
+- Unknown or stale cases fail closed.
+- Later unimplemented destinations remain visibly disabled.
+
+## 7. Testing plan
+
+- Focused dynamic workspace, Interview Planner, Tasks, gap-link, and shell tests.
+- Typecheck, production build, `git diff --check`, and a short browser smoke.
+
+## 8. Open questions
+
+- None for this slice. Services & Referrals and Notes & Journal remain next.
+
+# Browser-created Urgent Needs and Evidence Gaps, 2026-07-26
+
+## 1. Goal
+
+Connect the approved Lovable Urgent Needs and Evidence Gaps screens to each
+browser-created case's current canonical analysis state.
+
+## 2. Problem
+
+Browser-created cases can complete Purpose, Documents, masking, and Structured
+Analysis, but the next two Analysis destinations are still disabled. Their
+canonical reducers and presentation already work for the bundled demo.
+
+## 3. Proposed solution
+
+- Load only the current, fresh case-scoped analysis snapshot from IndexedDB.
+- Reuse the canonical Urgent Need and context-gap commands and persist every
+  successful update back to that same case snapshot.
+- Enable case-specific Urgent Needs and Evidence Gaps routes after a successful
+  current analysis, keeping missing, stale, and unknown cases fail-closed.
+- Derive Dashboard counts and shell availability from current canonical state.
+- Keep planning destinations that are not generalized yet visibly unavailable.
+
+## 4. Files to change
+
+- Dynamic case routes and one small shared case-state workspace wrapper
+- Browser-created case shell and Dashboard projections
+- Existing Urgent Needs and Evidence Gaps components via narrow props
+- Focused shell, planning, gap-action, routing, persistence, and Dashboard tests
+
+## 5. Step by step tasks
+
+1. Add the safe current-analysis state loader/provider.
+2. Add dynamic Urgent Needs and Evidence Gaps routes.
+3. Preserve case-specific owners, links, audit events, and persistence.
+4. Enable only the newly functional shell destinations.
+5. Derive Dashboard planning/gap projections from current snapshots.
+
+## 6. Acceptance criteria
+
+- Current cases can open both routes; stale, missing, or unknown cases fail
+  closed.
+- Urgent Need creation/status and gap response/review/action commands persist
+  independently per case and create canonical audit events.
+- No fixture planning records are copied into browser-created cases.
+- Dashboard counts update after navigation/reload.
+- Unimplemented planning routes remain disabled and truthful.
+
+## 7. Testing plan
+
+- Focused dynamic workspace, shell, Dashboard, Urgent Needs, and Evidence Gaps
+  tests.
+- Typecheck, production build, and `git diff --check`.
+- One short browser smoke on a synthetic browser-created case.
+
+## 8. Open questions
+
+- None for this bounded slice. Interview Planner and Case Tasks remain the next
+  destination pass.
+
 # Structured Analysis Lovable UX correction, 2026-07-26
 
 ## 1. Goal

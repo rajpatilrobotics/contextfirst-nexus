@@ -49,14 +49,54 @@ function manifestStillCurrent(manifest: ExportManifest | null, selection: Export
   return Boolean(manifest && manifest.caseRevision === caseRevision && sameSelection(manifest.exportSelection, selection));
 }
 
-export function ExportWorkspace() {
+export function ExportWorkspace({
+  caseBasePath = "/case/demo",
+}: {
+  caseBasePath?: string;
+}) {
   const { state, dispatchCaseCommand } = useCaseState();
   const requestedKind = state.purposeBrief?.requestedExport;
   const allSelectableCandidates = useMemo(
     () => state.candidates
-      .filter((candidate) => candidate.kind !== "context_gap" && candidate.inclusionStatus === "active")
+      .filter(
+        (candidate) =>
+          candidate.kind !== "context_gap" &&
+          candidate.inclusionStatus === "active" &&
+          candidate.reviewRequirement !== "optional",
+      )
       .sort((left, right) => left.id.localeCompare(right.id)),
     [state.candidates],
+  );
+  const informationalCandidateCount = useMemo(
+    () =>
+      state.candidates.filter(
+        (candidate) =>
+          candidate.kind !== "context_gap" &&
+          candidate.inclusionStatus === "active" &&
+          candidate.reviewRequirement === "optional",
+      ).length,
+    [state.candidates],
+  );
+  const eligibleCandidateIds = useMemo(
+    () =>
+      new Set(
+        allSelectableCandidates
+          .filter(
+            (candidate) =>
+              candidate.safeShareRecipientCategories.includes(
+                state.purposeBrief?.intendedRecipientCategory ??
+                  "legal_aid_team",
+              ) &&
+              ["human_accepted", "human_edited"].includes(
+                candidate.reviewStatus,
+              ),
+          )
+          .map((candidate) => candidate.id),
+      ),
+    [
+      allSelectableCandidates,
+      state.purposeBrief?.intendedRecipientCategory,
+    ],
   );
   const [selectedCandidateIds, setSelectedCandidateIds] = useState<string[]>([]);
   const [minimumConfirmed, setMinimumConfirmed] = useState(false);
@@ -77,9 +117,17 @@ export function ExportWorkspace() {
       : state.currentExportManifest?.exportSelection.kind === "minimum_necessary_safe_share"
         ? state.currentExportManifest.exportSelection.minimumNecessarySelection
         : null;
-    setSelectedCandidateIds(saved?.selectedCandidateIds ?? []);
+    setSelectedCandidateIds(
+      (saved?.selectedCandidateIds ?? []).filter((id) =>
+        eligibleCandidateIds.has(id),
+      ),
+    );
     setMinimumConfirmed(saved?.confirmed ?? false);
-  }, [requestedKind, state.purposeBrief?.revision]);
+  }, [
+    eligibleCandidateIds,
+    requestedKind,
+    state.purposeBrief?.revision,
+  ]);
 
   const selection = useMemo<ExportSelection>(() => {
     if (requestedKind !== "minimum_necessary_safe_share") {
@@ -216,6 +264,8 @@ export function ExportWorkspace() {
       <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_420px]">
         <div className="space-y-3">
           <ExportGatePanel
+            candidates={state.candidates}
+            caseBasePath={caseBasePath}
             gate={gateMatchesSelection ? state.exportGate : null}
             headingRef={gateHeadingRef}
             onEvaluate={evaluateGate}
@@ -237,20 +287,61 @@ export function ExportWorkspace() {
               </header>
               <fieldset className="grid gap-2">
                 <legend className="text-sm font-semibold">Candidate selection</legend>
+                {informationalCandidateCount > 0 ? (
+                  <p className="text-xs text-muted-foreground">
+                    {informationalCandidateCount} informational relationship{" "}
+                    {informationalCandidateCount === 1 ? "row is" : "rows are"}{" "}
+                    not part of minimum-necessary evidence selection and{" "}
+                    {informationalCandidateCount === 1 ? "requires" : "require"}{" "}
+                    no individual review.
+                  </p>
+                ) : null}
                 {allSelectableCandidates.map((candidate) => {
-                  const eligible = candidate.safeShareRecipientCategories.includes(
+                  const eligibleForRecipient =
+                    candidate.safeShareRecipientCategories.includes(
                     state.purposeBrief?.intendedRecipientCategory ?? "legal_aid_team",
                   );
+                  const reviewComplete = [
+                    "human_accepted",
+                    "human_edited",
+                  ].includes(candidate.reviewStatus);
+                  const eligible = eligibleForRecipient && reviewComplete;
+                  const requiredCandidateIds = candidate.dependencies.flatMap(
+                    (dependency) =>
+                      !dependency.active || dependency.kind === "source"
+                        ? []
+                        : [
+                            dependency.kind === "candidate"
+                              ? dependency.candidateId
+                              : dependency.nexusCandidateId,
+                          ],
+                  );
+                  const missingRequiredIds = requiredCandidateIds.filter(
+                    (id) => !selectedCandidateIds.includes(id),
+                  );
+                  const selectable =
+                    eligible && missingRequiredIds.length === 0;
                   return (
                     <Checkbox
                       checked={selectedCandidateIds.includes(candidate.id)}
+                      disabled={!selectable}
                       id={`safe-share-${candidate.id}`}
                       key={candidate.id}
                       label={(
                         <span>
                           <span className="font-semibold">{candidate.id}</span>
                           {" · "}
-                          {eligible ? "eligible for recipient" : "not eligible for recipient"}
+                          {!eligibleForRecipient
+                            ? "not eligible for recipient"
+                            : !reviewComplete
+                              ? candidate.reviewStatus === "rejected"
+                                ? "excluded after human rejection"
+                                : candidate.reviewRequirement === "derived_summary"
+                                  ? "available after reviewed dependencies are current"
+                                  : "complete human review before sharing"
+                            : missingRequiredIds.length > 0
+                              ? `select required records first: ${missingRequiredIds.join(", ")}`
+                              : "eligible for recipient"}
                         </span>
                       )}
                       onChange={(event) => {
@@ -306,7 +397,7 @@ export function ExportWorkspace() {
           </div>
           <a
             className="sr-only"
-            href="/case/demo/purpose#requested-export"
+            href={`${caseBasePath}/purpose#requested-export`}
           >
             Change handoff kind in Purpose
           </a>

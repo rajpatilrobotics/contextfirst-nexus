@@ -2,6 +2,7 @@
 
 import type { ComponentType, ReactNode } from "react";
 import { useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import {
   AlertOctagon,
@@ -439,7 +440,7 @@ function CaseShellContent({
       <header className="border-b border-border bg-card/60">
         <div className="mx-auto flex flex-wrap items-center justify-between gap-3 px-6 py-3">
           <div className="flex items-center gap-4">
-            <a href="/" className="flex items-baseline gap-2">
+            <Link href="/" className="flex items-baseline gap-2">
               <span
                 aria-hidden
                 className="inline-block h-2.5 w-2.5 -translate-y-0.5 rounded-full bg-[color:var(--amber)]"
@@ -447,7 +448,7 @@ function CaseShellContent({
               <span className="font-serif text-base">
                 ContextFirst <span className="italic text-muted-foreground">Nexus</span>
               </span>
-            </a>
+            </Link>
             <span className="hidden text-border sm:inline">·</span>
             <div className="hidden text-xs sm:block">
               <span className="font-mono text-foreground">REF-2024-0047-SYN</span>

@@ -11,6 +11,8 @@ import { buildExportDocumentSections } from "../../../lib/export/renderers/docum
 import {
   deriveGapActionCoverage,
   derivePlanningDashboardCounts,
+  deriveServiceResourceMatches,
+  serviceProviderDirectory,
   sourceLinkState,
 } from "../../../lib/planning";
 import {
@@ -97,6 +99,23 @@ function sessionStore() {
 }
 
 describe("planning canonical state", () => {
+  it("uses curated official resources without claiming availability", () => {
+    expect(serviceProviderDirectory).toHaveLength(7);
+    expect(
+      serviceProviderDirectory.every(
+        (resource) =>
+          resource.verificationStatus === "official_source_verified" &&
+          resource.availabilityStatus === "not_verified" &&
+          resource.sourceUrl.startsWith("https://") &&
+          resource.needCategories.length > 0,
+      ),
+    ).toBe(true);
+
+    const matches = deriveServiceResourceMatches(checkpointState());
+    expect(matches.find(({ resource }) => resource.id === "SERVICE-1")?.matchedNeedIds).toContain("NEED-1");
+    expect(matches.find(({ resource }) => resource.id === "SERVICE-4")?.matchedNeedIds).toContain("NEED-1");
+  });
+
   it("validates bounded planning commands and referral consent literals", () => {
     const state = checkpointState();
     expect(

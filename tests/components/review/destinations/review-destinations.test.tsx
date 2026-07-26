@@ -1,6 +1,6 @@
 import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it } from "vitest";
 import { CaseStateProvider } from "../../../../components/shell";
 import {
   EvidenceGapsWorkspace,
@@ -21,6 +21,10 @@ function renderDestination(element: React.ReactNode) {
     </CaseStateProvider>,
   );
 }
+
+beforeEach(() => {
+  window.history.replaceState({}, "", "/case/demo/review");
+});
 
 describe("canonical review destinations", () => {
   it("projects Evidence Gaps from the active run and preserves canonical response actions", async () => {
@@ -52,6 +56,33 @@ describe("canonical review destinations", () => {
       }),
     ).toBeInTheDocument();
     expect(screen.getByText(/Export impact:/i)).toBeInTheDocument();
+  });
+
+  it("opens the exact Evidence Gap requested by an export-remediation hash", async () => {
+    const state = checkpointState();
+    const gaps = state.candidates.filter(
+      (candidate) => candidate.kind === "context_gap",
+    );
+    const gap = gaps[gaps.length - 1];
+    if (!gap) throw new Error("checkpoint evidence gap missing");
+    window.history.replaceState(
+      {},
+      "",
+      `/case/CFN-CASE-DYNAMIC/gaps?exportBlocker=REVIEW_INCOMPLETE#candidate-${gap.id}`,
+    );
+
+    renderDestination(<EvidenceGapsWorkspace />);
+
+    expect(
+      await screen.findByRole("region", {
+        name: `Evidence and dependencies for ${gap.id}`,
+      }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", {
+        name: new RegExp(gap.reviewQuestion, "i"),
+      }),
+    ).toHaveAttribute("aria-current", "true");
   });
 
   it("renders exactly six selectable canonical nexus nodes with source-linked detail", () => {
@@ -117,6 +148,45 @@ describe("canonical review destinations", () => {
     expect(screen.getByText("Withdrawn from current findings")).toBeInTheDocument();
   });
 
+  it("renders a variable live-analysis Nexus set without requiring fixture IDs", () => {
+    const checkpoint = checkpointState();
+    const source = checkpoint.candidates.find(
+      (candidate) => candidate.kind === "nexus_relationship",
+    );
+    if (!source) throw new Error("checkpoint nexus candidate missing");
+    const liveRow = {
+      ...source,
+      id: "NEXUS-AI-0001",
+      title: "Source-grounded recruitment relationship",
+      category: "recruitment" as const,
+    };
+    const state = {
+      ...checkpoint,
+      candidates: [
+        ...checkpoint.candidates.filter(
+          (candidate) => candidate.kind !== "nexus_relationship",
+        ),
+        liveRow,
+      ],
+    };
+
+    const { container } = render(
+      <CaseStateProvider initialState={state}>
+        <EvidenceIntegrityWorkspace />
+      </CaseStateProvider>,
+    );
+
+    expect(screen.queryByText("Nexus contract mismatch")).not.toBeInTheDocument();
+    expect(
+      screen.getByRole("button", {
+        name: /Select Nexus node NEXUS-AI-0001/i,
+      }),
+    ).toBeInTheDocument();
+    expect(
+      container.querySelector('g[transform="translate(500,300)"]'),
+    ).not.toBeNull();
+  });
+
   it("renders the separate qualified Timeline destination", () => {
     renderDestination(<TimelineWorkspace />);
 
@@ -129,6 +199,27 @@ describe("canonical review destinations", () => {
     expect(
       screen.getByLabelText("Filter timeline"),
     ).toBeInTheDocument();
+  });
+
+  it("opens an exact timeline event from an export-remediation hash", async () => {
+    const state = checkpointState();
+    const event = state.candidates.find(
+      (candidate) => candidate.kind === "timeline_event",
+    );
+    if (!event) throw new Error("checkpoint timeline event missing");
+    window.history.replaceState(
+      {},
+      "",
+      `/case/CFN-CASE-DYNAMIC/timeline?exportBlocker=REVIEW_INCOMPLETE#candidate-${event.id}`,
+    );
+
+    renderDestination(<TimelineWorkspace />);
+
+    const row = await screen.findByLabelText(`Timeline event: ${event.id}`);
+    expect(row).toHaveAttribute("id", `candidate-${event.id}`);
+    expect(
+      within(row).getByRole("button"),
+    ).toHaveAttribute("aria-pressed", "true");
   });
 
   it("fails stale successful projections closed after a canonical Purpose change", () => {

@@ -158,6 +158,12 @@ function storeCase({ withPurpose = false }: { withPurpose?: boolean } = {}) {
       ...source,
       id: `PURPOSE-${CASE_ID}`,
       caseId: CASE_ID,
+      sourceMaterialClassification: "user_attested_synthetic",
+      authority: {
+        ...source.authority,
+        basis: "user_attested_synthetic_material",
+        consentStatus: "not_applicable_synthetic_material",
+      },
       createdAt: NOW,
       updatedAt: NOW,
     });
@@ -184,6 +190,9 @@ describe("browser-created Purpose to Documents flow", () => {
     storeCase({ withPurpose: true });
     const user = userEvent.setup();
     render(<BrowserCasePurposeWorkspace caseId={CASE_ID} />);
+    expect(
+      await screen.findByText(/Planning and local handoff routes use the current reviewed analysis state/i),
+    ).toBeInTheDocument();
 
     await user.click(
       await screen.findByRole("button", {

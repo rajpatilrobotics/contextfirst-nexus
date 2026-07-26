@@ -98,6 +98,31 @@ const GEMINI_RESPONSE_JSON_SCHEMA = {
             },
           },
           unknowns: { type: "array", items: { type: "string" } },
+          dateStart: { type: "string" },
+          dateEnd: { type: "string" },
+          datePrecision: {
+            type: "string",
+            enum: ["day", "date_range", "approximate", "conflicting", "unknown"],
+          },
+          dateAlternatives: {
+            type: "array",
+            items: {
+              type: "object",
+              additionalProperties: false,
+              required: ["label"],
+              properties: {
+                start: { type: "string" },
+                end: { type: "string" },
+                label: { type: "string" },
+              },
+            },
+          },
+          locationLabel: { type: "string" },
+          actorLabels: { type: "array", items: { type: "string" } },
+          nexusCategory: {
+            type: "string",
+            enum: ["recruitment", "movement", "control", "compelled_tasks", "offence_timing", "urgency"],
+          },
         },
       },
     },

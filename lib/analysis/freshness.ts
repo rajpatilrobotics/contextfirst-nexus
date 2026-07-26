@@ -2,6 +2,7 @@ import type { AnalysisRun, CaseState } from "../contracts";
 import type { BrowserCaseRecord } from "../cases";
 import { cfnDemoFixture } from "../fixtures";
 import { bundledGuidancePack } from "../guidance";
+import { CURRENT_BROWSER_DETERMINISTIC_ADAPTER_VERSION } from "./browser-deterministic-analysis";
 
 export function selectSuccessfulActiveAnalysisRun(state: CaseState): AnalysisRun | null {
   const activeRuns = state.analysisRuns.filter((run) => run.id === state.activeAnalysisRunId);
@@ -55,8 +56,15 @@ export function browserAnalysisSnapshotMatchesRecordMetadata(
   record: BrowserCaseRecord,
 ): boolean {
   const run = selectSuccessfulActiveAnalysisRun(state);
+  const currentBrowserRules =
+    !run ||
+    run.provider.providerId !== "local_replay" ||
+    !run.provider.adapterVersion.startsWith("browser-deterministic-analysis-") ||
+    run.provider.adapterVersion ===
+      CURRENT_BROWSER_DETERMINISTIC_ADAPTER_VERSION;
   return Boolean(
     run &&
+      currentBrowserRules &&
       record.purposeBrief &&
       record.documentPacket &&
       state.caseId === record.id &&

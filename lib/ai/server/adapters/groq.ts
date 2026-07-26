@@ -225,7 +225,7 @@ export function buildGroqRequest(input: ProviderPromptInput) {
           prompt.systemBoundary,
           prompt.requestedTasksAndSchema,
           prompt.definitions,
-          "Output budget: return at most 4 candidates. Each candidate must use concise, meaningful, non-whitespace text; include at most 2 short exact citations and at most 2 concise unknowns. Keep quotedText to the shortest sufficient exact source span.",
+          "Output budget: return at most 12 candidates across the relevant review lanes and destination types. Each candidate must use concise, meaningful, non-whitespace text; include at most 2 short exact citations and at most 2 concise unknowns. Keep quotedText to the shortest sufficient exact source span.",
           "Return only JSON matching the supplied schema.",
         ].join("\n\n"),
       },

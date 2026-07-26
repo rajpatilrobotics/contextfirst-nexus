@@ -362,7 +362,7 @@ function CandidateList({
           {candidates.map((candidate) => {
             const selected = candidate.id === selectedId;
             return (
-              <li key={candidate.id}>
+              <li id={`candidate-${candidate.id}`} key={candidate.id}>
                 <button
                   aria-current={selected ? "true" : undefined}
                   aria-label={`Select candidate ${candidate.id}: ${candidate.title}`}
@@ -385,6 +385,11 @@ function CandidateList({
                       <span className="mt-0.5 line-clamp-2 block text-[11px] text-muted-foreground">
                         {candidate.currentText}
                       </span>
+                      {candidate.deterministicMatch ? (
+                        <span className="mt-1 block truncate font-mono text-[10px] text-foreground/70">
+                          Matched “{candidate.deterministicMatch.exactPhrase}”
+                        </span>
+                      ) : null}
                     </span>
                     <span className="shrink-0">
                       <ReviewStatusBadge value={candidate.reviewStatus} />
@@ -432,11 +437,17 @@ function CandidateDetail({
   state,
   onOpenSource,
   onWithdrawRequest,
+  pendingQueueCount,
+  onPreviousPending,
+  onNextPending,
 }: {
   candidate: CaseCandidate;
   state: CaseState;
   onOpenSource: (selection: SourceSelection) => void;
   onWithdrawRequest: (candidate: CaseCandidate) => void;
+  pendingQueueCount: number;
+  onPreviousPending: (() => void) | null;
+  onNextPending: (() => void) | null;
 }) {
   const { dispatchCaseCommand } = useCaseState();
   const sourceDependencies = candidate.dependencies.filter(
@@ -473,6 +484,21 @@ function CandidateDetail({
           <p className="mt-1 text-sm text-muted-foreground">
             {candidate.currentText}
           </p>
+          {candidate.deterministicMatch ? (
+            <div
+              aria-label="Deterministic trigger explanation"
+              className="mt-2 grid gap-1 rounded-md border border-[color-mix(in_oklab,var(--amber)_35%,transparent)] bg-[color-mix(in_oklab,var(--amber)_8%,transparent)] p-2 text-xs"
+            >
+              <p>
+                <span className="font-semibold">Exact matched phrase:</span>{" "}
+                <q>{candidate.deterministicMatch.exactPhrase}</q>
+              </p>
+              <p className="text-muted-foreground">
+                <span className="font-semibold text-foreground">Why flagged:</span>{" "}
+                {candidate.deterministicMatch.rationale}
+              </p>
+            </div>
+          ) : null}
         </div>
         <div className="flex flex-wrap gap-2">
           <ItemOriginStatus value={candidate.itemOrigin} />
@@ -625,12 +651,41 @@ function CandidateDetail({
         aria-labelledby={`candidate-${candidate.id}-review-actions`}
         className="shrink-0 border-t border-border bg-muted/30 p-3"
       >
-        <h3
-          className="mb-2 font-mono text-[10px] font-semibold uppercase tracking-[0.16em]"
-          id={`candidate-${candidate.id}-review-actions`}
-        >
-          Human review
-        </h3>
+        <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+          <h3
+            className="font-mono text-[10px] font-semibold uppercase tracking-[0.16em]"
+            id={`candidate-${candidate.id}-review-actions`}
+          >
+            Human review
+          </h3>
+          <div
+            aria-label="Pending review queue navigation"
+            className="flex items-center gap-1"
+            role="group"
+          >
+            <span className="mr-1 text-[11px] text-muted-foreground">
+              {pendingQueueCount} pending in view
+            </span>
+            <Button
+              aria-label="Previous pending candidate"
+              className="!min-h-8 px-2 py-1 text-xs"
+              disabled={!onPreviousPending}
+              onClick={onPreviousPending ?? undefined}
+              variant="secondary"
+            >
+              Previous
+            </Button>
+            <Button
+              aria-label="Next pending candidate"
+              className="!min-h-8 px-2 py-1 text-xs"
+              disabled={!onNextPending}
+              onClick={onNextPending ?? undefined}
+              variant="secondary"
+            >
+              Next
+            </Button>
+          </div>
+        </div>
         <p className="sr-only">
           Every action dispatches the existing canonical review command. No
           filter or selection action changes case state.
@@ -685,7 +740,11 @@ export function StructuredAnalysisWorkspace({
     () =>
       state.candidates.filter(
         (candidate) =>
-          candidate.analysisRunId === activeRun?.id && Boolean(candidate.lane),
+          candidate.analysisRunId === activeRun?.id &&
+          Boolean(candidate.lane) &&
+          candidate.kind !== "context_gap" &&
+          candidate.kind !== "timeline_event" &&
+          candidate.kind !== "nexus_relationship",
       ),
     [activeRun?.id, state.candidates],
   );
@@ -741,6 +800,8 @@ export function StructuredAnalysisWorkspace({
         candidate.title,
         candidate.proposedText,
         candidate.currentText,
+        candidate.deterministicMatch?.exactPhrase ?? "",
+        candidate.deterministicMatch?.rationale ?? "",
         candidate.reviewQuestion,
         ...candidate.unknowns,
       ]
@@ -763,6 +824,27 @@ export function StructuredAnalysisWorkspace({
     ) ??
     visibleCandidates[0] ??
     null;
+  const selectedVisibleIndex = selectedCandidate
+    ? visibleCandidates.findIndex(
+        (candidate) => candidate.id === selectedCandidate.id,
+      )
+    : -1;
+  const pendingQueueCount = visibleCandidates.filter(
+    candidateRequiresPendingReview,
+  ).length;
+  const previousPendingCandidate =
+    selectedVisibleIndex > 0
+      ? visibleCandidates
+          .slice(0, selectedVisibleIndex)
+          .reverse()
+          .find(candidateRequiresPendingReview) ?? null
+      : null;
+  const nextPendingCandidate =
+    selectedVisibleIndex >= 0
+      ? visibleCandidates
+          .slice(selectedVisibleIndex + 1)
+          .find(candidateRequiresPendingReview) ?? null
+      : null;
   const filtersActive =
     statusFilter !== "all" ||
     originFilter !== "all" ||
@@ -771,8 +853,35 @@ export function StructuredAnalysisWorkspace({
   const presentationCandidates =
     runIsCurrent && !state.pendingLiveAnalysis ? laneCandidates : [];
   const browserLocalDeterministic =
-    activeRun?.provider.adapterVersion ===
-    "browser-deterministic-analysis-v1";
+    activeRun?.provider.adapterVersion.startsWith(
+      "browser-deterministic-analysis-",
+    ) ?? false;
+
+  useEffect(() => {
+    function openCandidateFromHash() {
+      if (typeof window === "undefined") return;
+      const match = /^#candidate-(.+)$/.exec(window.location.hash);
+      if (!match) return;
+      const candidateId = decodeURIComponent(match[1]);
+      const candidate = laneCandidates.find((item) => item.id === candidateId);
+      if (!candidate?.lane) return;
+      setActiveLane(candidate.lane);
+      setStatusFilter("all");
+      setOriginFilter("all");
+      setSupportFilter("all");
+      setQuery("");
+      setSelectedCandidateId(candidate.id);
+      window.requestAnimationFrame(() => {
+        const target = document.getElementById(`candidate-${candidate.id}`);
+        if (typeof target?.scrollIntoView === "function") {
+          target.scrollIntoView({ block: "nearest" });
+        }
+      });
+    }
+    openCandidateFromHash();
+    window.addEventListener("hashchange", openCandidateFromHash);
+    return () => window.removeEventListener("hashchange", openCandidateFromHash);
+  }, [laneCandidates]);
 
   useEffect(() => {
     const workspace = workspaceRef.current;
@@ -884,8 +993,11 @@ export function StructuredAnalysisWorkspace({
           }
           tone="neutral"
         >
-          A successful run may legitimately return no candidates. No favourable,
-          adverse, or legal conclusion is inferred from an empty result.
+          {browserLocalDeterministic
+            ? "No scope-aware contextual browser-local rule matched the current approved redacted input. Unrelated material is not forced into a case-review category."
+            : "A successful live run may legitimately return no candidates."}{" "}
+          No favourable, adverse, or legal conclusion is inferred from an empty
+          result.
         </Alert>
       </div>
     );
@@ -1033,10 +1145,21 @@ export function StructuredAnalysisWorkspace({
             <CandidateDetail
               candidate={selectedCandidate}
               key={selectedCandidate.id}
+              onNextPending={
+                nextPendingCandidate
+                  ? () => setSelectedCandidateId(nextPendingCandidate.id)
+                  : null
+              }
               onOpenSource={setSourceSelection}
+              onPreviousPending={
+                previousPendingCandidate
+                  ? () => setSelectedCandidateId(previousPendingCandidate.id)
+                  : null
+              }
               onWithdrawRequest={(candidate) =>
                 setWithdrawalCandidateId(candidate.id)
               }
+              pendingQueueCount={pendingQueueCount}
               state={state}
             />
           ) : (

@@ -17,6 +17,12 @@ export async function buildBrowserAnalysisIntent(input: {
   if (!purpose || purpose.status !== "complete") {
     return { ok: false, reason: "Complete Purpose before analysis." };
   }
+  if (purpose.sourceMaterialClassification === "bundled_synthetic_fixture") {
+    return {
+      ok: false,
+      reason: "Classify browser-uploaded material in Purpose before analysis.",
+    };
+  }
   if (!packet) {
     return { ok: false, reason: "Process a document packet before analysis." };
   }
@@ -61,7 +67,7 @@ export async function buildBrowserAnalysisIntent(input: {
     caseId: input.record.id,
     dataOrigin: "browser_local",
     syntheticOrAuthorizedPublicDataAttested:
-      purpose.authority.syntheticOrHarmlessDataAttested,
+      purpose.authority.sourceMaterialAttested,
     providerDataFlowAcknowledged: true,
     purpose: {
       purposeBriefId: purpose.id,
@@ -69,6 +75,8 @@ export async function buildBrowserAnalysisIntent(input: {
       practitionerRole: purpose.practitionerRole,
       jurisdictionCode: purpose.jurisdictionCode,
       requestedExport: purpose.requestedExport,
+      intendedRecipientCategory: purpose.intendedRecipientCategory,
+      sourceMaterialClassification: purpose.sourceMaterialClassification,
     },
     documentSetDigest: packet.documentSetDigest,
     maskingRevision: packet.masking.revision,

@@ -8,6 +8,7 @@ import {
   type CasePurposeBrief,
   type ExcludedDecision,
   type ProviderOptionProjection,
+  type SourceMaterialClassification,
 } from "../../lib/contracts";
 import {
   Alert,
@@ -67,16 +68,22 @@ export function CasePurposeBriefForm({
   const [jurisdictionCode, setJurisdictionCode] = useState(initialBrief?.jurisdictionCode ?? "");
   const [translationStatus, setTranslationStatus] = useState(initialBrief?.translationStatus ?? "");
   const [requestedExport, setRequestedExport] = useState(initialBrief?.requestedExport ?? "");
+  const [sourceMaterialClassification, setSourceMaterialClassification] = useState<
+    SourceMaterialClassification | ""
+  >(
+    initialBrief?.sourceMaterialClassification ??
+      (caseId === "CFN-DEMO-001" ? "bundled_synthetic_fixture" : ""),
+  );
   const [excludedDecisions, setExcludedDecisions] = useState(() => initialExcluded(initialBrief));
   const [authorityAttested, setAuthorityAttested] = useState(initialBrief?.authorityAttested ?? false);
   const [authorityNotVerified, setAuthorityNotVerified] = useState(
     initialBrief?.authority.authorityNotVerifiedAcknowledged ?? false,
   );
   const [syntheticAttested, setSyntheticAttested] = useState(
-    initialBrief?.authority.syntheticOrHarmlessDataAttested ?? false,
+    initialBrief?.authority.sourceMaterialAttested ?? false,
   );
   const [syntheticAcknowledged, setSyntheticAcknowledged] = useState(
-    initialBrief?.syntheticDataAcknowledged ?? false,
+    initialBrief?.sourceMaterialBoundaryAcknowledged ?? false,
   );
   const [prohibitedAcknowledged, setProhibitedAcknowledged] = useState(
     initialBrief?.prohibitedDecisionsAcknowledged ?? false,
@@ -120,13 +127,16 @@ export function CasePurposeBriefForm({
     if (!jurisdictionCode) next.jurisdictionCode = "Choose the fictional jurisdiction for later verification.";
     if (!translationStatus) next.translationStatus = "Choose the translation status.";
     if (!requestedExport) next.requestedExport = "Choose one requested handoff kind.";
+    if (!sourceMaterialClassification) {
+      next.sourceMaterialClassification = "Classify the packet as synthetic test material or authorized public material.";
+    }
     if (RequiredExcludedDecisions.some((decision) => !excludedDecisions.has(decision))) {
       next.excludedDecisions = "Confirm every decision that remains outside system support.";
     }
-    if (!authorityAttested) next.authorityAttested = "Confirm the fictional or hackathon test-data workflow.";
+    if (!authorityAttested) next.authorityAttested = "Confirm your authority to use the selected source material.";
     if (!authorityNotVerified) next.authorityNotVerified = "Acknowledge that the system cannot verify authority.";
-    if (!syntheticAttested) next.syntheticAttested = "Attest that the selected PDFs contain no real or private case data.";
-    if (!syntheticAcknowledged) next.syntheticAcknowledged = "Acknowledge the fictional and hackathon test-data-only boundary.";
+    if (!syntheticAttested) next.syntheticAttested = "Attest that the packet matches the selected source-material classification.";
+    if (!syntheticAcknowledged) next.syntheticAcknowledged = "Acknowledge that private or confidential case material is unavailable in this demonstration.";
     if (!prohibitedAcknowledged) next.prohibitedAcknowledged = "Acknowledge the prohibited-decision boundary.";
     if (!cooperationAcknowledged) next.cooperationAcknowledged = "Confirm cooperation neutrality.";
     if (!analysisOption) next.analysisService = "Analysis service unavailable";
@@ -151,7 +161,26 @@ export function CasePurposeBriefForm({
       return;
     }
 
+    if (!sourceMaterialClassification) {
+      setErrors({ sourceMaterialClassification: "Classify the packet before saving." });
+      return;
+    }
     const now = new Date().toISOString();
+    const authorityByClassification = {
+      bundled_synthetic_fixture: {
+        basis: "not_applicable_synthetic_fixture",
+        consentStatus: "not_applicable_synthetic_fixture",
+      },
+      user_attested_synthetic: {
+        basis: "user_attested_synthetic_material",
+        consentStatus: "not_applicable_synthetic_material",
+      },
+      user_attested_authorized_public: {
+        basis: "user_attested_authorized_public_material",
+        consentStatus: "not_applicable_authorized_public_material",
+      },
+    } as const;
+    const purposeAuthority = authorityByClassification[sourceMaterialClassification];
     const acknowledgement = {
       id: `ACK-${selected.releaseConfigurationId.toUpperCase()}-${Date.now()}`,
       schemaVersion: "1.0.0" as const,
@@ -175,12 +204,13 @@ export function CasePurposeBriefForm({
       supportedWorkflow: "case_preparation_handoff" as const,
       statedPurpose: statedPurpose.trim(),
       excludedDecisions: RequiredExcludedDecisions.filter((decision) => excludedDecisions.has(decision)),
+      sourceMaterialClassification,
       authority: {
-        basis: "not_applicable_synthetic_fixture" as const,
+        basis: purposeAuthority.basis,
         status: "active" as const,
-        consentStatus: "not_applicable_synthetic_fixture" as const,
+        consentStatus: purposeAuthority.consentStatus,
         authorityNotVerifiedAcknowledged: true as const,
-        syntheticOrHarmlessDataAttested: true as const,
+        sourceMaterialAttested: true as const,
       },
       jurisdictionCode,
       sourceLanguage: "en" as const,
@@ -189,7 +219,7 @@ export function CasePurposeBriefForm({
       intendedRecipientCategory,
       requestedExport,
       prohibitedDecisionsAcknowledged: true as const,
-      syntheticDataAcknowledged: true as const,
+      sourceMaterialBoundaryAcknowledged: true as const,
       providerSelection: {
         providerId: selected.providerId,
         releaseConfigurationId: selected.releaseConfigurationId,
@@ -229,6 +259,7 @@ export function CasePurposeBriefForm({
     jurisdictionCode: "jurisdiction-code",
     translationStatus: "translation-status",
     requestedExport: "requested-export",
+    sourceMaterialClassification: "source-material-classification",
     excludedDecisions: "excluded-decisions",
     authorityAttested: "authority-attested",
     authorityNotVerified: "authority-not-verified",
@@ -307,6 +338,39 @@ export function CasePurposeBriefForm({
                 >
                   <option value="case_preparation_handoff">Case preparation &amp; handoff</option>
                 </Select>
+              </div>
+              <div className="grid gap-1 text-sm sm:col-span-2">
+                <Label className="!text-xs !font-normal text-muted-foreground" htmlFor="source-material-classification">
+                  Source material classification
+                </Label>
+                <Select
+                  className="!min-h-0 !rounded-md !px-2.5 !py-1.5 !text-[13px] !shadow-none"
+                  id="source-material-classification"
+                  value={sourceMaterialClassification}
+                  onChange={(event) => {
+                    setSourceMaterialClassification(
+                      event.currentTarget.value as SourceMaterialClassification | "",
+                    );
+                    setAuthorityAttested(false);
+                    setSyntheticAttested(false);
+                    setSyntheticAcknowledged(false);
+                  }}
+                >
+                  <option value="">Choose source material</option>
+                  {caseId === "CFN-DEMO-001" ? (
+                    <option value="bundled_synthetic_fixture">Bundled synthetic demonstration</option>
+                  ) : null}
+                  <option value="user_attested_synthetic">Synthetic or hackathon test material</option>
+                  <option value="user_attested_authorized_public">Authorized public material</option>
+                </Select>
+                <p className="text-[11px] leading-4 text-muted-foreground">
+                  This is a practitioner attestation, not an authenticity or authority verification.
+                </p>
+                {errors.sourceMaterialClassification ? (
+                  <FieldError id="source-material-classification-error">
+                    {errors.sourceMaterialClassification}
+                  </FieldError>
+                ) : null}
               </div>
               <div className="grid gap-1 text-sm">
                 <Label className="!text-xs !font-normal text-muted-foreground" htmlFor="intended-recipient">Intended recipient</Label>
@@ -403,7 +467,7 @@ export function CasePurposeBriefForm({
             </legend>
             <ul className="space-y-2">
               <li className="rounded-md border border-border/70 bg-background px-3 py-1 text-sm">
-                <Checkbox checked={authorityAttested} id="authority-attested" label="I attest that I am using only fictional or hackathon test PDFs for the stated workflow." onChange={(event) => setAuthorityAttested(event.currentTarget.checked)} />
+                <Checkbox checked={authorityAttested} id="authority-attested" label="I attest that I am authorized to use the selected source material for this stated workflow." onChange={(event) => setAuthorityAttested(event.currentTarget.checked)} />
                 {errors.authorityAttested ? <FieldError id="authority-attested-error">{errors.authorityAttested}</FieldError> : null}
               </li>
               <li className="rounded-md border border-border/70 bg-background px-3 py-1 text-sm">
@@ -411,11 +475,11 @@ export function CasePurposeBriefForm({
                 {errors.authorityNotVerified ? <FieldError id="authority-not-verified-error">{errors.authorityNotVerified}</FieldError> : null}
               </li>
               <li className="rounded-md border border-border/70 bg-background px-3 py-1 text-sm">
-                <Checkbox checked={syntheticAttested} id="synthetic-attested" label="I attest that the selected PDFs contain no real or private case data." onChange={(event) => setSyntheticAttested(event.currentTarget.checked)} />
+                <Checkbox checked={syntheticAttested} id="synthetic-attested" label="I attest that every selected PDF matches the source-material classification above." onChange={(event) => setSyntheticAttested(event.currentTarget.checked)} />
                 {errors.syntheticAttested ? <FieldError id="synthetic-attested-error">{errors.syntheticAttested}</FieldError> : null}
               </li>
               <li className="rounded-md border border-border/70 bg-background px-3 py-1 text-sm">
-                <Checkbox checked={syntheticAcknowledged} id="synthetic-acknowledged" label="I acknowledge the fictional and hackathon test-data-only boundary." onChange={(event) => setSyntheticAcknowledged(event.currentTarget.checked)} />
+                <Checkbox checked={syntheticAcknowledged} id="synthetic-acknowledged" label="I acknowledge that private or confidential case material is unavailable in this demonstration." onChange={(event) => setSyntheticAcknowledged(event.currentTarget.checked)} />
                 {errors.syntheticAcknowledged ? <FieldError id="synthetic-acknowledged-error">{errors.syntheticAcknowledged}</FieldError> : null}
               </li>
               <li className="rounded-md border border-border/70 bg-background px-3 py-1 text-sm">
@@ -504,9 +568,11 @@ export function CasePurposeBriefForm({
             <Alert title="Authority and prototype boundary" tone="warning">
               <p className="text-xs leading-5">
                 This role chooser is not authentication. The system records your attestation but
-                cannot verify your authority. Use only fictional or hackathon test PDFs that contain
-                no real or private case data. PDF text is extracted in this browser and is not
-                transmitted to an AI provider.
+                cannot verify your authority, authenticity, or public-source status. Use only
+                synthetic test material or material you are authorized to use publicly. Private or
+                confidential case material is unavailable in this demonstration. PDF text is
+                extracted in this browser; any later provider transmission remains separately
+                disclosed and consent-gated.
               </p>
             </Alert>
 

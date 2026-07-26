@@ -50,11 +50,11 @@ describe("planning workspaces", () => {
 
     await user.type(screen.getByLabelText("Practitioner description"), "Needs a safe callback window.");
     await user.type(screen.getByLabelText("Safe-contact constraints"), "SMS only after 10:00.");
-    await user.type(screen.getByLabelText("Next action"), "Confirm a fictional safe-contact plan.");
+    await user.type(screen.getByLabelText("Next action"), "Confirm a safe-contact plan.");
     await user.click(screen.getByRole("button", { name: "Record need" }));
 
-    expect(screen.getByText(/saved in browser-session case state/i)).toBeInTheDocument();
-    expect(screen.getAllByText("Confirm a fictional safe-contact plan.").length).toBeGreaterThan(0);
+    expect(screen.getByText(/saved in browser-local case state/i)).toBeInTheDocument();
+    expect(screen.getAllByText("Confirm a safe-contact plan.").length).toBeGreaterThan(0);
   });
 
   it("creates and approves an Interview Planner question", async () => {
@@ -85,26 +85,26 @@ describe("planning workspaces", () => {
     renderWorkspace(<ServicesPreview />);
 
     expect(screen.getByRole("heading", { name: "Services & Referrals" })).toBeInTheDocument();
-    const providerList = screen.getByRole("navigation", { name: "Fictional providers" });
+    const providerList = screen.getByRole("navigation", { name: "Official service resources" });
     await user.click(
       within(providerList).getByRole("button", {
-        name: /Fictional Meridian Trauma Support/i,
+        name: /Legal Services Corporation/i,
       }),
     );
 
     const detail = screen.getByRole("article", {
-      name: "Selected provider: Fictional Meridian Trauma Support",
+      name: "Selected resource: Legal Services Corporation — Find Legal Help",
     });
     const save = within(detail).getByRole("button", { name: "Save local referral plan" });
     expect(save).toBeDisabled();
-    await user.click(within(detail).getByLabelText("Consent confirmed for this synthetic demonstration"));
+    await user.click(within(detail).getByLabelText("Consent confirmed for this resource follow-up"));
     await user.click(within(detail).getByLabelText("Safe-contact restrictions reviewed"));
     expect(save).toBeEnabled();
     await user.click(save);
 
     expect(screen.getByText(/No contact was made and no information was transmitted/i)).toBeInTheDocument();
     expect(save).toBeDisabled();
-    expect(within(detail).getByLabelText("Consent confirmed for this synthetic demonstration")).not.toBeChecked();
+    expect(within(detail).getByLabelText("Consent confirmed for this resource follow-up")).not.toBeChecked();
     expect(within(detail).getByLabelText("Safe-contact restrictions reviewed")).not.toBeChecked();
   });
 
@@ -112,27 +112,38 @@ describe("planning workspaces", () => {
     const user = userEvent.setup();
     renderWorkspace(<ServicesPreview />);
 
-    const providerList = screen.getByRole("navigation", { name: "Fictional providers" });
-    const harborDetail = screen.getByRole("article", {
-      name: "Selected provider: Fictional Harbor Legal Aid",
+    const providerList = screen.getByRole("navigation", { name: "Official service resources" });
+    const initialDetail = screen.getByRole("article", {
+      name: "Selected resource: 211 Community Resource Search",
     });
-    await user.click(within(harborDetail).getByLabelText("Consent confirmed for this synthetic demonstration"));
-    await user.click(within(harborDetail).getByLabelText("Safe-contact restrictions reviewed"));
-    expect(within(harborDetail).getByRole("button", { name: "Save local referral plan" })).toBeEnabled();
+    await user.click(within(initialDetail).getByLabelText("Consent confirmed for this resource follow-up"));
+    await user.click(within(initialDetail).getByLabelText("Safe-contact restrictions reviewed"));
+    expect(within(initialDetail).getByRole("button", { name: "Save local referral plan" })).toBeEnabled();
 
     await user.click(
       within(providerList).getByRole("button", {
-        name: /Fictional Meridian Trauma Support/i,
+        name: /Legal Services Corporation/i,
       }),
     );
 
-    const meridianDetail = screen.getByRole("article", {
-      name: "Selected provider: Fictional Meridian Trauma Support",
+    const legalAidDetail = screen.getByRole("article", {
+      name: "Selected resource: Legal Services Corporation — Find Legal Help",
     });
-    expect(within(meridianDetail).getByLabelText("Consent confirmed for this synthetic demonstration")).not.toBeChecked();
-    expect(within(meridianDetail).getByLabelText("Safe-contact restrictions reviewed")).not.toBeChecked();
-    expect(within(meridianDetail).getByRole("button", { name: "Save local referral plan" })).toBeDisabled();
+    expect(within(legalAidDetail).getByLabelText("Consent confirmed for this resource follow-up")).not.toBeChecked();
+    expect(within(legalAidDetail).getByLabelText("Safe-contact restrictions reviewed")).not.toBeChecked();
+    expect(within(legalAidDetail).getByRole("button", { name: "Save local referral plan" })).toBeDisabled();
     expect(screen.queryByText(/No contact was made and no information was transmitted/i)).not.toBeInTheDocument();
+  });
+
+  it("shows official source provenance without claiming resource availability", () => {
+    renderWorkspace(<ServicesPreview />);
+
+    expect(screen.getByText("Official source verified")).toBeInTheDocument();
+    expect(screen.getAllByText("Availability not verified").length).toBeGreaterThan(0);
+    expect(
+      screen.getByRole("link", { name: "United Way 211 official website" }),
+    ).toHaveAttribute("href", "https://www.211.org/");
+    expect(screen.queryByText(/fictional demonstration provider/i)).not.toBeInTheDocument();
   });
 
   it("keeps Interview Planner edit buffers scoped to the selected question", async () => {

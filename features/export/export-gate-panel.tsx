@@ -1,4 +1,4 @@
-import type { ExportGate } from "../../lib/contracts";
+import type { CaseCandidate, ExportGate } from "../../lib/contracts";
 import {
   AlertTriangle,
   CheckCircle2,
@@ -13,7 +13,7 @@ type Blocker = Extract<ExportGate, { status: "blocked" }>["blockers"][number];
 const blockerLabels: Record<Blocker["code"], string> = {
   PURPOSE_INCOMPLETE: "Finish the case purpose",
   AUTHORITY_INVALID: "Confirm practitioner authority",
-  DATA_ORIGIN_PROHIBITED: "Use the approved demo document set",
+  DATA_ORIGIN_PROHIBITED: "Confirm the packet source classification",
   REVIEW_INCOMPLETE: "Complete the remaining review decisions",
   CITATION_UNRESOLVED: "Resolve citation issues",
   COVERAGE_CONSEQUENTIAL: "Review the coverage limitation",
@@ -29,36 +29,76 @@ const blockerLabels: Record<Blocker["code"], string> = {
   OUTSIDE_STATED_PURPOSE: "Match the handoff to the stated purpose",
 };
 
-const routeByCode: Record<Blocker["code"], { route: string; target: string }> = {
-  PURPOSE_INCOMPLETE: { route: "/case/demo/purpose", target: "purpose-form" },
-  AUTHORITY_INVALID: { route: "/case/demo/purpose", target: "authority-attested" },
-  DATA_ORIGIN_PROHIBITED: { route: "/case/demo/intake", target: "documents" },
-  REVIEW_INCOMPLETE: { route: "/case/demo/review", target: "review-workspace" },
-  CITATION_UNRESOLVED: { route: "/case/demo/review", target: "citations" },
-  COVERAGE_CONSEQUENTIAL: { route: "/case/demo/intake", target: "coverage" },
-  JURISDICTION_UNVERIFIED: { route: "/case/demo/purpose", target: "jurisdiction-code" },
-  DEPENDENCY_UNRESOLVED: { route: "/case/demo/review", target: "dependencies" },
-  MASK_REVIEW_INCOMPLETE: { route: "/case/demo/intake", target: "masking" },
-  PII_CHECK_FAILED: { route: "/case/demo/intake", target: "masking" },
-  PROCESSING_FAILED: { route: "/case/demo/intake", target: "processing" },
-  SAFETY_VALIDATION_FAILED: { route: "/case/demo/intake", target: "analysis" },
-  ANALYSIS_RUN_STALE: { route: "/case/demo/intake", target: "analysis" },
-  GATE_EVALUATION_STALE: { route: "/case/demo/export", target: "export-gate" },
-  MINIMUM_NECESSITY_UNCONFIRMED: { route: "/case/demo/export", target: "minimum-necessary-selection" },
-  OUTSIDE_STATED_PURPOSE: { route: "/case/demo/purpose", target: "requested-export" },
+const routeByCode: Record<Blocker["code"], { demoRoute: string; dynamicRoute: string; target: string }> = {
+  PURPOSE_INCOMPLETE: { demoRoute: "purpose", dynamicRoute: "purpose", target: "purpose-form" },
+  AUTHORITY_INVALID: { demoRoute: "purpose", dynamicRoute: "purpose", target: "authority-attested" },
+  DATA_ORIGIN_PROHIBITED: { demoRoute: "purpose", dynamicRoute: "purpose", target: "source-material-classification" },
+  REVIEW_INCOMPLETE: { demoRoute: "review", dynamicRoute: "analysis", target: "review-workspace" },
+  CITATION_UNRESOLVED: { demoRoute: "review", dynamicRoute: "analysis", target: "citations" },
+  COVERAGE_CONSEQUENTIAL: { demoRoute: "intake", dynamicRoute: "documents", target: "coverage" },
+  JURISDICTION_UNVERIFIED: { demoRoute: "purpose", dynamicRoute: "purpose", target: "jurisdiction-code" },
+  DEPENDENCY_UNRESOLVED: { demoRoute: "review", dynamicRoute: "nexus", target: "dependencies" },
+  MASK_REVIEW_INCOMPLETE: { demoRoute: "intake", dynamicRoute: "documents", target: "masking" },
+  PII_CHECK_FAILED: { demoRoute: "intake", dynamicRoute: "documents", target: "masking" },
+  PROCESSING_FAILED: { demoRoute: "intake", dynamicRoute: "documents", target: "processing" },
+  SAFETY_VALIDATION_FAILED: { demoRoute: "intake", dynamicRoute: "analysis", target: "analysis" },
+  ANALYSIS_RUN_STALE: { demoRoute: "intake", dynamicRoute: "analysis", target: "analysis" },
+  GATE_EVALUATION_STALE: { demoRoute: "export", dynamicRoute: "export", target: "export-gate" },
+  MINIMUM_NECESSITY_UNCONFIRMED: { demoRoute: "export", dynamicRoute: "export", target: "minimum-necessary-selection" },
+  OUTSIDE_STATED_PURPOSE: { demoRoute: "purpose", dynamicRoute: "purpose", target: "requested-export" },
 };
 
-function remediationHref(blocker: Blocker) {
+function remediationHref(blocker: Blocker, caseBasePath: string) {
   const destination = routeByCode[blocker.code];
-  return `${destination.route}?exportBlocker=${encodeURIComponent(blocker.code)}#${encodeURIComponent(destination.target)}`;
+  const route = caseBasePath === "/case/demo"
+    ? destination.demoRoute
+    : destination.dynamicRoute;
+  return `${caseBasePath}/${route}?exportBlocker=${encodeURIComponent(blocker.code)}#${encodeURIComponent(destination.target)}`;
 }
 
-function remediationLabel(blocker: Blocker) {
-  const route = routeByCode[blocker.code].route;
-  if (route.endsWith("/purpose")) return "Return to Purpose";
-  if (route.endsWith("/intake")) return "Return to Documents";
-  if (route.endsWith("/review")) return "Return to Review";
+function remediationLabel(blocker: Blocker, caseBasePath: string) {
+  const destination = routeByCode[blocker.code];
+  const route = caseBasePath === "/case/demo"
+    ? destination.demoRoute
+    : destination.dynamicRoute;
+  if (route === "purpose") return "Return to Purpose";
+  if (route === "intake" || route === "documents") return "Return to Documents";
+  if (route === "review") return "Return to Review";
+  if (route === "analysis") return "Return to Analysis";
+  if (route === "nexus") return "Return to Nexus";
   return "Review this selection";
+}
+
+function candidateReviewDestination(
+  candidate: CaseCandidate | undefined,
+  caseBasePath: string,
+) {
+  if (caseBasePath === "/case/demo") {
+    return {
+      href: `${caseBasePath}/review?exportBlocker=REVIEW_INCOMPLETE#review-workspace`,
+      label: "Review",
+    };
+  }
+  const route =
+    candidate?.kind === "context_gap"
+      ? "gaps"
+      : candidate?.kind === "timeline_event"
+        ? "timeline"
+        : candidate?.kind === "nexus_relationship"
+          ? "nexus"
+          : "analysis";
+  const label =
+    route === "gaps"
+      ? "Evidence Gaps"
+      : route === "timeline"
+        ? "Timeline"
+        : route === "nexus"
+          ? "Evidence Integrity Map"
+          : "Structured Analysis";
+  return {
+    href: `${caseBasePath}/${route}?exportBlocker=REVIEW_INCOMPLETE#candidate-${encodeURIComponent(candidate?.id ?? "unknown")}`,
+    label,
+  };
 }
 
 function blockerGroup(code: Blocker["code"]) {
@@ -75,7 +115,9 @@ function blockerGroup(code: Blocker["code"]) {
   return "purpose";
 }
 
-export function ExportGatePanel({ gate, headingRef, onEvaluate }: {
+export function ExportGatePanel({ candidates = [], caseBasePath = "/case/demo", gate, headingRef, onEvaluate }: {
+  candidates?: CaseCandidate[];
+  caseBasePath?: string;
   gate: ExportGate | null;
   headingRef: React.RefObject<HTMLHeadingElement | null>;
   onEvaluate?: () => void;
@@ -155,15 +197,37 @@ export function ExportGatePanel({ gate, headingRef, onEvaluate }: {
                       ))}
                     </div>
                   ) : null}
+                  {blocker.code === "REVIEW_INCOMPLETE" && blocker.entityIds.length ? (
+                    <div className="mb-3 grid gap-2">
+                      <p className="text-xs font-semibold">Open each required review</p>
+                      <ul className="grid gap-1.5 sm:grid-cols-2">
+                        {blocker.entityIds.map((id) => {
+                          const candidate = candidates.find((item) => item.id === id);
+                          const destination = candidateReviewDestination(candidate, caseBasePath);
+                          return (
+                            <li key={id}>
+                              <a
+                                className="flex min-h-10 items-center justify-between gap-3 rounded-md border border-border bg-background px-3 py-2 text-xs"
+                                href={destination.href}
+                              >
+                                <span className="min-w-0 truncate font-mono">{id}</span>
+                                <span className="shrink-0 font-semibold">{destination.label}</span>
+                              </a>
+                            </li>
+                          );
+                        })}
+                      </ul>
+                    </div>
+                  ) : null}
                   <p className="text-xs text-muted-foreground">
                     <span className="font-medium text-foreground">Remediation:</span>{" "}
                     {blocker.remediation}
                   </p>
                   <a
                     className="mt-3 inline-flex min-h-10 items-center rounded-md border border-border bg-background px-3 py-2 text-sm font-semibold"
-                    href={remediationHref(blocker)}
+                    href={remediationHref(blocker, caseBasePath)}
                   >
-                    {remediationLabel(blocker)}
+                    {remediationLabel(blocker, caseBasePath)}
                   </a>
                   <dl className="mt-3 grid gap-1 text-xs text-muted-foreground">
                     <div><dt className="inline font-semibold">Code: </dt><dd className="inline">{blocker.code}</dd></div>

@@ -18,6 +18,7 @@ import {
 import { browserCaseAnalysisStore } from "../../lib/cases/browser-case-analysis-store";
 import type { CaseState } from "../../lib/contracts";
 import { browserAnalysisSnapshotMatchesRecordMetadata } from "../../lib/analysis/freshness";
+import { derivePlanningDashboardCounts } from "../../lib/planning";
 
 type NewCaseDraft = {
   assignedPractitioner: string;
@@ -106,6 +107,28 @@ export function CaseDashboard() {
         browserAnalysisSnapshotMatchesRecordMetadata(snapshot, record),
     );
   }).length;
+  const currentSnapshots = registry.cases.flatMap((record) => {
+    const snapshot = analysisSnapshots[record.id];
+    return snapshot &&
+      browserAnalysisSnapshotMatchesRecordMetadata(snapshot, record)
+      ? [snapshot]
+      : [];
+  });
+  const activeUrgentNeedCount = currentSnapshots.reduce(
+    (total, snapshot) =>
+      total + derivePlanningDashboardCounts(snapshot).openUrgentNeeds,
+    0,
+  );
+  const planningTaskCounts = currentSnapshots.reduce(
+    (counts, snapshot) => {
+      const planning = derivePlanningDashboardCounts(snapshot);
+      return {
+        open: counts.open + planning.openTasks,
+        overdue: counts.overdue + planning.overdueTasks,
+      };
+    },
+    { open: 0, overdue: 0 },
+  );
 
   return (
     <>
@@ -121,8 +144,10 @@ export function CaseDashboard() {
             <p className="mt-2 max-w-2xl text-sm text-muted-foreground">
               Create and reopen independent fictional cases stored only in this
               browser. Purpose Brief, browser-local Documents, and Structured
-              Analysis are connected; later planning and export stages remain
-              unavailable for created cases.
+              Analysis are connected. Urgent Needs and Evidence Gaps use the
+              same case state. Interview Planner, Services &amp; Referrals,
+              Case Tasks, Notes &amp; Journal, review destinations, Export
+              Gate, and Audit Trail are connected after a current analysis.
             </p>
           </div>
           <button
@@ -151,8 +176,15 @@ export function CaseDashboard() {
           />
           <SummaryMetric label="Documents" value={documentCount} />
           <SummaryMetric label="Analysis complete" value={currentAnalysisCount} />
-          <SummaryMetric label="Planning" value="Unavailable" />
-          <SummaryMetric label="Export" value="Unavailable" />
+          <SummaryMetric
+            label="Active urgent needs"
+            value={activeUrgentNeedCount}
+          />
+          <SummaryMetric
+            hint={`${planningTaskCounts.overdue} overdue`}
+            label="Open tasks"
+            value={planningTaskCounts.open}
+          />
         </div>
 
         <section className="mt-8" aria-labelledby="recent-cases-heading">
@@ -201,6 +233,15 @@ export function CaseDashboard() {
                     ),
                 );
                 const analysisHref = `/case/${record.id}/analysis`;
+                const openGapCount =
+                  analysisCurrent && analysis
+                    ? analysis.candidates.filter(
+                        (candidate) =>
+                          candidate.kind === "context_gap" &&
+                          candidate.inclusionStatus === "active" &&
+                          candidate.responseStatus === "unanswered",
+                      ).length
+                    : 0;
                 const documentsReady =
                   record.documentPacket?.masking.reviewStatus === "approved" &&
                   record.documentPacket.masking.leakScanStatus === "passed" &&
@@ -263,7 +304,7 @@ export function CaseDashboard() {
                       <dt className="text-muted-foreground">Analysis</dt>
                       <dd>
                         {analysisCurrent && analysis
-                          ? `${analysis.candidates.length} candidate${analysis.candidates.length === 1 ? "" : "s"}`
+                          ? `${analysis.candidates.length} candidate${analysis.candidates.length === 1 ? "" : "s"} · ${openGapCount} open gap${openGapCount === 1 ? "" : "s"}`
                           : documentsReady
                             ? "Ready to start"
                             : "Complete Documents first"}

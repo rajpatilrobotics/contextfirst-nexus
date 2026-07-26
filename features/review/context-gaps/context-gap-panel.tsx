@@ -55,17 +55,50 @@ function neutralGapQuestion(gap: ContextGap) {
   if (gap.id === "CAND-URG-INTERPRETER") {
     return "What, if anything, have you been told about interpretation support for the hearing?";
   }
+  if (gap.id.includes("LOCAL-GAP-A-RECRUITMENT")) {
+    return "What, if anything, do you remember about how the opportunity was described and whether those terms changed?";
+  }
+  if (gap.id.includes("LOCAL-GAP-A-MOVEMENT")) {
+    return "What, if anything, do you remember about how travel, movement, or accommodation was arranged?";
+  }
+  if (gap.id.includes("LOCAL-GAP-A-CONTROL")) {
+    return "What, if anything, do you remember about whether you could make your own choices or leave safely?";
+  }
+  if (gap.id.includes("LOCAL-GAP-A-WORK")) {
+    return "What, if anything, do you remember about the work terms, hours, pay, or ability to stop working?";
+  }
+  if (gap.id.includes("LOCAL-GAP-B-COMPELLED")) {
+    return "What, if anything, do you remember about instructions or pressure connected with the event?";
+  }
+  if (gap.id.includes("LOCAL-GAP-B-PROCEEDING")) {
+    return "What, if anything, have you been told about the event, date, or current procedural status?";
+  }
+  if (gap.id.includes("LOCAL-GAP-C-SAFETY")) {
+    return "What, if anything, would help you feel safer right now, including any safe-contact limits?";
+  }
+  if (gap.id.includes("LOCAL-GAP-C-ACCESS")) {
+    return "What, if anything, would help with language, accessibility, health, or communication support?";
+  }
+  if (gap.id.includes("LOCAL-GAP-C-PROCEDURAL")) {
+    return "What, if anything, have you been told about a hearing, deadline, or support needed to prepare?";
+  }
   return "What, if anything, would you like the practitioner to understand about this unresolved point?";
 }
 
 export function ContextGapPanel({
   gap,
+  interviewHref = "/case/demo/interview",
   state,
+  taskHref = "/case/demo/tasks",
+  owner = "M. Chen",
   onCommand,
   onOpenSource,
 }: {
   gap: ContextGap;
+  interviewHref?: string | null;
   state: CaseState;
+  taskHref?: string | null;
+  owner?: string;
   onCommand: CaseCommandDispatcher;
   onOpenSource?: (selection: SourceSelection) => void;
 }) {
@@ -168,7 +201,7 @@ export function ContextGapPanel({
     setCommandMessage(null);
     const base = {
       gapId: gap.id,
-      owner: "M. Chen",
+      owner,
       priority: "medium" as const,
     };
     const command =
@@ -213,16 +246,33 @@ export function ContextGapPanel({
 	      actionType === "create_interview_question"
 	        ? createdState?.interviewQuestions.find((question) => !previousIds.has(question.id))?.id
 	        : createdState?.caseTasks.find((task) => !previousIds.has(task.id))?.id;
-	    const href = actionType === "create_interview_question" ? "/case/demo/interview" : "/case/demo/tasks";
+	    const href =
+	      actionType === "create_interview_question"
+	        ? interviewHref
+	        : taskHref;
+	    const recordHref =
+	      href && createdId
+	        ? `${href}#${
+	            actionType === "create_interview_question"
+	              ? "question"
+	              : "task"
+	          }-${createdId}`
+	        : href;
 	    setCommandMessage({
 	      tone: "success",
 	      content: (
 	        <>
 	          {createdId ?? "Planning action"} created from {gap.id}.{" "}
-	          <a className="underline underline-offset-2" href={href}>
-	            Open {actionType === "create_interview_question" ? "Interview Planner" : "Case Tasks"}
-	          </a>
-	          .
+	          {recordHref ? (
+	            <>
+	              <a className="underline underline-offset-2" href={recordHref}>
+	                Open {actionType === "create_interview_question" ? "Interview Planner" : "Case Tasks"}
+	              </a>
+	              .
+	            </>
+	          ) : (
+	            "The planning record is saved; its destination remains unavailable in this browser-created-case slice."
+	          )}
 	        </>
 	      ),
 	    });

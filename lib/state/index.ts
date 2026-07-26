@@ -48,6 +48,7 @@ import {
 } from "../analysis/replay";
 import { buildLocalSourceExtraction } from "../analysis/local-source-extraction";
 import { createInitialPlanningState, serviceProviderDirectory } from "../planning";
+import { migrateLegacyCaseStateSourceMaterial } from "../purpose/source-material-migration";
 
 export const CASE_STATE_STORAGE_KEY = "contextfirst-nexus.case-state.v1" as const;
 const VERSION = "1.0.0" as const;
@@ -1449,7 +1450,14 @@ export function restoreCaseState(serialized: string): RestoreResult {
     if (!raw || typeof raw !== "object" || Array.isArray(raw)) {
       return { ok: false, reason: "persisted_json_invalid", resetState: createInitialCaseState() };
     }
-    const rawRecord = raw as Record<string, unknown>;
+    const migratedRaw = migrateLegacyCaseStateSourceMaterial(
+      raw,
+      "bundled_synthetic_fixture",
+    );
+    if (!migratedRaw || typeof migratedRaw !== "object" || Array.isArray(migratedRaw)) {
+      return { ok: false, reason: "persisted_json_invalid", resetState: createInitialCaseState() };
+    }
+    const rawRecord = migratedRaw as Record<string, unknown>;
     if (
       rawRecord.storageKey !== CASE_STATE_STORAGE_KEY ||
       rawRecord.caseId !== "CFN-DEMO-001" ||
@@ -1487,6 +1495,9 @@ export function restoreCaseState(serialized: string): RestoreResult {
       canonicalFixtureDigest: _canonicalFixtureDigest,
       ...caseProjection
     } = parsed;
+    void _storageKey;
+    void _persistedAt;
+    void _canonicalFixtureDigest;
     const caseResult = CaseStateSchema.safeParse({
       ...caseProjection,
       caseStatus: "draft",

@@ -26,6 +26,27 @@ Changing a frozen decision requires:
 
 ## 3. Frozen product decisions
 
+### DEC-053: Truthful browser-created handoff classification
+
+- Date: 2026-07-26
+- Status: Accepted for implementation
+- Decision: A complete browser-created Purpose Brief must explicitly classify
+  its packet as user-attested synthetic test material or user-attested
+  authorized public material. The classification, matching authority
+  attestation, current review state, masking result, citations, coverage,
+  dependencies, jurisdiction check, and handoff selection jointly control the
+  fail-closed Export Gate. Semantic, JSON, and PDF handoffs are local
+  projections of one canonical manifest and state the exact attested
+  classification. Private, confidential, unclassified, mixed-origin, or
+  mismatched packets remain blocked.
+- Reason: Browser-local ingestion and review are now real, but reusing the
+  bundled fixture's `Synthetic case` label for authorized public material would
+  be false. An explicit classification allows a truthful judge workflow
+  without claiming that the application independently verifies authority,
+  authenticity, or public-source status.
+- Authority: Direct user approval on 2026-07-26 and the
+  `Browser-created case export contract migration` section of `plan.md`.
+
 ### DEC-046: Browser-local ingestion hardening
 
 - Date: 2026-07-25

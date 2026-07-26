@@ -135,6 +135,12 @@ function storeReadyCase() {
     ...purpose,
     id: `PURPOSE-${CASE_ID}`,
     caseId: CASE_ID,
+    sourceMaterialClassification: "user_attested_authorized_public",
+    authority: {
+      ...purpose.authority,
+      basis: "user_attested_authorized_public_material",
+      consentStatus: "not_applicable_authorized_public_material",
+    },
     createdAt: NOW,
     updatedAt: NOW,
   });
@@ -290,16 +296,18 @@ describe("browser-created Structured Analysis workspace", () => {
       />,
     );
     expect(await screen.findByText("Live service ready")).toBeInTheDocument();
-    await user.click(
-      screen.getByText("Optional live-provider analysis"),
-    );
+    expect(
+      screen.getByRole("region", { name: "Recommended live analysis" }),
+    ).toBeInTheDocument();
     await user.click(
       screen.getByRole("checkbox", {
         name: /I confirm this packet contains only synthetic or authorized public material/i,
       }),
     );
     await user.click(
-      screen.getByRole("button", { name: "Start live analysis" }),
+      screen.getByRole("button", {
+        name: "Start recommended live analysis",
+      }),
     );
     expect(
       await screen.findByRole("region", {
@@ -381,29 +389,32 @@ describe("browser-created Structured Analysis workspace", () => {
       async save() {},
     };
     const fetchMock = vi.fn(
-      async (_input: RequestInfo | URL, _init?: RequestInit) =>
-        new Response(
-        JSON.stringify({
-          schemaVersion: "1.0.0",
-          liveAnalysisEnabled: false,
-          replayEnabled: true,
-          options: multipleSelectableProviderOptions().map((option) =>
-            option.mode === "live"
-              ? {
-                  ...option,
-                  availabilityStatus: "disabled",
-                  selectable: false,
-                }
-              : option,
-          ),
-        }),
+      async (input: RequestInfo | URL, init?: RequestInit) => {
+        void input;
+        void init;
+        return new Response(
+          JSON.stringify({
+            schemaVersion: "1.0.0",
+            liveAnalysisEnabled: false,
+            replayEnabled: true,
+            options: multipleSelectableProviderOptions().map((option) =>
+              option.mode === "live"
+                ? {
+                    ...option,
+                    availabilityStatus: "disabled",
+                    selectable: false,
+                  }
+                : option,
+            ),
+          }),
           { status: 200, headers: { "Content-Type": "application/json" } },
-        ),
+        );
+      },
     );
     vi.stubGlobal("fetch", fetchMock);
     const user = userEvent.setup();
 
-    render(
+    const localWorkspace = render(
       <BrowserCaseStructuredAnalysisWorkspace
         analysisStore={analysisStore}
         caseId={CASE_ID}
@@ -432,19 +443,43 @@ describe("browser-created Structured Analysis workspace", () => {
     expect(saved?.analysisRuns[0]).toMatchObject({
       mode: "deterministic_replay",
       provider: {
-        adapterVersion: "browser-deterministic-analysis-v1",
+        adapterVersion: "browser-deterministic-analysis-v4",
         providerTransmission: false,
       },
       status: "succeeded",
     });
     expect(
-      new Set(saved?.candidates.map((candidate) => candidate.lane)),
+      new Set(
+        saved?.candidates
+          .filter((candidate) => candidate.kind === "review_lane_item")
+          .map((candidate) => candidate.lane),
+      ),
     ).toEqual(
       new Set([
         "trafficking_indicators",
         "protection_remedy_urgency",
       ]),
     );
+    expect(
+      saved?.candidates.some((candidate) => candidate.kind === "context_gap"),
+    ).toBe(true);
+    expect(
+      saved?.candidates
+        .filter((candidate) => candidate.kind === "review_lane_item")
+        .every(
+          (candidate) =>
+            candidate.deterministicMatch?.exactPhrase &&
+            candidate.deterministicMatch.rationale,
+        ),
+    ).toBe(true);
+    expect(
+      await screen.findByLabelText("Deterministic trigger explanation"),
+    ).toHaveTextContent("Exact matched phrase");
+    expect(
+      saved?.candidates.some(
+        (candidate) => candidate.kind === "nexus_relationship",
+      ),
+    ).toBe(true);
     expect(saved?.citations.every((citation) => {
       const segment = saved.segments.find(
         (item) => item.id === citation.segmentId,
@@ -461,5 +496,29 @@ describe("browser-created Structured Analysis workspace", () => {
     expect(
       fetchMock.mock.calls.filter(([, init]) => init?.method === "POST"),
     ).toHaveLength(0);
+
+    if (!saved) throw new Error("expected_saved_local_analysis");
+    localWorkspace.unmount();
+    analysisStore.snapshots.set(CASE_ID, {
+      ...saved,
+      analysisRuns: saved.analysisRuns.map((run) => ({
+        ...run,
+        provider: {
+          ...run.provider,
+          adapterVersion: "browser-deterministic-analysis-v1",
+        },
+      })),
+    });
+    render(
+      <BrowserCaseStructuredAnalysisWorkspace
+        analysisStore={analysisStore}
+        caseId={CASE_ID}
+        fileStore={fileStore}
+        processSources={vi.fn(async () => processedResult())}
+      />,
+    );
+    expect(
+      await screen.findByRole("region", { name: "Analysis needs rerun" }),
+    ).toBeInTheDocument();
   });
 });

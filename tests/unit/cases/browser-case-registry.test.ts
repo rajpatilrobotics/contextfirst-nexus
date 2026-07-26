@@ -105,6 +105,12 @@ describe("browser-local case registry", () => {
       id: `PURPOSE-${first.record.id}`,
       caseId: first.record.id,
       revision: 1,
+      sourceMaterialClassification: "user_attested_synthetic" as const,
+      authority: {
+        ...source.authority,
+        basis: "user_attested_synthetic_material" as const,
+        consentStatus: "not_applicable_synthetic_material" as const,
+      },
       createdAt: NOW,
       updatedAt: NOW,
     };
@@ -128,5 +134,56 @@ describe("browser-local case registry", () => {
       restored.registry.cases.find((record) => record.id === first.record.id)
         ?.purposeBrief?.revision,
     ).toBe(1);
+  });
+
+  it("upgrades the former synthetic-only Purpose contract without losing a browser case", () => {
+    const created = addCase(
+      createEmptyBrowserCaseRegistry(),
+      "REF-2026-0203-SYN",
+      "MIGRATION",
+    );
+    const source = trustedPurposeBrief();
+    const saved = saveBrowserCasePurpose(created.registry, created.record.id, {
+      ...source,
+      id: `PURPOSE-${created.record.id}`,
+      caseId: created.record.id,
+      sourceMaterialClassification: "user_attested_synthetic",
+      authority: {
+        ...source.authority,
+        basis: "user_attested_synthetic_material",
+        consentStatus: "not_applicable_synthetic_material",
+      },
+    });
+    if (!saved.ok) throw new Error(saved.reason);
+    const legacy = JSON.parse(JSON.stringify(saved.registry)) as {
+      cases: Array<{
+        purposeBrief: Record<string, unknown> & {
+          authority: Record<string, unknown>;
+        };
+      }>;
+    };
+    const purpose = legacy.cases[0].purposeBrief;
+    delete purpose.sourceMaterialClassification;
+    purpose.syntheticDataAcknowledged =
+      purpose.sourceMaterialBoundaryAcknowledged;
+    delete purpose.sourceMaterialBoundaryAcknowledged;
+    purpose.authority.syntheticOrHarmlessDataAttested =
+      purpose.authority.sourceMaterialAttested;
+    delete purpose.authority.sourceMaterialAttested;
+    purpose.authority.basis = "not_applicable_synthetic_fixture";
+    purpose.authority.consentStatus = "not_applicable_synthetic_fixture";
+
+    const restored = restoreBrowserCaseRegistry(JSON.stringify(legacy));
+
+    expect(restored.ok).toBe(true);
+    expect(restored.registry.cases[0]?.purposeBrief).toMatchObject({
+      sourceMaterialClassification: "user_attested_synthetic",
+      sourceMaterialBoundaryAcknowledged: true,
+      authority: {
+        basis: "user_attested_synthetic_material",
+        consentStatus: "not_applicable_synthetic_material",
+        sourceMaterialAttested: true,
+      },
+    });
   });
 });

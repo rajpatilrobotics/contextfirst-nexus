@@ -10,7 +10,7 @@ import {
 } from "./fixtures";
 
 describe("TASK-023 Safety Lab evidence", () => {
-  it("shows every integrated provider record with only genuine Passed and Not run states", () => {
+  it("shows every integrated provider record with its genuine measured status", () => {
     const measured = [...reports.flatMap((report) => report.evidence), replayContinuity];
     const { container } = render(
       <SafetyLab
@@ -26,10 +26,20 @@ describe("TASK-023 Safety Lab evidence", () => {
     for (const evidenceId of evidenceIds) {
       expect(container.querySelector(`#result-${evidenceId}`)).toBeInTheDocument();
     }
-    expect(container.querySelectorAll('[data-evaluation-status="not_run"]')).toHaveLength(81);
-    expect(container.querySelectorAll('[data-evaluation-status="passed"]')).toHaveLength(30);
-    expect(container.querySelector('[data-evaluation-status="failed"]')).not.toBeInTheDocument();
-    expect(screen.getByText(/Production evidence currently contains genuine Passed and Not run records only/i)).toBeInTheDocument();
+    expect(
+      container.querySelectorAll('article[data-evaluation-status="not_run"]'),
+    ).toHaveLength(102);
+    expect(
+      container.querySelectorAll('article[data-evaluation-status="passed"]'),
+    ).toHaveLength(40);
+    expect(
+      container.querySelectorAll('article[data-evaluation-status="failed"]'),
+    ).toHaveLength(1);
+    expect(
+      screen.getByText(
+        /Production evidence shows only genuine recorded states/i,
+      ),
+    ).toBeInTheDocument();
     expect(screen.getByText("Replay continuity", { selector: "span" })).toBeInTheDocument();
   });
 

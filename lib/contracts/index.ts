@@ -582,6 +582,24 @@ export const TranslationStatusSchema = z.enum([
   "translated_unverified",
   "unknown",
 ]);
+export const SourceMaterialClassificationSchema = z.enum([
+  "bundled_synthetic_fixture",
+  "user_attested_synthetic",
+  "user_attested_authorized_public",
+]);
+export type SourceMaterialClassification = z.infer<
+  typeof SourceMaterialClassificationSchema
+>;
+export const PurposeAuthorityBasisSchema = z.enum([
+  "not_applicable_synthetic_fixture",
+  "user_attested_synthetic_material",
+  "user_attested_authorized_public_material",
+]);
+export const PurposeConsentStatusSchema = z.enum([
+  "not_applicable_synthetic_fixture",
+  "not_applicable_synthetic_material",
+  "not_applicable_authorized_public_material",
+]);
 
 export const CasePurposeBriefSchema = strict({
   id: IdSchemas.purposeBriefId,
@@ -602,12 +620,13 @@ export const CasePurposeBriefSchema = strict({
   supportedWorkflow: z.literal("case_preparation_handoff"),
   statedPurpose: z.string().trim().min(1).max(500),
   excludedDecisions: z.array(ExcludedDecisionSchema),
+  sourceMaterialClassification: SourceMaterialClassificationSchema,
   authority: strict({
-    basis: z.literal("not_applicable_synthetic_fixture"),
+    basis: PurposeAuthorityBasisSchema,
     status: z.enum(["active", "withdrawn"]),
-    consentStatus: z.literal("not_applicable_synthetic_fixture"),
+    consentStatus: PurposeConsentStatusSchema,
     authorityNotVerifiedAcknowledged: z.literal(true),
-    syntheticOrHarmlessDataAttested: z.literal(true),
+    sourceMaterialAttested: z.literal(true),
   }),
   jurisdictionCode: JurisdictionCodeSchema,
   sourceLanguage: z.literal("en"),
@@ -616,7 +635,7 @@ export const CasePurposeBriefSchema = strict({
   intendedRecipientCategory: SafeShareRecipientCategorySchema,
   requestedExport: RequestedExportSchema,
   prohibitedDecisionsAcknowledged: z.literal(true),
-  syntheticDataAcknowledged: z.literal(true),
+  sourceMaterialBoundaryAcknowledged: z.literal(true),
   providerSelection: PurposeProviderSelectionSchema,
   cooperationNeutralityAcknowledged: z.literal(true),
   authorityAttested: z.literal(true),
@@ -628,6 +647,43 @@ export const CasePurposeBriefSchema = strict({
   );
   if (missing.length > 0) {
     context.addIssue({ code: "custom", message: "Purpose brief must include every excluded decision." });
+  }
+  const expectedAuthority = {
+    bundled_synthetic_fixture: {
+      basis: "not_applicable_synthetic_fixture",
+      consentStatus: "not_applicable_synthetic_fixture",
+    },
+    user_attested_synthetic: {
+      basis: "user_attested_synthetic_material",
+      consentStatus: "not_applicable_synthetic_material",
+    },
+    user_attested_authorized_public: {
+      basis: "user_attested_authorized_public_material",
+      consentStatus: "not_applicable_authorized_public_material",
+    },
+  } as const;
+  const expected = expectedAuthority[brief.sourceMaterialClassification];
+  if (
+    brief.authority.basis !== expected.basis ||
+    brief.authority.consentStatus !== expected.consentStatus
+  ) {
+    context.addIssue({
+      code: "custom",
+      message: "Purpose authority must match the selected source-material classification.",
+      path: ["authority"],
+    });
+  }
+  if (
+    (brief.caseId === "CFN-DEMO-001" &&
+      brief.sourceMaterialClassification !== "bundled_synthetic_fixture") ||
+    (brief.caseId !== "CFN-DEMO-001" &&
+      brief.sourceMaterialClassification === "bundled_synthetic_fixture")
+  ) {
+    context.addIssue({
+      code: "custom",
+      message: "Bundled fixture classification is reserved for the bundled demonstration case.",
+      path: ["sourceMaterialClassification"],
+    });
   }
 });
 export type CasePurposeBrief = z.infer<typeof CasePurposeBriefSchema>;
@@ -990,6 +1046,11 @@ const CandidateItemBaseSchema = strict({
   title: safeText,
   proposedText: safeText,
   currentText: safeText,
+  deterministicMatch: strict({
+    ruleCode: z.string().trim().min(1).max(80),
+    exactPhrase: z.string().trim().min(1).max(240),
+    rationale: safeText,
+  }).optional(),
   currentTextOrigin: ItemOriginSchema,
   itemOrigin: ItemOriginSchema,
   assertionMode: AssertionModeSchema,
@@ -1356,14 +1417,24 @@ export const ServiceProviderDirectoryRecordSchema = strict({
   id: IdSchemas.serviceProviderId,
   name: safeText,
   category: safeText,
+  needCategories: z.array(UrgentNeedCategorySchema).min(1),
+  resourceType: z.enum([
+    "official_directory",
+    "official_locator",
+    "official_roster",
+    "funded_navigation_service",
+  ]),
   coverageArea: safeText,
   hours: safeText,
   languages: z.array(safeText),
   accessibility: safeText,
   eligibilityCaveat: safeText,
   safeContactMethodLabel: safeText,
-  fixtureReviewDate: dateOnly,
-  verificationStatus: z.literal("fictional_unverified"),
+  sourceLabel: safeText,
+  sourceUrl: z.string().url(),
+  lastVerifiedDate: dateOnly,
+  verificationStatus: z.literal("official_source_verified"),
+  availabilityStatus: z.literal("not_verified"),
 });
 export type ServiceProviderDirectoryRecord = z.infer<typeof ServiceProviderDirectoryRecordSchema>;
 
@@ -1467,6 +1538,10 @@ export const BrowserAnalysisIntentSchema = strict({
     practitionerRole: PractitionerRoleSchema,
     jurisdictionCode: JurisdictionCodeSchema,
     requestedExport: RequestedExportSchema,
+    intendedRecipientCategory: SafeShareRecipientCategorySchema,
+    sourceMaterialClassification: SourceMaterialClassificationSchema.exclude([
+      "bundled_synthetic_fixture",
+    ]),
   }),
   documentSetDigest: sha256,
   maskingRevision: nonNegativeInteger,
@@ -1582,6 +1657,19 @@ export const ModelCandidateProposalSchema = strict({
     }),
   ),
   unknowns: z.array(z.string()),
+  dateStart: dateOnly.nullish(),
+  dateEnd: dateOnly.nullish(),
+  datePrecision: TimelinePrecisionSchema.nullish(),
+  dateAlternatives: z.array(
+    strict({
+      start: dateOnly.optional(),
+      end: dateOnly.optional(),
+      label: nonEmptyString,
+    }),
+  ).nullish(),
+  locationLabel: safeText.nullish(),
+  actorLabels: z.array(safeText).nullish(),
+  nexusCategory: NexusCategorySchema.nullish(),
 });
 export const ModelAnalysisProposalSchema = strict({
   candidates: z.array(ModelCandidateProposalSchema),
@@ -2413,7 +2501,8 @@ export const PurposeExportSummarySchema = strict({
   requestedExport: ExportKindSchema,
   jurisdictionCode: JurisdictionCodeSchema,
   excludedDecisions: z.array(ExcludedDecisionSchema),
-  authorityBasis: z.literal("not_applicable_synthetic_fixture"),
+  sourceMaterialClassification: SourceMaterialClassificationSchema,
+  authorityBasis: PurposeAuthorityBasisSchema,
 });
 
 export const ReviewedExportCandidateSchema = strict({
@@ -2562,14 +2651,18 @@ export const ExportManifestSchema = strict({
   caseId: IdSchemas.caseId,
   caseRevision: nonNegativeInteger,
   reviewedStateHash: sha256,
-  synthetic: z.literal(true),
+  sourceMaterialClassification: SourceMaterialClassificationSchema,
   purposeBriefId: IdSchemas.purposeBriefId,
   purposeSummary: PurposeExportSummarySchema,
   runManifest: AnalysisRunSchema.refine((run) => run.status === "succeeded"),
   generatedAt: isoUtcTimestamp,
   labels: z.tuple([
     z.literal("AI-assisted, human-reviewed case-preparation draft."),
-    z.literal("Synthetic case."),
+    z.union([
+      z.literal("Bundled synthetic demonstration."),
+      z.literal("Uploaded synthetic or hackathon test material — user-attested, not independently verified."),
+      z.literal("Authorized public material — user-attested, not independently verified."),
+    ]),
     z.literal("Not legal advice."),
     z.literal("Local legal verification required."),
   ]),

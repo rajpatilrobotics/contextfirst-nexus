@@ -41,7 +41,7 @@ export function ExportPdfDocument({ manifest }: { manifest: ExportManifest }) {
         ))}
         <Text
           fixed
-          render={({ pageNumber, totalPages }) => `Synthetic case · ${manifest.id} · Page ${pageNumber} of ${totalPages}`}
+          render={({ pageNumber, totalPages }) => `${manifest.labels[1]} · ${manifest.id} · Page ${pageNumber} of ${totalPages}`}
           style={styles.footer}
         />
       </Page>

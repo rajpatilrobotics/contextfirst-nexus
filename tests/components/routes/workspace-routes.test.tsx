@@ -2,9 +2,9 @@ import { render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import AnalysisPage from "../../../app/case/demo/analysis/page";
 import AuditPage from "../../../app/case/demo/audit/page";
+import DocumentsPage from "../../../app/case/demo/documents/page";
 import ExportPage from "../../../app/case/demo/export/page";
 import GapsPage from "../../../app/case/demo/gaps/page";
-import IntakePage from "../../../app/case/demo/intake/page";
 import InterviewPage from "../../../app/case/demo/interview/page";
 import NexusPage from "../../../app/case/demo/nexus/page";
 import NotesPage from "../../../app/case/demo/notes/page";
@@ -22,7 +22,7 @@ import { checkpointState } from "../review/candidate/review-test-state";
 
 const routeCases = [
   ["/case/demo/purpose", PurposePage, /^Purpose Brief$/i],
-  ["/case/demo/intake", IntakePage, /Documents & Source Health/i],
+  ["/case/demo/documents", DocumentsPage, /Documents & Source Health/i],
   ["/case/demo/analysis", AnalysisPage, /^Structured Analysis$/i],
   ["/case/demo/urgent-needs", UrgentNeedsPage, /^Urgent Needs$/i],
   ["/case/demo/gaps", GapsPage, /^Evidence Gaps$/i],
@@ -32,7 +32,7 @@ const routeCases = [
   ["/case/demo/notes", NotesPage, /^Notes & Journal$/i],
   ["/case/demo/nexus", NexusPage, /^Evidence Integrity Map$/i],
   ["/case/demo/timeline", TimelinePage, /^Timeline$/i],
-  ["/case/demo/export", ExportPage, /^Export Gate & Safe Handoff$/i],
+  ["/case/demo/export", ExportPage, /^Export Gate$/i],
   ["/case/demo/audit", AuditPage, /^Audit Trail$/i],
 ] as const;
 

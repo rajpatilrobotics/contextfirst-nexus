@@ -106,7 +106,7 @@ describe("TASK-021 context gaps", () => {
 
     expect(await screen.findByRole("link", { name: "Open Interview Planner" })).toHaveAttribute(
       "href",
-      "/case/demo/interview",
+      "/case/demo/interview#question-QUESTION-3",
     );
     expect(screen.getByText(/QUESTION-3 created from CAND-SENDER-0402/i)).toBeInTheDocument();
     expect(recordedCommand).toMatchObject({
@@ -117,6 +117,39 @@ describe("TASK-021 context gaps", () => {
       },
     });
     expect(JSON.stringify(recordedCommand)).not.toContain("help clarify this point");
+  });
+
+  it("uses a case-specific task owner without linking to an unavailable dynamic destination", async () => {
+    const user = userEvent.setup();
+    const state = checkpointState();
+    let recordedCommand: CaseCommand | null = null;
+    const onCommand = vi.fn<CaseCommandDispatcher>((command) => {
+      recordedCommand = command;
+      return applyCaseCommand(state, command);
+    });
+    render(
+      <ContextGapPanel
+        gap={gap(state, "CAND-SENDER-0402")}
+        onCommand={onCommand}
+        owner="Dynamic reviewer"
+        state={state}
+        taskHref={null}
+      />,
+    );
+
+    await user.click(screen.getByRole("button", { name: "Create case task" }));
+
+    expect(recordedCommand).toMatchObject({
+      type: "create_gap_action",
+      input: {
+        actionType: "create_case_task",
+        owner: "Dynamic reviewer",
+      },
+    });
+    expect(screen.getByText(/destination remains unavailable/i)).toBeInTheDocument();
+    expect(
+      screen.queryByRole("link", { name: "Open Case Tasks" }),
+    ).not.toBeInTheDocument();
   });
 
   it("completes an unknown context gap through the canonical individual review command", async () => {

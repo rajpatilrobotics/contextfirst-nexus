@@ -187,8 +187,9 @@ export function BrowserCasePurposeWorkspace({ caseId }: { caseId: string }) {
           <DemoOnlyNotice>
             Purpose persists in this browser. Documents supports browser-local PDF
             intake, text-layer extraction, source health, and masking. Structured
-            Analysis becomes available after the document privacy checks pass;
-            later planning and export stages remain unavailable.
+            Analysis becomes available after the document privacy checks pass.
+            Planning and local handoff routes use the current reviewed analysis
+            state and remain fail-closed until their canonical prerequisites pass.
           </DemoOnlyNotice>
         </section>
 

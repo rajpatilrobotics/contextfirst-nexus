@@ -12,6 +12,7 @@ import {
   type ExportSelection,
   type GuidanceCard,
   type ReviewDecision,
+  type SourceMaterialClassification,
 } from "../../contracts";
 import {
   analysisRunInputMatchesState,
@@ -21,12 +22,13 @@ import {
 const MANIFEST_SCHEMA_VERSION = "1.0.0" as const;
 const REVIEWED_HASH_PROJECTION_VERSION = "1.0.0" as const;
 const DEFAULT_NOW = "2026-07-16T00:00:00.000Z";
-const LABELS = [
-  "AI-assisted, human-reviewed case-preparation draft.",
-  "Synthetic case.",
-  "Not legal advice.",
-  "Local legal verification required.",
-] as const;
+const SOURCE_MATERIAL_LABELS: Record<SourceMaterialClassification, string> = {
+  bundled_synthetic_fixture: "Bundled synthetic demonstration.",
+  user_attested_synthetic:
+    "Uploaded synthetic or hackathon test material — user-attested, not independently verified.",
+  user_attested_authorized_public:
+    "Authorized public material — user-attested, not independently verified.",
+};
 
 type BlockedExportGate = Extract<ExportGate, { status: "blocked" }>;
 type ExportBlocker = BlockedExportGate["blockers"][number];
@@ -165,13 +167,32 @@ function minimumNecessityIssues(state: CaseState, selection: ExportSelection) {
   const issues: string[] = [];
   const minimum = selection.minimumNecessarySelection;
   if (!minimum.confirmed) issues.push("minimum_necessity_confirmation");
+  if (minimum.selectedCandidateIds.length === 0) {
+    issues.push("minimum_necessity_selection_empty");
+  }
+  const eligibleCandidates = activeReviewedCandidates(state)
+    .filter((candidate) =>
+      candidate.safeShareRecipientCategories.includes(
+        minimum.intendedRecipientCategory,
+      ),
+    );
   const eligible = new Set(
-    activeReviewedCandidates(state)
-      .filter((candidate) => candidate.safeShareRecipientCategories.includes(minimum.intendedRecipientCategory))
-      .map((candidate) => candidate.id),
+    eligibleCandidates.map((candidate) => candidate.id),
   );
+  const selected = new Set(minimum.selectedCandidateIds);
   for (const id of minimum.selectedCandidateIds) {
     if (!eligible.has(id)) issues.push(id);
+  }
+  for (const candidate of eligibleCandidates) {
+    if (!selected.has(candidate.id)) continue;
+    for (const dependency of candidate.dependencies) {
+      if (!dependency.active || dependency.kind === "source") continue;
+      const targetId =
+        dependency.kind === "candidate"
+          ? dependency.candidateId
+          : dependency.nexusCandidateId;
+      if (!selected.has(targetId)) issues.push(targetId);
+    }
   }
   return [...new Set(issues)].sort();
 }
@@ -180,6 +201,56 @@ function guidanceIssues(cards: GuidanceCard[]) {
   return cards
     .filter((card) => card.verificationStatus !== "current_for_scope" || !card.localLegalVerificationRequired)
     .map((card) => card.id);
+}
+
+function authorityMatchesClassification(state: CaseState) {
+  const purpose = state.purposeBrief;
+  if (
+    !purpose ||
+    purpose.status !== "complete" ||
+    purpose.authority.status !== "active" ||
+    !purpose.authorityAttested ||
+    !purpose.authority.sourceMaterialAttested ||
+    !purpose.sourceMaterialBoundaryAcknowledged
+  ) {
+    return false;
+  }
+  const expected = {
+    bundled_synthetic_fixture: {
+      basis: "not_applicable_synthetic_fixture",
+      consentStatus: "not_applicable_synthetic_fixture",
+    },
+    user_attested_synthetic: {
+      basis: "user_attested_synthetic_material",
+      consentStatus: "not_applicable_synthetic_material",
+    },
+    user_attested_authorized_public: {
+      basis: "user_attested_authorized_public_material",
+      consentStatus: "not_applicable_authorized_public_material",
+    },
+  } as const;
+  const match = expected[purpose.sourceMaterialClassification];
+  return (
+    purpose.authority.basis === match.basis &&
+    purpose.authority.consentStatus === match.consentStatus
+  );
+}
+
+function prohibitedDocumentIds(state: CaseState) {
+  const classification = state.purposeBrief?.sourceMaterialClassification;
+  if (!classification) return state.documents.map((document) => document.id);
+  if (classification === "bundled_synthetic_fixture") {
+    return state.documents
+      .filter(
+        (document) =>
+          document.dataOrigin !== "bundled_synthetic" ||
+          !document.syntheticLabelPresent,
+      )
+      .map((document) => document.id);
+  }
+  return state.documents
+    .filter((document) => document.dataOrigin !== "browser_local")
+    .map((document) => document.id);
 }
 
 function buildBlockers(state: CaseState, selection: ExportSelection, options: ExportCoreOptions = {}) {
@@ -192,12 +263,22 @@ function buildBlockers(state: CaseState, selection: ExportSelection, options: Ex
   if (!purpose || purpose.status !== "complete") {
     blockers.push(blocker("PURPOSE_INCOMPLETE", purpose ? [purpose.id] : ["purpose"], "Purpose brief is not complete.", "Complete the Purpose brief before export."));
   }
-  if (!purpose || purpose.authority.status !== "active" || !purpose.authorityAttested || !purpose.authority.syntheticOrHarmlessDataAttested) {
-    blockers.push(blocker("AUTHORITY_INVALID", purpose ? [purpose.id] : ["authority"], "Purpose authority is not valid for export.", "Restore active synthetic fixture authority."));
+  if (!authorityMatchesClassification(state)) {
+    blockers.push(blocker(
+      "AUTHORITY_INVALID",
+      purpose ? [purpose.id] : ["authority"],
+      "Purpose authority and source-material attestations are not valid for handoff.",
+      "Return to Purpose and confirm the packet classification and authority.",
+    ));
   }
-  const prohibitedOrigins = state.documents.filter((document) => document.dataOrigin !== "bundled_synthetic" || !document.syntheticLabelPresent).map((document) => document.id);
+  const prohibitedOrigins = prohibitedDocumentIds(state);
   if (prohibitedOrigins.length > 0) {
-    blockers.push(blocker("DATA_ORIGIN_PROHIBITED", prohibitedOrigins, "Only bundled synthetic data may be exported.", "Remove prohibited-origin documents."));
+    blockers.push(blocker(
+      "DATA_ORIGIN_PROHIBITED",
+      prohibitedOrigins,
+      "The packet source classification does not match its documents or is not eligible for this local handoff.",
+      "Return to Purpose and confirm synthetic test material or authorized public material.",
+    ));
   }
   const incompleteReviews = activeCandidates(state)
     .filter((candidate) => candidate.reviewRequirement === "individual" && !["human_accepted", "human_edited", "rejected"].includes(candidate.reviewStatus))
@@ -466,7 +547,7 @@ export function createExportManifest(state: CaseState, selection: ExportSelectio
     kind: gate.exportSelection.kind,
     caseId: state.caseId,
     caseRevision: state.caseRevision,
-    synthetic: true as const,
+    sourceMaterialClassification: state.purposeBrief.sourceMaterialClassification,
     purposeBriefId: state.purposeBrief.id,
     purposeSummary: {
       supportedWorkflow: state.purposeBrief.supportedWorkflow,
@@ -475,10 +556,16 @@ export function createExportManifest(state: CaseState, selection: ExportSelectio
       requestedExport: state.purposeBrief.requestedExport,
       jurisdictionCode: state.purposeBrief.jurisdictionCode,
       excludedDecisions: [...state.purposeBrief.excludedDecisions].sort(),
+      sourceMaterialClassification: state.purposeBrief.sourceMaterialClassification,
       authorityBasis: state.purposeBrief.authority.basis,
     },
     runManifest: run,
-    labels: LABELS,
+    labels: [
+      "AI-assisted, human-reviewed case-preparation draft.",
+      SOURCE_MATERIAL_LABELS[state.purposeBrief.sourceMaterialClassification],
+      "Not legal advice.",
+      "Local legal verification required.",
+    ] as const,
     exportSelection: gate.exportSelection,
     exportSelectionDigest: gate.exportSelectionDigest,
     includedCandidates,

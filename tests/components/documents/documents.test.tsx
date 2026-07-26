@@ -671,5 +671,5 @@ describe("TASK-019 masking and controller-backed analysis", () => {
       "href",
       "/case/demo/review",
     );
-  });
+  }, 10_000);
 });

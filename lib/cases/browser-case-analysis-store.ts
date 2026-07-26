@@ -1,4 +1,9 @@
 import { CaseStateSchema, type CaseState } from "../contracts";
+import {
+  analysisRunInputMatchesState,
+  selectSuccessfulActiveAnalysisRun,
+} from "../analysis/freshness";
+import { migrateLegacyCaseStateSourceMaterial } from "../purpose/source-material-migration";
 
 const DATABASE_NAME = "contextfirst-nexus.browser-analysis.v1";
 const STORE_NAME = "analysis-snapshots";
@@ -8,6 +13,50 @@ export type BrowserCaseAnalysisStore = {
   load(caseId: string): Promise<CaseState | null>;
   save(caseId: string, state: CaseState): Promise<void>;
 };
+
+export function migrateLegacyBrowserSafeShareEligibility(
+  state: CaseState,
+): CaseState {
+  if (state.caseId === "CFN-DEMO-001" || !state.purposeBrief) return state;
+  const run = selectSuccessfulActiveAnalysisRun(state);
+  if (
+    !run ||
+    run.provider.providerId !== "local_replay" ||
+    run.provider.adapterVersion !== "browser-deterministic-analysis-v2" ||
+    !analysisRunInputMatchesState(state, run) ||
+    state.candidates.some(
+      (candidate) =>
+        candidate.kind !== "context_gap" &&
+        candidate.safeShareRecipientCategories.length > 0,
+    )
+  ) {
+    return state;
+  }
+
+  const recipient = state.purposeBrief.intendedRecipientCategory;
+  const migrated: CaseState = {
+    ...state,
+    analysisRuns: state.analysisRuns.map((candidateRun) =>
+      candidateRun.id === run.id
+        ? {
+            ...candidateRun,
+            provider: {
+              ...candidateRun.provider,
+              // This migration repairs only the v2 safe-share recipient field.
+              // It must not silently claim the newer precision rules ran.
+              adapterVersion: "browser-deterministic-analysis-v3",
+            },
+          }
+        : candidateRun,
+    ),
+    candidates: state.candidates.map((candidate) => ({
+      ...candidate,
+      safeShareRecipientCategories:
+        candidate.kind === "context_gap" ? [] : [recipient],
+    })),
+  };
+  return migrated;
+}
 
 function openDatabase(): Promise<IDBDatabase> {
   return new Promise((resolve, reject) => {
@@ -55,9 +104,14 @@ export const browserCaseAnalysisStore: BrowserCaseAnalysisStore = {
         transaction.objectStore(STORE_NAME).get(caseId),
       );
       if (!stored) return null;
-      const parsed = CaseStateSchema.safeParse(stored.state);
+      const parsed = CaseStateSchema.safeParse(
+        migrateLegacyCaseStateSourceMaterial(
+          stored.state,
+          "user_attested_synthetic",
+        ),
+      );
       return parsed.success && parsed.data.caseId === caseId
-        ? parsed.data
+        ? migrateLegacyBrowserSafeShareEligibility(parsed.data)
         : null;
     } finally {
       database.close();

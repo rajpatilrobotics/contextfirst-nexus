@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import type { ComponentType, ReactNode } from "react";
+import { useEffect, useState, type ComponentType, type ReactNode } from "react";
 import {
   AlertOctagon,
   CheckSquare,
@@ -20,6 +20,8 @@ import {
 } from "lucide-react";
 import { Chip, SyntheticBanner } from "../lovable/nexus-ui";
 import type { BrowserCaseRecord } from "../../lib/cases";
+import { browserCaseAnalysisStore } from "../../lib/cases/browser-case-analysis-store";
+import { browserAnalysisSnapshotMatchesRecordMetadata } from "../../lib/analysis/freshness";
 
 type NavigationIcon = ComponentType<{
   "aria-hidden"?: boolean | "true";
@@ -57,23 +59,86 @@ const GROUPS = ["Intake", "Analysis", "Planning", "Review", "Export"] as const;
 
 export function BrowserCaseShell({
   activeStage = "purpose",
+  analysisCurrent,
   children,
   record,
 }: {
-  activeStage?: "analysis" | "documents" | "purpose";
+  activeStage?:
+    | "analysis"
+    | "audit"
+    | "documents"
+    | "evidence-gaps"
+    | "export"
+    | "interview"
+    | "nexus"
+    | "notes"
+    | "purpose"
+    | "services"
+    | "tasks"
+    | "timeline"
+    | "urgent-needs";
+  analysisCurrent?: boolean;
   children: ReactNode;
   record: BrowserCaseRecord;
 }) {
+  const [storedAnalysisCurrent, setStoredAnalysisCurrent] = useState(false);
   const purposeComplete = record.purposeBrief?.status === "complete";
   const purposeHref = `/case/${record.id}/purpose`;
   const documentsHref = `/case/${record.id}/documents`;
   const analysisHref = `/case/${record.id}/analysis`;
+  const urgentNeedsHref = `/case/${record.id}/urgent-needs`;
+  const evidenceGapsHref = `/case/${record.id}/gaps`;
+  const interviewHref = `/case/${record.id}/interview`;
+  const servicesHref = `/case/${record.id}/services`;
+  const tasksHref = `/case/${record.id}/tasks`;
+  const notesHref = `/case/${record.id}/notes`;
+  const nexusHref = `/case/${record.id}/nexus`;
+  const timelineHref = `/case/${record.id}/timeline`;
+  const exportHref = `/case/${record.id}/export`;
+  const auditHref = `/case/${record.id}/audit`;
+  const progressStage =
+    activeStage === "urgent-needs" || activeStage === "evidence-gaps"
+      ? "analysis"
+      : ["interview", "notes", "services", "tasks"].includes(activeStage)
+        ? "planning"
+        : activeStage === "nexus" || activeStage === "timeline"
+          ? "review"
+          : activeStage === "audit"
+            ? "export"
+            : activeStage;
   const analysisReady =
     Boolean(record.documentPacket) &&
     record.documentPacket?.masking.reviewStatus === "approved" &&
     record.documentPacket.masking.leakScanStatus === "passed" &&
     !record.documentPacket.coverage.hasConsequentialOpenIssue &&
     record.documentPacket.coverage.processedDocuments > 0;
+  const analysisComplete = analysisCurrent ?? storedAnalysisCurrent;
+
+  useEffect(() => {
+    if (typeof analysisCurrent === "boolean") {
+      setStoredAnalysisCurrent(analysisCurrent);
+      return;
+    }
+    let cancelled = false;
+    void browserCaseAnalysisStore
+      .load(record.id)
+      .then((snapshot) => {
+        if (!cancelled) {
+          setStoredAnalysisCurrent(
+            Boolean(
+              snapshot &&
+                browserAnalysisSnapshotMatchesRecordMetadata(snapshot, record),
+            ),
+          );
+        }
+      })
+      .catch(() => {
+        if (!cancelled) setStoredAnalysisCurrent(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [analysisCurrent, record]);
 
   return (
     <div className="min-h-screen overflow-x-hidden bg-background text-foreground">
@@ -137,14 +202,18 @@ export function BrowserCaseShell({
         >
           <ol className="mx-auto grid grid-cols-3 gap-x-3 gap-y-2 px-6 pb-3 sm:flex sm:w-max sm:min-w-full sm:flex-nowrap sm:items-center sm:gap-2">
             {STAGES.map((stage, index) => {
-              const current = stage.id === activeStage;
+              const current = stage.id === progressStage;
               const complete =
                 (stage.id === "purpose" && purposeComplete) ||
-                (stage.id === "documents" && analysisReady);
+                (stage.id === "documents" && analysisReady) ||
+                (stage.id === "analysis" && analysisComplete);
               const available =
                 stage.id === "purpose" ||
                 (stage.id === "documents" && purposeComplete) ||
-                (stage.id === "analysis" && analysisReady);
+                (stage.id === "analysis" && analysisReady) ||
+                (stage.id === "planning" && analysisComplete) ||
+                (stage.id === "review" && analysisComplete) ||
+                (stage.id === "export" && analysisComplete);
               const stageBody = (
                 <>
                   <span
@@ -184,7 +253,13 @@ export function BrowserCaseShell({
                       aria-current={current ? "step" : undefined}
                       className="flex items-center gap-2"
                       href={
-                        stage.id === "analysis"
+                        stage.id === "review"
+                          ? nexusHref
+                          : stage.id === "export"
+                          ? exportHref
+                          : stage.id === "planning"
+                          ? interviewHref
+                          : stage.id === "analysis"
                           ? analysisHref
                           : stage.id === "documents"
                             ? documentsHref
@@ -217,7 +292,9 @@ export function BrowserCaseShell({
 
       <div className="border-b border-border bg-muted/40 px-6 py-2 text-xs text-muted-foreground lg:hidden">
         {analysisReady
-          ? "Planning, review, and export stages are not yet available for browser-created cases."
+          ? analysisComplete
+            ? "Analysis, planning, review, Export Gate, and Audit Trail are connected to this browser-local case."
+            : "Structured Analysis is ready. Later planning, review, and export stages remain unavailable."
           : "Approve the document privacy check to unlock Structured Analysis. Later workspace stages are not yet available."}
       </div>
 
@@ -292,49 +369,305 @@ export function BrowserCaseShell({
                     </>
                   ) : null}
                   {group === "Analysis" ? (
-                    <li>
-                      {analysisReady ? (
-                        <Link
-                          aria-current={
-                            activeStage === "analysis" ? "page" : undefined
-                          }
-                          className={`flex items-center gap-2 rounded-md px-2 py-1.5 text-sm ${
-                            activeStage === "analysis"
-                              ? "bg-primary text-primary-foreground"
-                              : "text-foreground/80 hover:bg-muted"
-                          }`}
-                          href={analysisHref}
-                        >
-                          <Search
-                            className="h-4 w-4 opacity-80"
-                            aria-hidden="true"
-                          />
-                          <span>Structured Analysis</span>
-                        </Link>
-                      ) : (
-                        <span
-                          aria-disabled="true"
-                          className="flex cursor-not-allowed items-center justify-between gap-2 rounded-md px-2 py-1.5 text-sm text-muted-foreground opacity-65"
-                          title="Approve the document privacy check before analysis"
-                        >
-                          <span className="flex items-center gap-2">
+                    <>
+                      <li>
+                        {analysisReady ? (
+                          <Link
+                            aria-current={
+                              activeStage === "analysis" ? "page" : undefined
+                            }
+                            className={`flex items-center gap-2 rounded-md px-2 py-1.5 text-sm ${
+                              activeStage === "analysis"
+                                ? "bg-primary text-primary-foreground"
+                                : "text-foreground/80 hover:bg-muted"
+                            }`}
+                            href={analysisHref}
+                          >
                             <Search
                               className="h-4 w-4 opacity-80"
                               aria-hidden="true"
                             />
                             <span>Structured Analysis</span>
+                          </Link>
+                        ) : (
+                          <span
+                            aria-disabled="true"
+                            className="flex cursor-not-allowed items-center justify-between gap-2 rounded-md px-2 py-1.5 text-sm text-muted-foreground opacity-65"
+                            title="Approve the document privacy check before analysis"
+                          >
+                            <span className="flex items-center gap-2">
+                              <Search
+                                className="h-4 w-4 opacity-80"
+                                aria-hidden="true"
+                              />
+                              <span>Structured Analysis</span>
+                            </span>
+                            <span className="font-mono text-[8px] uppercase tracking-[0.1em]">
+                              Unavailable
+                            </span>
                           </span>
-                          <span className="font-mono text-[8px] uppercase tracking-[0.1em]">
-                            Unavailable
-                          </span>
-                        </span>
-                      )}
-                    </li>
+                        )}
+                      </li>
+                      {[
+                        {
+                          href: urgentNeedsHref,
+                          icon: AlertOctagon,
+                          label: "Urgent Needs",
+                          view: "urgent-needs" as const,
+                        },
+                        {
+                          href: evidenceGapsHref,
+                          icon: HelpCircle,
+                          label: "Evidence Gaps",
+                          view: "evidence-gaps" as const,
+                        },
+                      ].map((item) => {
+                        const Icon = item.icon;
+                        return (
+                          <li key={item.view}>
+                            {analysisComplete ? (
+                              <Link
+                                aria-current={
+                                  activeStage === item.view ? "page" : undefined
+                                }
+                                className={`flex items-center gap-2 rounded-md px-2 py-1.5 text-sm ${
+                                  activeStage === item.view
+                                    ? "bg-primary text-primary-foreground"
+                                    : "text-foreground/80 hover:bg-muted"
+                                }`}
+                                href={item.href}
+                              >
+                                <Icon
+                                  className="h-4 w-4 opacity-80"
+                                  aria-hidden="true"
+                                />
+                                <span>{item.label}</span>
+                              </Link>
+                            ) : (
+                              <span
+                                aria-disabled="true"
+                                className="flex cursor-not-allowed items-center justify-between gap-2 rounded-md px-2 py-1.5 text-sm text-muted-foreground opacity-65"
+                                title="Complete a current Structured Analysis run first"
+                              >
+                                <span className="flex min-w-0 items-center gap-2">
+                                  <Icon
+                                    className="h-4 w-4 shrink-0 opacity-80"
+                                    aria-hidden="true"
+                                  />
+                                  <span>{item.label}</span>
+                                </span>
+                                <span className="font-mono text-[8px] uppercase tracking-[0.1em]">
+                                  Unavailable
+                                </span>
+                              </span>
+                            )}
+                          </li>
+                        );
+                      })}
+                    </>
                   ) : null}
+                  {group === "Planning"
+                    ? [
+                        {
+                          href: interviewHref,
+                          icon: MessageSquare,
+                          label: "Interview Planner",
+                          view: "interview" as const,
+                        },
+                        {
+                          href: servicesHref,
+                          icon: HandHelping,
+                          label: "Services & Referrals",
+                          view: "services" as const,
+                        },
+                        {
+                          href: tasksHref,
+                          icon: CheckSquare,
+                          label: "Case Tasks",
+                          view: "tasks" as const,
+                        },
+                        {
+                          href: notesHref,
+                          icon: NotebookPen,
+                          label: "Notes & Journal",
+                          view: "notes" as const,
+                        },
+                      ].map((item) => {
+                        const Icon = item.icon;
+                        return (
+                          <li key={item.view}>
+                            {analysisComplete ? (
+                              <Link
+                                aria-current={
+                                  activeStage === item.view ? "page" : undefined
+                                }
+                                className={`flex items-center gap-2 rounded-md px-2 py-1.5 text-sm ${
+                                  activeStage === item.view
+                                    ? "bg-primary text-primary-foreground"
+                                    : "text-foreground/80 hover:bg-muted"
+                                }`}
+                                href={item.href}
+                              >
+                                <Icon
+                                  className="h-4 w-4 opacity-80"
+                                  aria-hidden="true"
+                                />
+                                <span>{item.label}</span>
+                              </Link>
+                            ) : (
+                              <span
+                                aria-disabled="true"
+                                className="flex cursor-not-allowed items-center justify-between gap-2 rounded-md px-2 py-1.5 text-sm text-muted-foreground opacity-65"
+                                title="Complete a current Structured Analysis run first"
+                              >
+                                <span className="flex min-w-0 items-center gap-2">
+                                  <Icon
+                                    className="h-4 w-4 shrink-0 opacity-80"
+                                    aria-hidden="true"
+                                  />
+                                  <span>{item.label}</span>
+                                </span>
+                                <span className="font-mono text-[8px] uppercase tracking-[0.1em]">
+                                  Unavailable
+                                </span>
+                              </span>
+                            )}
+                          </li>
+                        );
+                      })
+                    : null}
+                  {group === "Review"
+                    ? [
+                        {
+                          href: nexusHref,
+                          icon: Network,
+                          label: "Charge–Coercion Nexus",
+                          view: "nexus" as const,
+                        },
+                        {
+                          href: timelineHref,
+                          icon: Clock3,
+                          label: "Timeline",
+                          view: "timeline" as const,
+                        },
+                      ].map((item) => {
+                        const Icon = item.icon;
+                        return (
+                          <li key={item.view}>
+                            {analysisComplete ? (
+                              <Link
+                                aria-current={
+                                  activeStage === item.view ? "page" : undefined
+                                }
+                                className={`flex items-center gap-2 rounded-md px-2 py-1.5 text-sm ${
+                                  activeStage === item.view
+                                    ? "bg-primary text-primary-foreground"
+                                    : "text-foreground/80 hover:bg-muted"
+                                }`}
+                                href={item.href}
+                              >
+                                <Icon
+                                  className="h-4 w-4 opacity-80"
+                                  aria-hidden="true"
+                                />
+                                <span>{item.label}</span>
+                              </Link>
+                            ) : (
+                              <span
+                                aria-disabled="true"
+                                className="flex cursor-not-allowed items-center justify-between gap-2 rounded-md px-2 py-1.5 text-sm text-muted-foreground opacity-65"
+                                title="Complete a current Structured Analysis run first"
+                              >
+                                <span className="flex min-w-0 items-center gap-2">
+                                  <Icon
+                                    className="h-4 w-4 shrink-0 opacity-80"
+                                    aria-hidden="true"
+                                  />
+                                  <span>{item.label}</span>
+                                </span>
+                                <span className="font-mono text-[8px] uppercase tracking-[0.1em]">
+                                  Unavailable
+                                </span>
+                              </span>
+                            )}
+                          </li>
+                        );
+                      })
+                    : null}
+                  {group === "Export"
+                    ? [
+                        {
+                          href: exportHref,
+                          icon: Send,
+                          label: "Export Gate",
+                          view: "export" as const,
+                        },
+                        {
+                          href: auditHref,
+                          icon: ScrollText,
+                          label: "Audit Trail",
+                          view: "audit" as const,
+                        },
+                      ].map((item) => {
+                        const Icon = item.icon;
+                        return (
+                          <li key={item.view}>
+                            {analysisComplete ? (
+                              <Link
+                                aria-current={
+                                  activeStage === item.view ? "page" : undefined
+                                }
+                                className={`flex items-center gap-2 rounded-md px-2 py-1.5 text-sm ${
+                                  activeStage === item.view
+                                    ? "bg-primary text-primary-foreground"
+                                    : "text-foreground/80 hover:bg-muted"
+                                }`}
+                                href={item.href}
+                              >
+                                <Icon
+                                  className="h-4 w-4 opacity-80"
+                                  aria-hidden="true"
+                                />
+                                <span>{item.label}</span>
+                              </Link>
+                            ) : (
+                              <span
+                                aria-disabled="true"
+                                className="flex cursor-not-allowed items-center justify-between gap-2 rounded-md px-2 py-1.5 text-sm text-muted-foreground opacity-65"
+                                title="Complete a current Structured Analysis run first"
+                              >
+                                <span className="flex min-w-0 items-center gap-2">
+                                  <Icon
+                                    className="h-4 w-4 shrink-0 opacity-80"
+                                    aria-hidden="true"
+                                  />
+                                  <span>{item.label}</span>
+                                </span>
+                                <span className="font-mono text-[8px] uppercase tracking-[0.1em]">
+                                  Unavailable
+                                </span>
+                              </span>
+                            )}
+                          </li>
+                        );
+                      })
+                    : null}
                   {DISABLED_NAVIGATION.filter(
                     (item) =>
                       item.group === group &&
-                      item.label !== "Structured Analysis",
+                      ![
+                        "Structured Analysis",
+                        "Urgent Needs",
+                        "Evidence Gaps",
+                        "Interview Planner",
+                        "Services & Referrals",
+                        "Case Tasks",
+                        "Notes & Journal",
+                        "Charge–Coercion Nexus",
+                        "Timeline",
+                        "Export Gate",
+                        "Audit Trail",
+                      ].includes(item.label),
                   ).map((item) => {
                     const Icon = item.icon;
                     return (

@@ -30,6 +30,15 @@ function renderWorkspace(state: CaseState = checkpointState()) {
   );
 }
 
+function isStructuredCandidate(candidate: CaseState["candidates"][number]) {
+  return (
+    Boolean(candidate.lane) &&
+    candidate.kind !== "context_gap" &&
+    candidate.kind !== "timeline_event" &&
+    candidate.kind !== "nexus_relationship"
+  );
+}
+
 function staleCheckpointState() {
   const checkpoint = checkpointState();
   if (!checkpoint.purposeBrief) throw new Error("checkpoint purpose missing");
@@ -49,6 +58,7 @@ function staleCheckpointState() {
 
 beforeEach(() => {
   window.sessionStorage.clear();
+  window.history.replaceState({}, "", "/case/demo/analysis");
 });
 
 describe("Phase 3 Structured Analysis", () => {
@@ -57,7 +67,8 @@ describe("Phase 3 Structured Analysis", () => {
     const activeRunId = state.activeAnalysisRunId;
     const laneCandidates = state.candidates.filter(
       (candidate) =>
-        candidate.analysisRunId === activeRunId && Boolean(candidate.lane),
+        candidate.analysisRunId === activeRunId &&
+        isStructuredCandidate(candidate),
     );
 
     renderWorkspace(state);
@@ -104,16 +115,17 @@ describe("Phase 3 Structured Analysis", () => {
       }),
     ).toBeInTheDocument();
 
-    await user.type(screen.getByRole("searchbox", { name: "Search candidates" }), "passport");
+    await user.type(
+      screen.getByRole("searchbox", { name: "Search candidates" }),
+      "no matching candidate",
+    );
     expect(
       screen.queryByRole("article", {
         name: "Candidate detail: CAND-CTRL-CONFINEMENT",
       }),
     ).not.toBeInTheDocument();
     expect(
-      screen.getByRole("article", {
-        name: "Candidate detail: CAND-CTRL-PASSPORT",
-      }),
+      screen.getByRole("region", { name: "No visible candidate detail" }),
     ).toBeInTheDocument();
 
     const filters = screen.getByRole("region", {
@@ -147,6 +159,24 @@ describe("Phase 3 Structured Analysis", () => {
     ).not.toBeInTheDocument();
   });
 
+  it("opens an exact candidate from an export-remediation hash", async () => {
+    window.history.replaceState(
+      {},
+      "",
+      "/case/CFN-CASE-DYNAMIC/analysis?exportBlocker=REVIEW_INCOMPLETE#candidate-CAND-META-COOPERATION",
+    );
+    renderWorkspace();
+
+    expect(
+      await screen.findByRole("article", {
+        name: "Candidate detail: CAND-META-COOPERATION",
+      }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("tab", { name: /Lane C — Protection & Urgency/i }),
+    ).toHaveAttribute("aria-selected", "true");
+  });
+
   it("includes only active invalidated candidates in the pending projection", async () => {
     const user = userEvent.setup();
     const checkpoint = checkpointState();
@@ -174,6 +204,7 @@ describe("Phase 3 Structured Analysis", () => {
     };
     const pendingCount = state.candidates.filter(
       (candidate) =>
+        isStructuredCandidate(candidate) &&
         candidate.inclusionStatus === "active" &&
         (candidate.reviewStatus === "pending" ||
           candidate.reviewStatus === "invalidated"),
@@ -211,11 +242,11 @@ describe("Phase 3 Structured Analysis", () => {
 
     await user.click(
       screen.getByRole("button", {
-        name: /Select candidate CAND-CTRL-PASSPORT/i,
+        name: /Select candidate CAND-CTRL-CONFINEMENT/i,
       }),
     );
     const detail = screen.getByRole("article", {
-      name: "Candidate detail: CAND-CTRL-PASSPORT",
+      name: "Candidate detail: CAND-CTRL-CONFINEMENT",
     });
     await user.click(within(detail).getByRole("button", { name: "Edit wording" }));
     const editDialog = screen.getByRole("dialog", {
@@ -225,7 +256,7 @@ describe("Phase 3 Structured Analysis", () => {
     await user.clear(wording);
     await user.type(
       wording,
-      "Passport custody is separately reported and documented in the reviewed sources.",
+      "The reviewed source reports physical confinement, without independent confirmation.",
     );
     await user.type(
       within(editDialog).getByLabelText("Concise reason"),
@@ -241,12 +272,88 @@ describe("Phase 3 Structured Analysis", () => {
       expect(
         within(
           screen.getByRole("article", {
-            name: "Candidate detail: CAND-CTRL-PASSPORT",
+            name: "Candidate detail: CAND-CTRL-CONFINEMENT",
           }),
         ).getByLabelText(/Review status: Human edited/i),
       ).toBeInTheDocument(),
     );
     expect(screen.getByText(/review recorded in canonical case state/i)).toBeInTheDocument();
+  });
+
+  it("navigates the visible pending queue without recording a review action", async () => {
+    const user = userEvent.setup();
+    const checkpoint = checkpointState();
+    const laneCandidate = checkpoint.candidates.find(
+      (candidate) =>
+        candidate.analysisRunId === checkpoint.activeAnalysisRunId &&
+        candidate.lane === "trafficking_indicators" &&
+        isStructuredCandidate(candidate),
+    );
+    if (!laneCandidate) throw new Error("lane candidate missing");
+    const secondCandidate = {
+      ...laneCandidate,
+      id: `${laneCandidate.id}-SECOND`,
+      title: `${laneCandidate.title} — second pending review`,
+      proposedText: `${laneCandidate.proposedText} Second review item.`,
+      currentText: `${laneCandidate.currentText} Second review item.`,
+      reviewStatus: "pending" as const,
+      inclusionStatus: "active" as const,
+    };
+    const state: CaseState = {
+      ...checkpoint,
+      candidates: [
+        ...checkpoint.candidates.map((candidate) =>
+          candidate.id === laneCandidate.id
+            ? {
+                ...candidate,
+                inclusionStatus: "active" as const,
+                reviewStatus: "pending" as const,
+              }
+            : candidate,
+        ),
+        secondCandidate,
+      ],
+    };
+    const lanePending = state.candidates.filter(
+      (candidate) =>
+        candidate.analysisRunId === state.activeAnalysisRunId &&
+        candidate.lane === "trafficking_indicators" &&
+        isStructuredCandidate(candidate) &&
+        candidate.inclusionStatus === "active" &&
+        (candidate.reviewStatus === "pending" ||
+          candidate.reviewStatus === "invalidated"),
+    );
+    expect(lanePending.length).toBeGreaterThan(1);
+
+    renderWorkspace(state);
+    await user.click(
+      screen.getByRole("button", {
+        name: new RegExp(`^Select candidate ${lanePending[0].id}:`),
+      }),
+    );
+
+    const auditBefore = screen.getByTestId("analysis-last-audit").textContent;
+    expect(
+      screen.getByRole("group", {
+        name: "Pending review queue navigation",
+      }),
+    ).toHaveTextContent(`${lanePending.length} pending in view`);
+
+    await user.click(
+      screen.getByRole("button", { name: "Next pending candidate" }),
+    );
+
+    expect(
+      screen.getByRole("article", {
+        name: `Candidate detail: ${lanePending[1].id}`,
+      }),
+    ).toBeInTheDocument();
+    expect(screen.getByTestId("analysis-last-audit")).toHaveTextContent(
+      auditBefore ?? "",
+    );
+    expect(
+      screen.getByRole("button", { name: "Previous pending candidate" }),
+    ).toBeEnabled();
   });
 
   it("opens the existing exact-source drawer and audits an intentional reveal", async () => {
@@ -284,12 +391,12 @@ describe("Phase 3 Structured Analysis", () => {
 
     await user.click(
       screen.getByRole("tab", {
-        name: /Lane B — Non-Punishment Relevance/i,
+        name: /Lane C — Protection & Urgency/i,
       }),
     );
     await user.click(
       screen.getByRole("button", {
-        name: /Select candidate CAND-TASK-0402/i,
+        name: /Select candidate CAND-META-COOPERATION/i,
       }),
     );
     await user.click(

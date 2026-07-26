@@ -150,7 +150,7 @@ describe("TASK-028 canonical review fixture", () => {
 
     expect(cfnDemoFixture.canonicalFixtureDigest).toBe("ede4457873700cc4bce1bb5fad29c89a4e25d2e6ca7ccd33c323a2ce8ac5809c");
     expect(cfnDemoFixture.approvedRedactedInputDigest).toBe("430b6bd635d101340c52c41e65d66b55c8d443fbff4a252748dab504845e18ee");
-    expect(cfnDemoEvaluationDefinitions.evaluationDefinitionSetDigest).toBe("649b10f68d8a445e79c626efa63ede464cc19b7a82ffab5785c8dcd84b4f2683");
+    expect(cfnDemoEvaluationDefinitions.evaluationDefinitionSetDigest).toBe("f33edcab4fb346591d31171f8cff8db60f944405c221afa7292facaa26221473");
     expect(CFN_DEMO_FIXTURE_BINDING).toEqual({
       dataOrigin: "bundled_synthetic",
       caseId: "CFN-DEMO-001",

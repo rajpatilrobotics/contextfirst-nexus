@@ -17,7 +17,7 @@ import {
 
 const REQUIRED_LABELS = [
   "AI-assisted, human-reviewed case-preparation draft.",
-  "Synthetic case.",
+  "Bundled synthetic demonstration.",
   "Not legal advice.",
   "Local legal verification required.",
 ];
@@ -103,6 +103,38 @@ describe("TASK-022 canonical export renderers", () => {
     for (const candidate of manifest.includedCandidates) expect(first.text).toContain(candidate.candidateId);
     for (const gap of manifest.reviewedGaps) expect(first.text).toContain(gap.candidateId);
     for (const identifier of DECLARED_DIRECT_IDENTIFIERS) expect(first.text).not.toContain(identifier);
+  }, 20_000);
+
+  it("uses the authorized-public label in semantic, JSON, and PDF projections without a synthetic claim", async () => {
+    const base = createReadyManifest();
+    const manifest = ExportManifestSchema.parse({
+      ...base,
+      sourceMaterialClassification: "user_attested_authorized_public",
+      purposeSummary: {
+        ...base.purposeSummary,
+        sourceMaterialClassification: "user_attested_authorized_public",
+        authorityBasis: "user_attested_authorized_public_material",
+      },
+      labels: [
+        "AI-assisted, human-reviewed case-preparation draft.",
+        "Authorized public material — user-attested, not independently verified.",
+        "Not legal advice.",
+        "Local legal verification required.",
+      ],
+    });
+    const semantic = buildExportDocumentSections(manifest)
+      .flatMap((section) => section.items)
+      .join("\n");
+    const json = renderExportJson(manifest);
+    const renderedPdf = await extractPdf(await renderExportPdf(manifest));
+
+    for (const projection of [semantic, json, renderedPdf.text]) {
+      expect(projection).toContain(
+        "Authorized public material — user-attested, not independently verified.",
+      );
+      expect(projection).not.toContain("Bundled synthetic demonstration.");
+      expect(projection).not.toContain("Synthetic case.");
+    }
   }, 20_000);
 
   it("keeps post-withdrawal limitation and safe audit provenance while excluding the withdrawn positive item", () => {

@@ -308,6 +308,8 @@ export function BrowserCaseStructuredAnalysisWorkspace({
         caseId,
         approvedRedactedInputDigest:
           built.intent.approvedRedactedInputDigest,
+        safeShareRecipientCategory:
+          built.intent.purpose.intendedRecipientCategory,
         documents: sourceContext.documents,
         segments: sourceContext.segments.filter((segment) =>
           sourceContext.selectedSegmentIds.has(segment.id),
@@ -349,7 +351,11 @@ export function BrowserCaseStructuredAnalysisWorkspace({
 
   if (state) {
     return (
-      <BrowserCaseShell activeStage="analysis" record={record}>
+      <BrowserCaseShell
+        activeStage="analysis"
+        analysisCurrent
+        record={record}
+      >
         <div className="space-y-4">
           {persistenceError ? (
             <Alert title="Analysis changes are not persisted" tone="warning">
@@ -446,6 +452,59 @@ export function BrowserCaseStructuredAnalysisWorkspace({
             </div>
           </div>
 
+          {serviceState === "available" ? (
+            <section
+              aria-label="Recommended live analysis"
+              className="mt-4 rounded-lg border border-[color-mix(in_oklab,var(--sage)_45%,transparent)] bg-[color-mix(in_oklab,var(--sage)_8%,transparent)] p-3"
+            >
+              <div className="flex flex-wrap items-center gap-2">
+                <h3 className="text-sm font-semibold">
+                  Recommended: admitted live analysis
+                </h3>
+                <Chip tone="sage">Broader semantic interpretation</Chip>
+              </div>
+              <p className="mt-2 text-xs leading-5 text-muted-foreground">
+                The admitted live release is preferred when available because
+                it can assess broader context than deterministic language
+                rules. Only approved redacted text is eligible; raw PDFs are
+                never sent.
+              </p>
+              <label className="mt-3 flex cursor-pointer items-start gap-3 text-sm">
+                <input
+                  checked={acknowledged}
+                  className="mt-1 h-4 w-4"
+                  onChange={(event) => setAcknowledged(event.target.checked)}
+                  type="checkbox"
+                />
+                <span>
+                  I confirm this packet contains only synthetic or authorized
+                  public material, and I understand that its approved redacted
+                  text may be sent to the admitted live provider shown in the
+                  resulting provenance.
+                </span>
+              </label>
+              <Button
+                className="mt-3"
+                disabled={
+                  !corpusReady ||
+                  !acknowledged ||
+                  status === "running" ||
+                  !runtimeResult
+                }
+                onClick={() => void startLiveAnalysis()}
+              >
+                <Sparkles aria-hidden="true" className="h-4 w-4" />
+                Start recommended live analysis
+              </Button>
+            </section>
+          ) : (
+            <p className="mt-2 text-xs leading-5 text-muted-foreground">
+              {serviceState === "loading"
+                ? "Checking whether an admitted browser-upload live release is available. No provider call occurs during this check."
+                : "No browser-upload-eligible release is currently admitted and enabled. No provider call or credit usage can occur."}
+            </p>
+          )}
+
           <div className="mt-4 flex flex-wrap items-center gap-3">
             <Button
               disabled={
@@ -454,6 +513,7 @@ export function BrowserCaseStructuredAnalysisWorkspace({
                 !runtimeResult
               }
               onClick={() => void startLocalAnalysis()}
+              variant={serviceState === "available" ? "secondary" : "primary"}
             >
               {status === "running" ? (
                 <LoaderCircle
@@ -461,11 +521,13 @@ export function BrowserCaseStructuredAnalysisWorkspace({
                   className="h-4 w-4 animate-spin"
                 />
               ) : (
-                <Sparkles aria-hidden="true" className="h-4 w-4" />
+                <ShieldCheck aria-hidden="true" className="h-4 w-4" />
               )}
               {status === "running"
                 ? "Analyzing safely…"
-                : "Run browser-local analysis"}
+                : serviceState === "available"
+                  ? "Use private browser-local fallback"
+                  : "Run browser-local analysis"}
             </Button>
             <Link
               className="text-sm font-medium underline"
@@ -474,52 +536,6 @@ export function BrowserCaseStructuredAnalysisWorkspace({
               Review Documents
             </Link>
           </div>
-
-          <details className="mt-4 rounded-lg border border-border bg-background/60 p-3">
-            <summary className="cursor-pointer text-sm font-medium">
-              Optional live-provider analysis
-            </summary>
-            <p className="mt-2 text-xs leading-5 text-muted-foreground">
-              A live provider can offer broader language interpretation, but
-              only an admitted browser-upload release may receive approved
-              redacted text. Raw PDFs are never sent.
-            </p>
-            <label className="mt-3 flex cursor-pointer items-start gap-3 text-sm">
-              <input
-                checked={acknowledged}
-                className="mt-1 h-4 w-4"
-                onChange={(event) => setAcknowledged(event.target.checked)}
-                type="checkbox"
-              />
-              <span>
-                I confirm this packet contains only synthetic or authorized
-                public material, and I understand that its approved redacted
-                text may be sent to the admitted live provider shown in the
-                resulting provenance.
-              </span>
-            </label>
-            {serviceState === "unavailable" ? (
-              <p className="mt-3 text-xs leading-5 text-muted-foreground">
-                No browser-upload-eligible release is currently admitted and
-                enabled. No provider call or credit usage can occur.
-              </p>
-            ) : null}
-            <Button
-              className="mt-3"
-              disabled={
-                !corpusReady ||
-                !acknowledged ||
-                serviceState !== "available" ||
-                status === "running" ||
-                !runtimeResult
-              }
-              onClick={() => void startLiveAnalysis()}
-              variant="secondary"
-            >
-              <Sparkles aria-hidden="true" className="h-4 w-4" />
-              Start live analysis
-            </Button>
-          </details>
         </section>
       </div>
     </BrowserCaseShell>

@@ -34,6 +34,12 @@ describe("browser-local Case Dashboard", () => {
       screen.getByText("Analysis complete").nextElementSibling,
     ).toHaveTextContent("0");
     expect(
+      screen.getByText("Active urgent needs").nextElementSibling,
+    ).toHaveTextContent("0");
+    expect(screen.getByText("Open tasks").nextElementSibling).toHaveTextContent(
+      "0",
+    );
+    expect(
       screen.getByText(
         /Purpose Brief, browser-local Documents, and Structured Analysis are connected/i,
       ),
@@ -106,5 +112,8 @@ describe("browser-local Case Dashboard", () => {
     });
     expect(card).toHaveAttribute("href", "/case/CFN-CASE-CASE002/purpose");
     expect(screen.queryByText(/M\. Chen|A\. Okafor|R\. Salazar/)).not.toBeInTheDocument();
+    expect(
+      screen.getByText(/review destinations, Export Gate, and Audit Trail are connected/i),
+    ).toBeInTheDocument();
   });
 });

@@ -86,18 +86,19 @@ describe("TASK-038 /api/analyze contract", () => {
     expect(body.liveAnalysisEnabled).toBe(false);
     expect(body.replayEnabled).toBe(true);
     expect(body.options.map((option: { providerId: string }) => option.providerId)).toEqual([
-      "openai",
-      "google_gemini",
       "mistral",
+      "google_gemini",
+      "groq",
+      "openai",
       "local_replay",
     ]);
     expect(
-      body.options.slice(0, 3).map((option: { availabilityStatus: string }) => option.availabilityStatus),
-    ).toEqual(["disabled", "disabled", "disabled"]);
-    expect(body.options.slice(0, 3).every((option: { selectable: boolean }) => !option.selectable)).toBe(
+      body.options.slice(0, 4).map((option: { availabilityStatus: string }) => option.availabilityStatus),
+    ).toEqual(["disabled", "disabled", "disabled", "disabled"]);
+    expect(body.options.slice(0, 4).every((option: { selectable: boolean }) => !option.selectable)).toBe(
       true,
     );
-    expect(body.options[3]).toMatchObject({
+    expect(body.options[4]).toMatchObject({
       providerId: "local_replay",
       releaseConfigurationId: "prepared-replay-v1",
       mode: "deterministic_replay",
@@ -115,10 +116,10 @@ describe("TASK-038 /api/analyze contract", () => {
     const body = await response.json();
 
     expect(body.liveAnalysisEnabled).toBe(false);
-    expect(body.options.slice(0, 3).every((option: { selectable: boolean }) => !option.selectable)).toBe(
+    expect(body.options.slice(0, 4).every((option: { selectable: boolean }) => !option.selectable)).toBe(
       true,
     );
-    expect(body.options[3].selectable).toBe(true);
+    expect(body.options[4].selectable).toBe(true);
   });
 
   it("keeps Trust correlated with the API through the shared server policy", async () => {

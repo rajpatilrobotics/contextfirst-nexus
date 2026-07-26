@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   Activity,
   AlertTriangle,
@@ -126,9 +126,13 @@ function useSourceMode(): SourceMode {
 }
 
 function DestinationBoundary({
+  analysisHref = "/case/demo/analysis",
+  documentsHref = "/case/demo/intake",
   kind,
   title,
 }: {
+  analysisHref?: string;
+  documentsHref?: string;
   kind: Exclude<ReturnType<typeof deriveReviewDestinationState>["kind"], "ready">;
   title: string;
 }) {
@@ -162,10 +166,10 @@ function DestinationBoundary({
         {copy.body}
       </Alert>
       <div className="flex flex-wrap gap-2">
-        <a className="min-h-9 rounded-[var(--radius-control)] border border-[var(--color-border)] px-3 py-2 text-sm font-semibold" href="/case/demo/intake">
+        <a className="min-h-9 rounded-[var(--radius-control)] border border-[var(--color-border)] px-3 py-2 text-sm font-semibold" href={documentsHref}>
           Open Documents
         </a>
-        <a className="min-h-9 rounded-[var(--radius-control)] border border-[var(--color-border)] px-3 py-2 text-sm font-semibold" href="/case/demo/analysis">
+        <a className="min-h-9 rounded-[var(--radius-control)] border border-[var(--color-border)] px-3 py-2 text-sm font-semibold" href={analysisHref}>
           Open Structured Analysis
         </a>
       </div>
@@ -180,7 +184,19 @@ function requiresGapReview(gap: ContextGap) {
   );
 }
 
-export function EvidenceGapsWorkspace() {
+export function EvidenceGapsWorkspace({
+  analysisHref = "/case/demo/analysis",
+  documentsHref = "/case/demo/intake",
+  interviewHref = "/case/demo/interview",
+  owner = "M. Chen",
+  taskHref = "/case/demo/tasks",
+}: {
+  analysisHref?: string;
+  documentsHref?: string;
+  interviewHref?: string | null;
+  owner?: string;
+  taskHref?: string | null;
+} = {}) {
   const { state, dispatchCaseCommand } = useCaseState();
   const destination = deriveReviewDestinationState(state);
   const [filter, setFilter] = useState<GapFilter>("all");
@@ -189,6 +205,35 @@ export function EvidenceGapsWorkspace() {
   const [sourceSelection, setSourceSelection] = useState<SourceSelection | null>(null);
   const sourceMode = useSourceMode();
   const workspaceRef = useRef<HTMLDivElement>(null);
+  const gaps = useMemo(
+    () =>
+      destination.kind === "ready"
+        ? selectContextGaps(destination.state.candidates)
+        : [],
+    [destination.kind, state.activeAnalysisRunId, state.candidates],
+  );
+
+  useEffect(() => {
+    function openGapFromHash() {
+      if (typeof window === "undefined") return;
+      const match = /^#candidate-(.+)$/.exec(window.location.hash);
+      if (!match) return;
+      const candidateId = decodeURIComponent(match[1]);
+      if (!gaps.some((gap) => gap.id === candidateId)) return;
+      setFilter("all");
+      setQuery("");
+      setRequestedId(candidateId);
+      window.requestAnimationFrame(() => {
+        const target = document.getElementById(`candidate-${candidateId}`);
+        if (typeof target?.scrollIntoView === "function") {
+          target.scrollIntoView({ block: "nearest" });
+        }
+      });
+    }
+    openGapFromHash();
+    window.addEventListener("hashchange", openGapFromHash);
+    return () => window.removeEventListener("hashchange", openGapFromHash);
+  }, [gaps]);
 
   useEffect(() => {
     const workspace = workspaceRef.current;
@@ -200,10 +245,16 @@ export function EvidenceGapsWorkspace() {
   }, [sourceMode, sourceSelection]);
 
   if (destination.kind !== "ready") {
-    return <DestinationBoundary kind={destination.kind} title="Evidence Gaps" />;
+    return (
+      <DestinationBoundary
+        analysisHref={analysisHref}
+        documentsHref={documentsHref}
+        kind={destination.kind}
+        title="Evidence Gaps"
+      />
+    );
   }
 
-  const gaps = selectContextGaps(destination.state.candidates);
   const visible = gaps.filter((gap) => {
     if (
       query &&
@@ -364,7 +415,13 @@ export function EvidenceGapsWorkspace() {
 
         {!gaps.length ? (
           <Alert title="No canonical context-gap candidates" tone="neutral">
-            The successful active run produced zero context gaps. This is not a claim that the packet is complete.
+            <span>
+              The successful active run produced zero context gaps. This is not
+              a claim that the packet is complete.{" "}
+              <a className="font-semibold underline" href={analysisHref}>
+                Review or rerun Structured Analysis.
+              </a>
+            </span>
           </Alert>
         ) : (
           <div className="grid min-w-0 gap-3 lg:grid-cols-[380px_1fr]">
@@ -404,9 +461,12 @@ export function EvidenceGapsWorkspace() {
             {selected ? (
               <ContextGapPanel
                 gap={selected}
+                interviewHref={interviewHref}
                 onCommand={dispatchCaseCommand}
                 onOpenSource={setSourceSelection}
+                owner={owner}
                 state={destination.state}
+                taskHref={taskHref}
               />
             ) : (
               <Alert title="No visible gap detail" tone="neutral">
@@ -448,10 +508,17 @@ function nexusContractError(rows: NexusRow[]) {
   if (!rows.length) return null;
   const counts = new Map<string, number>();
   for (const row of rows) counts.set(row.id, (counts.get(row.id) ?? 0) + 1);
-  const missing = GoldenNexusIds.filter((id) => !counts.has(id));
   const duplicate = [...counts.entries()]
     .filter(([, count]) => count > 1)
     .map(([id]) => id);
+  if (duplicate.length) return `Duplicate: ${duplicate.join(", ")}`;
+
+  const usesGoldenContract = rows.some((row) =>
+    GoldenNexusIds.includes(row.id as (typeof GoldenNexusIds)[number]),
+  );
+  if (!usesGoldenContract) return null;
+
+  const missing = GoldenNexusIds.filter((id) => !counts.has(id));
   const unexpected = rows
     .map((row) => row.id)
     .filter((id) => !GoldenNexusIds.includes(id as (typeof GoldenNexusIds)[number]));
@@ -462,7 +529,6 @@ function nexusContractError(rows: NexusRow[]) {
 
   return [
     missing.length ? `Missing: ${missing.join(", ")}` : null,
-    duplicate.length ? `Duplicate: ${duplicate.join(", ")}` : null,
     unexpected.length ? `Unexpected: ${unexpected.join(", ")}` : null,
   ].filter(Boolean).join(". ");
 }
@@ -493,6 +559,19 @@ function NexusVisualMap({
   onSelect: (candidateId: string) => void;
   view: "graph" | "table";
 }) {
+  const usesGoldenLayout = rows.every((row) =>
+    GoldenNexusIds.includes(row.id as (typeof GoldenNexusIds)[number]),
+  );
+  const genericX = (index: number, count: number) =>
+    count <= 1 ? 500 : 130 + (740 * index) / (count - 1);
+  const nexusPositions = new Map(
+    rows.map((row, index) => [
+      row.id,
+      usesGoldenLayout
+        ? nexusMapLayout[row.id as keyof typeof nexusMapLayout]
+        : { x: genericX(index, rows.length), y: 300 },
+    ]),
+  );
   const visibleIds = new Set(rows.map((row) => row.id));
   const hubId =
     rows.reduce<NexusRow | null>((best, row) => {
@@ -518,10 +597,14 @@ function NexusVisualMap({
         id: `source-group:${row.id}`,
         rowId: row.id,
         dependencies,
-        position:
-          nexusSourceGroupLayout[
-            row.id as keyof typeof nexusSourceGroupLayout
-          ],
+        position: usesGoldenLayout
+          ? nexusSourceGroupLayout[
+              row.id as keyof typeof nexusSourceGroupLayout
+            ]
+          : {
+              x: nexusPositions.get(row.id)?.x ?? 500,
+              y: 105,
+            },
       },
     ];
   });
@@ -539,11 +622,15 @@ function NexusVisualMap({
     return {
       id: candidateId,
       label: candidate?.title ?? candidateId,
-      position:
-        nexusCandidateLayout[index] ?? {
-          x: 115 + (index % 2) * 770,
-          y: 335 + Math.floor(index / 2) * 90,
-        },
+      position: usesGoldenLayout
+        ? nexusCandidateLayout[index] ?? {
+            x: 115 + (index % 2) * 770,
+            y: 335 + Math.floor(index / 2) * 90,
+          }
+        : {
+            x: genericX(index, candidateIds.length),
+            y: 510,
+          },
       active: rows.some((row) =>
         row.dependencies.some(
           (dependency) =>
@@ -560,7 +647,7 @@ function NexusVisualMap({
       kind: "nexus" as const,
       kicker: row.id.replace("NEXUS-", ""),
       label: row.title,
-      position: nexusMapLayout[row.id as keyof typeof nexusMapLayout],
+      position: nexusPositions.get(row.id) ?? { x: 500, y: 300 },
       color: NEXUS_CATEGORY_META[row.category].color,
       active: nexusNodeState(row) === "active",
       row,
@@ -779,6 +866,7 @@ function NexusVisualMap({
                         : undefined
                     }
                     key={node.id}
+                    id={interactive ? `candidate-${node.id}` : undefined}
                     onClick={
                       interactive ? () => onSelect(node.id) : undefined
                     }
@@ -1096,7 +1184,13 @@ function NexusMapDetail({
   );
 }
 
-export function EvidenceIntegrityWorkspace() {
+export function EvidenceIntegrityWorkspace({
+  analysisHref = "/case/demo/analysis",
+  documentsHref = "/case/demo/intake",
+}: {
+  analysisHref?: string;
+  documentsHref?: string;
+} = {}) {
   const { state, dispatchCaseCommand } = useCaseState();
   const destination = deriveReviewDestinationState(state);
   const [category, setCategory] = useState<NexusFilter>("all");
@@ -1109,12 +1203,44 @@ export function EvidenceIntegrityWorkspace() {
   >(null);
   const [sourceSelection, setSourceSelection] = useState<SourceSelection | null>(null);
   const sourceMode = useSourceMode();
+  const rows = useMemo(
+    () => (destination.kind === "ready" ? currentRunNexusRows(state) : []),
+    [destination.kind, state.activeAnalysisRunId, state.candidates],
+  );
+
+  useEffect(() => {
+    function openNodeFromHash() {
+      if (typeof window === "undefined") return;
+      const match = /^#candidate-(.+)$/.exec(window.location.hash);
+      if (!match) return;
+      const candidateId = decodeURIComponent(match[1]);
+      if (!rows.some((row) => row.id === candidateId)) return;
+      setCategory("all");
+      setSupport("all");
+      setQuery("");
+      setRequestedId(candidateId);
+      window.requestAnimationFrame(() => {
+        document.getElementById(`candidate-${candidateId}`)?.scrollIntoView({
+          block: "nearest",
+        });
+      });
+    }
+    openNodeFromHash();
+    window.addEventListener("hashchange", openNodeFromHash);
+    return () => window.removeEventListener("hashchange", openNodeFromHash);
+  }, [rows]);
 
   if (destination.kind !== "ready") {
-    return <DestinationBoundary kind={destination.kind} title="Evidence Integrity Map" />;
+    return (
+      <DestinationBoundary
+        analysisHref={analysisHref}
+        documentsHref={documentsHref}
+        kind={destination.kind}
+        title="Evidence Integrity Map"
+      />
+    );
   }
 
-  const rows = currentRunNexusRows(state);
   const contractError = nexusContractError(rows);
   const visible = rows.filter((row) => {
     if (category !== "all" && row.category !== category) return false;
@@ -1248,7 +1374,7 @@ export function EvidenceIntegrityWorkspace() {
           </Alert>
         ) : contractError ? (
           <Alert title="Nexus contract mismatch" tone="danger">
-            The active canonical run must contain six unique required relationship records. {contractError}. The interface will not fabricate or deduplicate nodes.
+            The active canonical run contains malformed relationship records. {contractError}. The interface will not fabricate or deduplicate nodes.
           </Alert>
         ) : (
           <div className="grid min-w-0 gap-4 lg:grid-cols-[1fr_360px]">
@@ -1302,12 +1428,25 @@ export function EvidenceIntegrityWorkspace() {
   );
 }
 
-export function TimelineWorkspace() {
+export function TimelineWorkspace({
+  analysisHref = "/case/demo/analysis",
+  documentsHref = "/case/demo/intake",
+}: {
+  analysisHref?: string;
+  documentsHref?: string;
+} = {}) {
   const { state, dispatchCaseCommand } = useCaseState();
   const destination = deriveReviewDestinationState(state);
 
   if (destination.kind !== "ready") {
-    return <DestinationBoundary kind={destination.kind} title="Timeline" />;
+    return (
+      <DestinationBoundary
+        analysisHref={analysisHref}
+        documentsHref={documentsHref}
+        kind={destination.kind}
+        title="Timeline"
+      />
+    );
   }
 
   const hasCoverageWarning = destination.state.coverage.issues.some(

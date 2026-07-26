@@ -16,7 +16,12 @@ function replayOption() {
   return option;
 }
 
-async function completeForm(user: ReturnType<typeof userEvent.setup>) {
+async function completeForm(
+  user: ReturnType<typeof userEvent.setup>,
+  classification:
+    | "user_attested_synthetic"
+    | "user_attested_authorized_public" = "user_attested_synthetic",
+) {
   await user.selectOptions(screen.getByLabelText("Practitioner role"), "demo_evaluator");
   await user.selectOptions(screen.getByLabelText("Organization type"), "research_or_evaluation");
   await user.type(screen.getByLabelText("Authorized purpose"), "Prepare a qualified synthetic review handoff.");
@@ -24,14 +29,18 @@ async function completeForm(user: ReturnType<typeof userEvent.setup>) {
   await user.selectOptions(screen.getByLabelText("Recipient category"), "legal_aid_team");
   await user.selectOptions(screen.getByLabelText("Fictional jurisdiction"), "J-01");
   await user.selectOptions(screen.getByLabelText("Translation status"), "original_language");
+  await user.selectOptions(
+    screen.getByLabelText("Source material classification"),
+    classification,
+  );
   await user.selectOptions(screen.getByLabelText("Requested handoff"), "full_practitioner_handoff");
   for (const decision of RequiredExcludedDecisions) {
     await user.click(screen.getByRole("checkbox", { name: new RegExp(decision === "credibility" ? "Credibility" : decision.replaceAll("_", ".*"), "i") }));
   }
-  await user.click(screen.getByRole("checkbox", { name: /using only fictional or hackathon test PDFs/i }));
+  await user.click(screen.getByRole("checkbox", { name: /authorized to use the selected source material/i }));
   await user.click(screen.getByRole("checkbox", { name: /system cannot verify my authority/i }));
-  await user.click(screen.getByRole("checkbox", { name: /selected PDFs contain no real or private case data/i }));
-  await user.click(screen.getByRole("checkbox", { name: /fictional and hackathon test-data-only boundary/i }));
+  await user.click(screen.getByRole("checkbox", { name: /every selected PDF matches the source-material classification/i }));
+  await user.click(screen.getByRole("checkbox", { name: /private or confidential case material is unavailable/i }));
   await user.click(screen.getByRole("checkbox", { name: /does not make the excluded consequential decisions/i }));
   await user.click(screen.getByRole("checkbox", { name: /cooperation with authorities is not a condition/i }));
   await user.click(screen.getByRole("checkbox", { name: /prepared demo replay or browser-local source extraction/i }));
@@ -47,8 +56,8 @@ describe("TASK-039 CasePurposeBriefForm", () => {
     expect(summary).toHaveTextContent("Acknowledge how local analysis works.");
     expect(summary).not.toHaveTextContent(/choose one available live release|selected release/i);
     expect(screen.queryByRole("radio")).not.toBeInTheDocument();
-    expect(screen.getByText(/Use only fictional or hackathon test PDFs/i)).toHaveTextContent(
-      /not transmitted to an AI provider/i,
+    expect(screen.getByText(/Use only synthetic test material/i)).toHaveTextContent(
+      /separately disclosed and consent-gated/i,
     );
     expect(screen.queryByText(/Only bundled fictional adult fixture/i)).not.toBeInTheDocument();
     await user.click(screen.getByRole("link", { name: "Choose the practitioner role." }));
@@ -76,6 +85,11 @@ describe("TASK-039 CasePurposeBriefForm", () => {
     const brief = savedBriefs[0];
     expect(brief.id).toBe("PURPOSE-CFN-CASE-ALPHA");
     expect(brief.caseId).toBe("CFN-CASE-ALPHA");
+    expect(brief.sourceMaterialClassification).toBe("user_attested_synthetic");
+    expect(brief.authority).toMatchObject({
+      basis: "user_attested_synthetic_material",
+      consentStatus: "not_applicable_synthetic_material",
+    });
     expect(brief.excludedDecisions).toEqual(RequiredExcludedDecisions);
     expect(brief.providerSelection).toMatchObject({
       providerId: "local_replay",
@@ -115,6 +129,34 @@ describe("TASK-039 CasePurposeBriefForm", () => {
     expect(saved.id).toBe(initialBrief.id);
     expect(saved.createdAt).toBe(initialBrief.createdAt);
     expect(saved.revision).toBe(initialBrief.revision + 1);
+  });
+
+  it("records authorized public material without labelling it synthetic", async () => {
+    const user = userEvent.setup();
+    const onSave = vi.fn((brief: CasePurposeBrief) => {
+      void brief;
+      return null;
+    });
+    render(
+      <CasePurposeBriefForm
+        analysisOption={replayOption()}
+        caseId="CFN-CASE-PUBLIC"
+        onSave={onSave}
+        purposeBriefId="PURPOSE-CFN-CASE-PUBLIC"
+      />,
+    );
+
+    await completeForm(user, "user_attested_authorized_public");
+    await user.click(screen.getByRole("button", { name: "Save Case Purpose Brief" }));
+
+    await waitFor(() => expect(onSave).toHaveBeenCalledTimes(1));
+    expect(onSave.mock.calls[0]?.[0]).toMatchObject({
+      sourceMaterialClassification: "user_attested_authorized_public",
+      authority: {
+        basis: "user_attested_authorized_public_material",
+        consentStatus: "not_applicable_authorized_public_material",
+      },
+    });
   });
 
   it("does not reuse a legacy live-provider acknowledgement for the local replay", () => {

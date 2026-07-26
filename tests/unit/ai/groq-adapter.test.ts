@@ -96,7 +96,7 @@ describe("Groq native analysis adapter", () => {
     });
     expect(request.messages).toHaveLength(2);
     expect(request.messages[0].content).toContain(
-      "return at most 4 candidates",
+      "return at most 12 candidates",
     );
     expect(request.messages[0].content).toContain(
       "at most 2 short exact citations",

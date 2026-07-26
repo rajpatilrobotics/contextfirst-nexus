@@ -7,6 +7,7 @@ import {
   ProcessingStageSchema,
   type CasePurposeBrief,
 } from "../contracts";
+import { migrateLegacyPurposeBrief } from "../purpose/source-material-migration";
 
 export const BROWSER_CASE_REGISTRY_STORAGE_KEY =
   "contextfirst-nexus.browser-cases.v1";
@@ -187,11 +188,20 @@ export function restoreBrowserCaseRegistry(serialized: string | null):
       raw && typeof raw === "object" && Array.isArray((raw as { cases?: unknown }).cases)
         ? {
             ...raw,
-            cases: (raw as { cases: unknown[] }).cases.map((record) =>
-              record && typeof record === "object" && !("documentPacket" in record)
+            cases: (raw as { cases: unknown[] }).cases.map((record) => {
+              if (!record || typeof record !== "object") return record;
+              const withPacket = !("documentPacket" in record)
                 ? { ...record, documentPacket: null }
-                : record,
-            ),
+                : record;
+              const migratedPurpose = migrateLegacyPurposeBrief(
+                (withPacket as { purposeBrief?: unknown }).purposeBrief,
+                "user_attested_synthetic",
+              );
+              return {
+                ...withPacket,
+                purposeBrief: migratedPurpose.value,
+              };
+            }),
           }
         : raw;
     const parsed = BrowserCaseRegistrySchema.safeParse(withDocumentDefaults);
