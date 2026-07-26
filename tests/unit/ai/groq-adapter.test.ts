@@ -30,14 +30,14 @@ function validRequest(): AnalyzeRequest {
     requestedMode: "live",
     providerSelection: {
       providerId: "groq",
-      releaseConfigurationId: "groq-oss-free-v1",
+      releaseConfigurationId: "groq-oss-20b-free-v1",
       serviceTier: "unpaid",
     },
     providerDisclosureAcknowledgement: {
       id: "ACK-GROQ-001",
       schemaVersion: "1.0.0",
       providerId: "groq",
-      releaseConfigurationId: "groq-oss-free-v1",
+      releaseConfigurationId: "groq-oss-20b-free-v1",
       serviceTier: "unpaid",
       disclosureVersion: "1.0.0",
       dataFlowAcknowledged: true,
@@ -84,10 +84,10 @@ describe("Groq native analysis adapter", () => {
     const request = buildGroqRequest(canonicalInput());
 
     expect(request).toMatchObject({
-      model: "openai/gpt-oss-120b",
-      reasoning_effort: "medium",
+      model: "openai/gpt-oss-20b",
+      reasoning_effort: "low",
       include_reasoning: false,
-      max_completion_tokens: 8192,
+      max_completion_tokens: 4096,
       response_format: {
         type: "json_schema",
         json_schema: { strict: true },
@@ -96,10 +96,10 @@ describe("Groq native analysis adapter", () => {
     });
     expect(request.messages).toHaveLength(2);
     expect(request.messages[0].content).toContain(
-      "return at most 10 candidates",
+      "return at most 4 candidates",
     );
     expect(request.messages[0].content).toContain(
-      "at most 3 short exact citations",
+      "at most 2 short exact citations",
     );
     expect(JSON.stringify(request)).not.toContain("apiKey");
   });
@@ -108,7 +108,7 @@ describe("Groq native analysis adapter", () => {
     const transport = vi.fn().mockResolvedValue(
       new Response(
         JSON.stringify({
-          model: "openai/gpt-oss-120b",
+          model: "openai/gpt-oss-20b",
           choices: [
             {
               finish_reason: "stop",
@@ -134,8 +134,8 @@ describe("Groq native analysis adapter", () => {
       ok: true,
       provenance: {
         providerId: "groq",
-        releaseConfigurationId: "groq-oss-free-v1",
-        returnedModel: "openai/gpt-oss-120b",
+        releaseConfigurationId: "groq-oss-20b-free-v1",
+        returnedModel: "openai/gpt-oss-20b",
       },
       tokenUsage: { input: 20, output: 10, total: 30 },
     });
@@ -162,7 +162,7 @@ describe("Groq native analysis adapter", () => {
     const transport = vi.fn().mockResolvedValue(
       new Response(
         JSON.stringify({
-          model: "openai/gpt-oss-120b",
+          model: "openai/gpt-oss-20b",
           choices: [
             {
               finish_reason: "stop",
@@ -191,7 +191,7 @@ describe("Groq native analysis adapter", () => {
       fetch: vi.fn().mockResolvedValue(
         new Response(
           JSON.stringify({
-            model: "openai/gpt-oss-120b",
+            model: "openai/gpt-oss-20b",
             choices: [
               {
                 finish_reason: "length",

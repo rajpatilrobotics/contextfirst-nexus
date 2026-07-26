@@ -218,18 +218,23 @@ describe("Phase 3 Structured Analysis", () => {
       name: "Candidate detail: CAND-CTRL-PASSPORT",
     });
     await user.click(within(detail).getByRole("button", { name: "Edit wording" }));
-    const wording = within(detail).getByLabelText("Revised wording");
+    const editDialog = screen.getByRole("dialog", {
+      name: "Edit wording details",
+    });
+    const wording = within(editDialog).getByLabelText("Revised wording");
     await user.clear(wording);
     await user.type(
       wording,
       "Passport custody is separately reported and documented in the reviewed sources.",
     );
     await user.type(
-      within(detail).getByLabelText("Concise reason"),
+      within(editDialog).getByLabelText("Concise reason"),
       "Preserve the different canonical evidence natures.",
     );
     await user.click(
-      within(detail).getByRole("button", { name: "Record individual action" }),
+      within(editDialog).getByRole("button", {
+        name: "Record individual action",
+      }),
     );
 
     await waitFor(() =>
@@ -256,7 +261,8 @@ describe("Phase 3 Structured Analysis", () => {
     })[0];
     await user.click(openSource);
 
-    const drawer = await screen.findByRole("complementary");
+    const drawer = await screen.findByRole("dialog");
+    expect(drawer).toHaveAttribute("aria-modal", "true");
     expect(within(drawer).getByText("Exact approved masked quote")).toBeInTheDocument();
     await user.click(
       within(drawer).getByRole("button", { name: "Review reveal warning" }),
@@ -270,6 +276,41 @@ describe("Phase 3 Structured Analysis", () => {
     expect(screen.getByTestId("analysis-last-audit")).toHaveTextContent(
       "source_revealed",
     );
+  });
+
+  it("opens withdrawal in an accessible overlay instead of expanding the workspace", async () => {
+    const user = userEvent.setup();
+    renderWorkspace();
+
+    await user.click(
+      screen.getByRole("tab", {
+        name: /Lane B — Non-Punishment Relevance/i,
+      }),
+    );
+    await user.click(
+      screen.getByRole("button", {
+        name: /Select candidate CAND-TASK-0402/i,
+      }),
+    );
+    await user.click(
+      screen.getByRole("button", { name: "Withdraw evidence" }),
+    );
+
+    const dialog = screen.getByRole("alertdialog", {
+      name: "Confirm evidence withdrawal",
+    });
+    expect(dialog).toHaveAttribute("aria-modal", "true");
+    expect(dialog.closest('[aria-hidden="true"]')).toBeNull();
+    expect(
+      screen.queryByRole("heading", { name: "Dependency change" }),
+    ).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Keep evidence" }));
+    expect(
+      screen.queryByRole("alertdialog", {
+        name: "Confirm evidence withdrawal",
+      }),
+    ).not.toBeInTheDocument();
   });
 
   it("renders blocked, ready-empty, failed, stale, and successful zero-result states explicitly", () => {

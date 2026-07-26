@@ -141,13 +141,13 @@ export const LiveProviderReleaseConfigurationIdSchema = z.enum([
   "openai-quality-v1",
   "gemini-quality-v1",
   "mistral-small-free-v1",
-  "groq-oss-free-v1",
+  "groq-oss-20b-free-v1",
 ]);
 export const ProviderReleaseConfigurationIdSchema = z.enum([
   "openai-quality-v1",
   "gemini-quality-v1",
   "mistral-small-free-v1",
-  "groq-oss-free-v1",
+  "groq-oss-20b-free-v1",
   "prepared-replay-v1",
 ]);
 export const ProviderServiceTierSchema = z.enum(["paid", "unpaid", "local"]);
@@ -189,8 +189,8 @@ export const ProviderReleaseConfigurationSchema = z.discriminatedUnion(
     }),
     strict({
       providerId: z.literal("groq"),
-      releaseConfigurationId: z.literal("groq-oss-free-v1"),
-      requestedModel: z.literal("openai/gpt-oss-120b"),
+      releaseConfigurationId: z.literal("groq-oss-20b-free-v1"),
+      requestedModel: z.literal("openai/gpt-oss-20b"),
       serviceTier: z.literal("unpaid"),
     }),
     strict({
@@ -238,7 +238,7 @@ export const ProviderReleaseSelectionSchema = z.discriminatedUnion("providerId",
   }),
   strict({
     providerId: z.literal("groq"),
-    releaseConfigurationId: z.literal("groq-oss-free-v1"),
+    releaseConfigurationId: z.literal("groq-oss-20b-free-v1"),
     serviceTier: z.literal("unpaid"),
   }),
   strict({
@@ -333,7 +333,7 @@ export const DeployedAccountReleaseAvailabilitySchema = z.discriminatedUnion(
 export const ProviderReleaseInferenceSettingSchema = z.discriminatedUnion("kind", [
   strict({
     kind: z.literal("reasoning_effort"),
-    value: z.literal("medium"),
+    value: z.enum(["low", "medium"]),
   }),
   strict({
     kind: z.literal("thinking_level"),
@@ -367,11 +367,25 @@ export const EvaluatedReleaseConfigurationSchema =
     if (value.providerId === "openai" && value.inferenceSetting.kind !== "reasoning_effort") {
       context.addIssue({ code: "custom", message: "OpenAI uses reasoning_effort." });
     }
+    if (
+      value.providerId === "openai" &&
+      value.inferenceSetting.kind === "reasoning_effort" &&
+      value.inferenceSetting.value !== "medium"
+    ) {
+      context.addIssue({ code: "custom", message: "OpenAI uses medium reasoning effort." });
+    }
     if (value.providerId === "google_gemini" && value.inferenceSetting.kind !== "thinking_level") {
       context.addIssue({ code: "custom", message: "Gemini uses thinking_level." });
     }
     if (value.providerId === "mistral" && value.inferenceSetting.kind !== "reasoning_effort") {
       context.addIssue({ code: "custom", message: "Mistral uses reasoning_effort." });
+    }
+    if (
+      value.providerId === "mistral" &&
+      value.inferenceSetting.kind === "reasoning_effort" &&
+      value.inferenceSetting.value !== "medium"
+    ) {
+      context.addIssue({ code: "custom", message: "Mistral uses medium reasoning effort." });
     }
     if (value.providerId === "groq" && value.inferenceSetting.kind !== "reasoning_effort") {
       context.addIssue({ code: "custom", message: "Groq uses reasoning_effort." });
@@ -390,7 +404,7 @@ export const ProviderReleaseAdmissionRecordSchema = strict({
 }).superRefine((record, context) => {
   const requiresDeploymentEvidence =
     record.releaseConfigurationId === "mistral-small-free-v1" ||
-    record.releaseConfigurationId === "groq-oss-free-v1";
+    record.releaseConfigurationId === "groq-oss-20b-free-v1";
   if (
     requiresDeploymentEvidence &&
     record.deployedAccountReleaseAvailability.status === "not_required"

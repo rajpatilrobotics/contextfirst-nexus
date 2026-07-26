@@ -260,7 +260,7 @@ function providerEntry(providerId: ManagedLiveProviderId) {
   const releaseId = {
     mistral: "mistral-small-free-v1",
     google_gemini: "gemini-quality-v1",
-    groq: "groq-oss-free-v1",
+    groq: "groq-oss-20b-free-v1",
     openai: "openai-quality-v1",
   } as const;
   return getRegistryEntry(releaseId[providerId]);

@@ -1,6 +1,6 @@
 import evaluationDefinitionsJson from "../../../fixtures/evals/definitions/evaluation-definitions.json";
 import geminiReportJson from "../../../fixtures/evals/results/admission/gemini-quality-v1.report.json";
-import groqReportJson from "../../../fixtures/evals/results/admission/groq-oss-free-v1.report.json";
+import groqReportJson from "../../../fixtures/evals/results/admission/groq-oss-20b-free-v1.report.json";
 import mistralReportJson from "../../../fixtures/evals/results/admission/mistral-small-free-v1.report.json";
 import openAiReportJson from "../../../fixtures/evals/results/admission/openai-quality-v1.report.json";
 import deterministicHarnessJson from "../../../fixtures/evals/results/deterministic-harness-v1.json";

@@ -289,7 +289,7 @@ describe("provider and disclosure contracts", () => {
             ? "gemini-quality-v1"
             : providerId === "mistral"
               ? "mistral-small-free-v1"
-              : "groq-oss-free-v1",
+              : "groq-oss-20b-free-v1",
       requestedModel:
         providerId === "openai"
           ? "gpt-5.6-sol"
@@ -297,7 +297,7 @@ describe("provider and disclosure contracts", () => {
             ? "gemini-3.5-flash"
             : providerId === "mistral"
               ? "mistral-small-2603"
-              : "openai/gpt-oss-120b",
+              : "openai/gpt-oss-20b",
       serviceTier: providerId === "openai" ? "paid" : "unpaid",
       schemaVersion: "1.0.0",
       displayOrder,

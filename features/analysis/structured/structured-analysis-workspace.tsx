@@ -172,9 +172,11 @@ function useSourceMode(): SourceMode {
 function AnalysisHeader({
   candidates,
   documentsHref,
+  browserLocalDeterministic,
 }: {
   candidates: CaseCandidate[];
   documentsHref: string;
+  browserLocalDeterministic: boolean;
 }) {
   const pending = candidates.filter(candidateRequiresPendingReview).length;
   const reviewed = candidates.filter((candidate) =>
@@ -200,7 +202,11 @@ function AnalysisHeader({
         <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
           <Chip tone="amber">{pending} pending review</Chip>
           <Chip tone="mute">{candidates.length} candidates</Chip>
-          <Chip tone="mute">Machine assistance: transparent, non-binding</Chip>
+          <Chip tone="mute">
+            {browserLocalDeterministic
+              ? "Browser-local rules · no provider transmission"
+              : "Machine assistance: transparent, non-binding"}
+          </Chip>
         </div>
       </div>
       <a
@@ -344,15 +350,15 @@ function CandidateList({
   return (
     <section
       aria-labelledby="structured-candidate-list-heading"
-      className="min-w-0 overflow-hidden rounded-xl border border-border bg-card"
+      className="flex min-w-0 flex-col overflow-hidden rounded-xl border border-border bg-card lg:h-full"
     >
-      <div className="border-b border-border p-3">
+      <div className="shrink-0 border-b border-border p-3">
         <h2 className="font-serif text-base" id="structured-candidate-list-heading">
           Candidates ({candidates.length})
         </h2>
       </div>
       {candidates.length ? (
-        <ul>
+        <ul className="min-h-0 flex-1 overflow-y-auto">
           {candidates.map((candidate) => {
             const selected = candidate.id === selectedId;
             return (
@@ -450,9 +456,10 @@ function CandidateDetail({
   return (
     <article
       aria-label={`Candidate detail: ${candidate.id}`}
-      className="min-w-0 overflow-hidden rounded-xl border border-border bg-card"
+      className="flex min-w-0 flex-col overflow-hidden rounded-xl border border-border bg-card lg:h-full"
     >
-      <header className="grid gap-3 border-b border-border p-5">
+      <div className="min-h-0 flex-1 overflow-y-auto">
+      <header className="grid gap-2 border-b border-border p-4">
         <div>
           <div className="flex flex-wrap items-center gap-2 font-mono text-[11px] text-muted-foreground">
             <span>{candidate.id}</span>
@@ -462,8 +469,8 @@ function CandidateDetail({
               <Chip tone="neutral">Lane {laneCode(candidate.lane)}</Chip>
             ) : null}
           </div>
-          <h2 className="mt-1 font-serif text-2xl">{candidate.title}</h2>
-          <p className="mt-2 text-sm text-muted-foreground">
+          <h2 className="mt-1 font-serif text-xl leading-tight">{candidate.title}</h2>
+          <p className="mt-1 text-sm text-muted-foreground">
             {candidate.currentText}
           </p>
         </div>
@@ -477,7 +484,7 @@ function CandidateDetail({
         </div>
       </header>
 
-      <div className="grid gap-5 p-5 md:grid-cols-2">
+      <div className="grid gap-4 p-4 md:grid-cols-2">
         <section
           aria-labelledby={`candidate-${candidate.id}-citations`}
           className="grid content-start gap-3"
@@ -612,10 +619,11 @@ function CandidateDetail({
           </dl>
         </section>
       </div>
+      </div>
 
       <section
         aria-labelledby={`candidate-${candidate.id}-review-actions`}
-        className="border-t border-border bg-muted/30 p-4"
+        className="shrink-0 border-t border-border bg-muted/30 p-3"
       >
         <h3
           className="mb-2 font-mono text-[10px] font-semibold uppercase tracking-[0.16em]"
@@ -634,6 +642,7 @@ function CandidateDetail({
           key={candidate.id}
           onCommand={dispatchCaseCommand}
           onWithdrawRequest={onWithdrawRequest}
+          reasonedActionPresentation="dialog"
           state={state}
         />
       </section>
@@ -761,15 +770,18 @@ export function StructuredAnalysisWorkspace({
     query.trim().length > 0;
   const presentationCandidates =
     runIsCurrent && !state.pendingLiveAnalysis ? laneCandidates : [];
+  const browserLocalDeterministic =
+    activeRun?.provider.adapterVersion ===
+    "browser-deterministic-analysis-v1";
 
   useEffect(() => {
     const workspace = workspaceRef.current;
     if (!workspace) return;
-    workspace.inert = Boolean(sourceSelection && sourceMode === "mobile");
+    workspace.inert = Boolean(sourceSelection || withdrawalCandidate);
     return () => {
       workspace.inert = false;
     };
-  }, [sourceMode, sourceSelection]);
+  }, [sourceSelection, withdrawalCandidate]);
 
   function clearFilters() {
     setStatusFilter("all");
@@ -781,6 +793,7 @@ export function StructuredAnalysisWorkspace({
   const sharedHeader = (
     <>
       <AnalysisHeader
+        browserLocalDeterministic={browserLocalDeterministic}
         candidates={presentationCandidates}
         documentsHref={documentsHref}
       />
@@ -879,17 +892,9 @@ export function StructuredAnalysisWorkspace({
   }
 
   return (
-    <div
-      className={
-        sourceMode === "desktop" && sourceSelection
-          ? "flex items-start"
-          : "relative"
-      }
-    >
+    <div className="relative">
       <div
-        aria-hidden={
-          sourceSelection && sourceMode === "mobile" ? "true" : undefined
-        }
+        aria-hidden={sourceSelection || withdrawalCandidate ? "true" : undefined}
         className="min-w-0 flex-1 space-y-2"
         ref={workspaceRef}
       >
@@ -1015,7 +1020,7 @@ export function StructuredAnalysisWorkspace({
         </section>
 
         <div
-          className="grid min-w-0 gap-4 lg:grid-cols-[380px_1fr]"
+          className="grid min-w-0 gap-4 lg:h-[clamp(500px,calc(100dvh-22rem),720px)] lg:grid-cols-[360px_minmax(0,1fr)]"
           id="structured-analysis-workspace"
         >
           <CandidateList
@@ -1048,15 +1053,6 @@ export function StructuredAnalysisWorkspace({
           )}
         </div>
 
-        {withdrawalCandidate || state.dependencyChanges.length ? (
-          <DependencyChangePanel
-            candidateToWithdraw={withdrawalCandidate}
-            onCancelWithdrawal={() => setWithdrawalCandidateId(null)}
-            onCommand={dispatchCaseCommand}
-            state={state}
-          />
-        ) : null}
-
         <p className="flex items-start gap-2 text-xs leading-5 text-[var(--color-ink-muted)]">
           <ShieldCheck
             aria-hidden="true"
@@ -1068,10 +1064,21 @@ export function StructuredAnalysisWorkspace({
         </p>
       </div>
 
+      {withdrawalCandidate ? (
+        <DependencyChangePanel
+          candidateToWithdraw={withdrawalCandidate}
+          onCancelWithdrawal={() => setWithdrawalCandidateId(null)}
+          onCommand={dispatchCaseCommand}
+          presentation="dialog"
+          state={state}
+        />
+      ) : null}
+
       <SourceDrawer
         mode={sourceMode}
         onClose={() => setSourceSelection(null)}
         onCommand={dispatchCaseCommand}
+        presentation="overlay"
         selection={sourceSelection}
         state={state}
       />

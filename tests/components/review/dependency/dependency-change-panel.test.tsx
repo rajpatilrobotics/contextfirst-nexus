@@ -92,6 +92,37 @@ describe("TASK-021 dependency change and hero withdrawal", () => {
     expect(command).not.toHaveProperty("intent");
   });
 
+  it("presents the Structured Analysis withdrawal confirmation as a compact modal", async () => {
+    const user = userEvent.setup();
+    const state = checkpointState();
+    const onCancelWithdrawal = vi.fn();
+    render(
+      <DependencyChangePanel
+        candidateToWithdraw={candidate(state, "CAND-TASK-0402")}
+        onCancelWithdrawal={onCancelWithdrawal}
+        onCommand={vi.fn()}
+        presentation="dialog"
+        state={state}
+      />,
+    );
+
+    const dialog = screen.getByRole("alertdialog", {
+      name: "Confirm evidence withdrawal",
+    });
+    expect(dialog).toHaveAttribute("aria-modal", "true");
+    expect(
+      screen.queryByRole("heading", { name: "Dependency change" }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("region", {
+        name: "No dependency change recorded",
+      }),
+    ).not.toBeInTheDocument();
+
+    await user.keyboard("{Escape}");
+    expect(onCancelWithdrawal).toHaveBeenCalledOnce();
+  });
+
   it("persists before-and-after feedback, moves focus, and announces the three invalidated items", async () => {
     const user = userEvent.setup();
     render(<CanonicalWithdrawalHarness />);

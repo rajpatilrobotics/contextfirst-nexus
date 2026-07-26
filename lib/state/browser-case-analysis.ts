@@ -1,8 +1,12 @@
 import {
+  AnalysisRunSchema,
   AuditEventSchema,
   CaseStateSchema,
+  type AnalysisExecutionResult,
   type BrowserAnalyzeResponse,
+  type CaseCandidate,
   type CaseState,
+  type Citation,
 } from "../contracts";
 import type { CitationSourceContext } from "../citations";
 import type { BrowserCaseRecord } from "../cases";
@@ -12,7 +16,13 @@ import { deriveCaseStatus } from "./index";
 export function createBrowserAnalysisCaseState(input: {
   record: BrowserCaseRecord;
   sourceContext: CitationSourceContext;
-  response: Extract<BrowserAnalyzeResponse, { outcome: "succeeded" }>;
+  response:
+    | Extract<BrowserAnalyzeResponse, { outcome: "succeeded" }>
+    | {
+        run: AnalysisExecutionResult;
+        candidates: CaseCandidate[];
+        citations: Citation[];
+      };
   approvedRedactedInputDigest: string;
   now?: string;
 }): CaseState {
@@ -23,15 +33,24 @@ export function createBrowserAnalysisCaseState(input: {
     throw new Error("browser_analysis_prerequisites_missing");
   }
   const now = input.now ?? new Date().toISOString();
-  const run = {
+  const run = AnalysisRunSchema.parse({
     ...response.run,
-    recovery: {
-      recoveryOfRunId: null,
-      selectionReason: "initial_choice",
-      selectedBy: "practitioner",
-      automaticFailover: false,
-      outputsMerged: false,
-    },
+    recovery:
+      response.run.mode === "deterministic_replay"
+        ? {
+            recoveryOfRunId: null,
+            selectionReason: "explicit_deterministic_replay",
+            selectedBy: "practitioner",
+            automaticFailover: false,
+            outputsMerged: false,
+          }
+        : {
+            recoveryOfRunId: null,
+            selectionReason: "initial_choice",
+            selectedBy: "practitioner",
+            automaticFailover: false,
+            outputsMerged: false,
+          },
     inputState: {
       sourceCaseRevision: purpose.revision + 1,
       canonicalFixtureDigest: packet.documentSetDigest,
@@ -41,7 +60,7 @@ export function createBrowserAnalysisCaseState(input: {
       selectedSegmentIds: [...sourceContext.selectedSegmentIds],
       approvedRedactedInputDigest: input.approvedRedactedInputDigest,
     },
-  };
+  });
   const audit = [
     AuditEventSchema.parse({
       id: "AUDIT-0001",
@@ -52,7 +71,7 @@ export function createBrowserAnalysisCaseState(input: {
       actorRole: purpose.practitionerRole,
       entityIds: [run.id],
       summary: "analysis_started",
-      createdAt: response.run.startedAt,
+      createdAt: run.startedAt,
       commandId: null,
       idempotencyKey: null,
       analysisRunId: run.id,
@@ -70,7 +89,7 @@ export function createBrowserAnalysisCaseState(input: {
       actor: "system",
       entityIds: [run.id],
       summary: "analysis_completed",
-      createdAt: response.run.completedAt,
+      createdAt: run.completedAt,
       commandId: null,
       idempotencyKey: null,
       analysisRunId: run.id,

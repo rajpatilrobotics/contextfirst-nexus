@@ -437,6 +437,28 @@ Changing a frozen decision requires:
 - Authority: `plan.md`, `docs/MODEL_ROUTING.md`,
   `docs/TESTING_AND_EVALUATION.md`
 
+### DEC-052: Use Groq GPT-OSS 20B for bounded free development
+
+- Date: 2026-07-26
+- Status: Rejected after a non-resumable structured-response failure
+- Decision: Replace the current Groq runtime candidate with separately
+  versioned `groq-oss-20b-free-v1` using `openai/gpt-oss-20b`, low reasoning,
+  strict JSON Schema output, no tools or retry, a 4,096 completion ceiling,
+  at most four candidates, two citations, and two unknowns per candidate.
+- Evidence: A one-token synthetic diagnostic succeeded with 7,925 of 8,000
+  per-minute tokens remaining, proving the earlier failure was an oversized
+  request rather than exhausted account quota. The reduced v2 bundled-fictional
+  canary passed with two candidates and six exact citations. Four more paced
+  repetitions passed; `EVAL-002` repetition 3 then returned
+  `invalid_structured_response`, and the runner stopped before the remaining
+  twenty-one calls.
+- Boundary: The 120B attempts remain historical evidence. The 20B release
+  starts fresh, remains disabled and non-selectable, and cannot receive
+  browser-uploaded content until its complete evaluation, reviewed static
+  admission, ZDR, deployment, and data-policy gates pass.
+- Authority: `plan.md`, `docs/MODEL_ROUTING.md`,
+  `docs/TESTING_AND_EVALUATION.md`
+
 ## 6. Rejected or deferred decisions
 
 ### DEC-030: General legal RAG and agentic tools
@@ -581,3 +603,10 @@ These are not product-choice reopeners. They must be recorded before dependent i
 - The base revision and integration order used for implementation worktrees.
 
 These values must never include credentials, tokens, account identifiers, private URLs, or billing details.
+## 2026-07-26 — Browser-local deterministic analysis is the zero-credit continuity path
+
+- Browser-created cases may run a transparent deterministic Structured Analysis over only the current approved redacted corpus.
+- The local path creates cautious human-review prompts in the existing three lanes with exact canonical citations; it does not make legal findings or claim semantic AI understanding.
+- It persists through the existing canonical case-state and audit path, invalidates when its bound Purpose/document/masking input changes, and never transmits source text or consumes provider credits.
+- Live provider analysis remains a separate optional path and still requires an admitted browser-upload release plus explicit data-flow acknowledgement.
+- This local path is a reliable fallback and judge demonstration capability, not a substitute for admitting a higher-quality live model.

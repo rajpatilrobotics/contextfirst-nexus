@@ -254,13 +254,15 @@ function fallbackProvenance(input: CanonicalProviderInput): AnalysisProviderProv
           ? "gemini-3.5-flash"
           : input.release.providerId === "mistral"
             ? "mistral-small-2603"
-            : "openai/gpt-oss-120b",
+            : "openai/gpt-oss-20b",
     adapterVersion: "task-011-shared-boundary-v1",
     returnedModel: null,
     inferenceSetting:
       input.release.providerId === "google_gemini"
         ? { kind: "thinking_level", value: "medium" }
-        : { kind: "reasoning_effort", value: "medium" },
+        : input.release.providerId === "groq"
+          ? { kind: "reasoning_effort", value: "low" }
+          : { kind: "reasoning_effort", value: "medium" },
     disclosureVersion: "1.0.0",
     providerTransmission: true,
   } as AnalysisProviderProvenance;

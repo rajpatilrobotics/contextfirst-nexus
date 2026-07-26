@@ -1,6 +1,6 @@
 "use client";
 
-import { useId, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { ArrowRight, FileSearch, ShieldAlert } from "lucide-react";
 import type {
   CaseCandidate,
@@ -85,6 +85,7 @@ export function CandidateReviewActions({
   allowWithdrawal = false,
   onWithdrawRequest,
   compact = false,
+  reasonedActionPresentation = "inline",
 }: {
   candidate: CaseCandidate;
   state: CaseState;
@@ -92,8 +93,11 @@ export function CandidateReviewActions({
   allowWithdrawal?: boolean;
   onWithdrawRequest?: (candidate: CaseCandidate) => void;
   compact?: boolean;
+  reasonedActionPresentation?: "inline" | "dialog";
 }) {
   const fieldId = useId();
+  const actionDialogRef = useRef<HTMLElement>(null);
+  const actionInvokerRef = useRef<HTMLElement | null>(null);
   const [activeAction, setActiveAction] = useState<ReasonedAction | null>(null);
   const [editedText, setEditedText] = useState(candidate.currentText);
   const [reason, setReason] = useState("");
@@ -102,6 +106,65 @@ export function CandidateReviewActions({
   const isReviewable =
     candidate.reviewRequirement === "individual" &&
     candidate.inclusionStatus === "active";
+
+  function openReasonedAction(
+    action: ReasonedAction,
+    invoker: HTMLElement,
+  ) {
+    actionInvokerRef.current = invoker;
+    setActiveAction(action);
+    if (action === "edit" || action === "accept_as_limitation") {
+      setEditedText(candidate.currentText);
+    }
+    setFieldError(null);
+  }
+
+  function closeReasonedAction() {
+    setActiveAction(null);
+    setFieldError(null);
+    window.setTimeout(() => actionInvokerRef.current?.focus(), 0);
+  }
+
+  useEffect(() => {
+    if (!activeAction || reasonedActionPresentation !== "dialog") return;
+    const dialog = actionDialogRef.current;
+    window.setTimeout(() => {
+      dialog
+        ?.querySelector<HTMLElement>("textarea, input, button")
+        ?.focus();
+    }, 0);
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key !== "Escape") return;
+      event.preventDefault();
+      closeReasonedAction();
+    };
+    window.addEventListener("keydown", handleEscape);
+    return () => window.removeEventListener("keydown", handleEscape);
+  }, [activeAction, reasonedActionPresentation]);
+
+  function trapActionDialogFocus(event: React.KeyboardEvent<HTMLElement>) {
+    if (
+      reasonedActionPresentation !== "dialog" ||
+      event.key !== "Tab"
+    ) {
+      return;
+    }
+    const focusable = Array.from(
+      event.currentTarget.querySelectorAll<HTMLElement>(
+        "button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled])",
+      ),
+    );
+    if (!focusable.length) return;
+    const first = focusable[0];
+    const last = focusable.at(-1)!;
+    if (event.shiftKey && document.activeElement === first) {
+      event.preventDefault();
+      last.focus();
+    } else if (!event.shiftKey && document.activeElement === last) {
+      event.preventDefault();
+      first.focus();
+    }
+  }
 
   async function sendReviewIntent(intent: ReviewIntent) {
     setCommandMessage(null);
@@ -232,11 +295,12 @@ export function CandidateReviewActions({
         {canRecordLimitation(candidate) ? (
           <Button
             disabled={!isReviewable}
-            onClick={() => {
-              setActiveAction("accept_as_limitation");
-              setEditedText(candidate.currentText);
-              setFieldError(null);
-            }}
+            onClick={(event) =>
+              openReasonedAction(
+                "accept_as_limitation",
+                event.currentTarget,
+              )
+            }
             variant="primary"
           >
             Record as limitation
@@ -246,11 +310,9 @@ export function CandidateReviewActions({
         {candidate.assertionMode !== "unknown_state" && !canRecordLimitation(candidate) ? (
           <Button
             disabled={!isReviewable}
-            onClick={() => {
-              setActiveAction("edit");
-              setEditedText(candidate.currentText);
-              setFieldError(null);
-            }}
+            onClick={(event) =>
+              openReasonedAction("edit", event.currentTarget)
+            }
             variant="secondary"
           >
             Edit wording
@@ -259,20 +321,18 @@ export function CandidateReviewActions({
 
         <Button
           disabled={!isReviewable}
-          onClick={() => {
-            setActiveAction("reject");
-            setFieldError(null);
-          }}
+          onClick={(event) =>
+            openReasonedAction("reject", event.currentTarget)
+          }
           variant="secondary"
         >
           Reject suggestion
         </Button>
         <Button
           disabled={!isReviewable}
-          onClick={() => {
-            setActiveAction("mark_uncertain");
-            setFieldError(null);
-          }}
+          onClick={(event) =>
+            openReasonedAction("mark_uncertain", event.currentTarget)
+          }
           variant="secondary"
         >
           Mark uncertain
@@ -289,9 +349,28 @@ export function CandidateReviewActions({
       </div>
 
       {activeAction ? (
+        <div
+          className={
+            reasonedActionPresentation === "dialog"
+              ? "fixed inset-0 z-[60] grid place-items-end bg-black/35 p-3 sm:place-items-center"
+              : undefined
+          }
+        >
         <section
           aria-label={`${reasonedActionLabel(activeAction)} details`}
-          className="grid gap-3 rounded-[var(--radius-control)] border border-[var(--color-border-strong)] bg-[var(--color-surface-subtle)] p-3"
+          aria-modal={
+            reasonedActionPresentation === "dialog" ? "true" : undefined
+          }
+          className={`grid gap-3 border border-[var(--color-border-strong)] bg-[var(--color-surface-subtle)] p-3 ${
+            reasonedActionPresentation === "dialog"
+              ? "max-h-[calc(100dvh-1.5rem)] w-full max-w-xl overflow-y-auto rounded-[var(--radius-dialog)] bg-[var(--color-surface)] p-4 shadow-[var(--shadow-elevated)]"
+              : "rounded-[var(--radius-control)]"
+          }`}
+          onKeyDown={trapActionDialogFocus}
+          ref={actionDialogRef}
+          role={
+            reasonedActionPresentation === "dialog" ? "dialog" : undefined
+          }
         >
           <div>
             <p className="cfn-type-label">{reasonedActionLabel(activeAction)}</p>
@@ -327,16 +406,14 @@ export function CandidateReviewActions({
               Record individual action
             </Button>
             <Button
-              onClick={() => {
-                setActiveAction(null);
-                setFieldError(null);
-              }}
+              onClick={closeReasonedAction}
               variant="secondary"
             >
               Cancel
             </Button>
           </div>
         </section>
+        </div>
       ) : null}
 
       {commandMessage ? (

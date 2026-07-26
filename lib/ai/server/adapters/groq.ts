@@ -18,8 +18,8 @@ import { MODEL_ANALYSIS_JSON_SCHEMA } from "./mistral";
 const GROQ_ENDPOINT = "https://api.groq.com/openai/v1/chat/completions";
 const GROQ_RELEASE = {
   providerId: "groq",
-  releaseConfigurationId: "groq-oss-free-v1",
-  requestedModel: "openai/gpt-oss-120b",
+  releaseConfigurationId: "groq-oss-20b-free-v1",
+  requestedModel: "openai/gpt-oss-20b",
   serviceTier: "unpaid",
 } as const;
 
@@ -225,7 +225,7 @@ export function buildGroqRequest(input: ProviderPromptInput) {
           prompt.systemBoundary,
           prompt.requestedTasksAndSchema,
           prompt.definitions,
-          "Output budget: return at most 10 candidates. Each candidate must use concise, meaningful, non-whitespace text; include at most 3 short exact citations and at most 5 concise unknowns. Keep quotedText to the shortest sufficient exact source span.",
+          "Output budget: return at most 4 candidates. Each candidate must use concise, meaningful, non-whitespace text; include at most 2 short exact citations and at most 2 concise unknowns. Keep quotedText to the shortest sufficient exact source span.",
           "Return only JSON matching the supplied schema.",
         ].join("\n\n"),
       },
@@ -237,9 +237,9 @@ export function buildGroqRequest(input: ProviderPromptInput) {
         ].join("\n\n"),
       },
     ],
-    reasoning_effort: "medium",
+    reasoning_effort: "low",
     include_reasoning: false,
-    max_completion_tokens: 8192,
+    max_completion_tokens: 4096,
     response_format: {
       type: "json_schema",
       json_schema: {
@@ -273,7 +273,7 @@ function buildGroqProvenance(
     ...GROQ_RELEASE,
     adapterVersion: GROQ_ADAPTER_VERSION,
     returnedModel,
-    inferenceSetting: { kind: "reasoning_effort", value: "medium" },
+    inferenceSetting: { kind: "reasoning_effort", value: "low" },
     disclosureVersion: AI_BOUNDARY_VERSION,
     providerTransmission: true,
   });

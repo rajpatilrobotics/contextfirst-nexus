@@ -38,8 +38,8 @@ export const LIVE_PROVIDER_RELEASES = [
   },
   {
     providerId: "groq",
-    releaseConfigurationId: "groq-oss-free-v1",
-    requestedModel: "openai/gpt-oss-120b",
+    releaseConfigurationId: "groq-oss-20b-free-v1",
+    requestedModel: "openai/gpt-oss-20b",
     serviceTier: "unpaid",
   },
 ] as const satisfies readonly LiveProviderReleaseConfiguration[];
@@ -128,9 +128,10 @@ export const PROVIDER_REGISTRY = [
   }),
   liveEntry(LIVE_PROVIDER_RELEASES[3], {
     displayName: "Groq",
-    modelDisplayName: "GPT-OSS 120B",
-    modelAliasDisclosure: "Frozen Groq free-tier evaluation candidate.",
-    inferenceSetting: { kind: "reasoning_effort", value: "medium" },
+    modelDisplayName: "GPT-OSS 20B",
+    modelAliasDisclosure:
+      "Frozen Groq free-tier development evaluation candidate.",
+    inferenceSetting: { kind: "reasoning_effort", value: "low" },
     disclosure: {
       schemaVersion: "1.0.0",
       disclosureVersion: "1.0.0",

@@ -105,7 +105,7 @@ export const LIVE_RELEASES = [
   { providerId: "openai", releaseConfigurationId: "openai-quality-v1", requestedModel: "gpt-5.6-sol", serviceTier: "paid", inferenceSetting: { kind: "reasoning_effort", value: "medium" } },
   { providerId: "google_gemini", releaseConfigurationId: "gemini-quality-v1", requestedModel: "gemini-3.5-flash", serviceTier: "unpaid", inferenceSetting: { kind: "thinking_level", value: "medium" } },
   { providerId: "mistral", releaseConfigurationId: "mistral-small-free-v1", requestedModel: "mistral-small-2603", serviceTier: "unpaid", inferenceSetting: { kind: "reasoning_effort", value: "medium" } },
-  { providerId: "groq", releaseConfigurationId: "groq-oss-free-v1", requestedModel: "openai/gpt-oss-120b", serviceTier: "unpaid", inferenceSetting: { kind: "reasoning_effort", value: "medium" } },
+  { providerId: "groq", releaseConfigurationId: "groq-oss-20b-free-v1", requestedModel: "openai/gpt-oss-20b", serviceTier: "unpaid", inferenceSetting: { kind: "reasoning_effort", value: "low" } },
 ] as const;
 
 function plannedRelease(release: typeof LIVE_RELEASES[number]) {

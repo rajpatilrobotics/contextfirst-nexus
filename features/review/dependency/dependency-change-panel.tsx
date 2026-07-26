@@ -44,11 +44,13 @@ export function DependencyChangePanel({
   candidateToWithdraw,
   onCancelWithdrawal,
   onCommand,
+  presentation = "section",
 }: {
   state: CaseState;
   candidateToWithdraw: CaseCandidate | null;
   onCancelWithdrawal: () => void;
   onCommand: CaseCommandDispatcher;
+  presentation?: "section" | "dialog";
 }) {
   const reasonId = useId();
   const previewHeadingRef = useRef<HTMLHeadingElement>(null);
@@ -68,6 +70,17 @@ export function DependencyChangePanel({
       window.setTimeout(() => previewHeadingRef.current?.focus(), 0);
     }
   }, [candidateToWithdraw]);
+
+  useEffect(() => {
+    if (!candidateToWithdraw || presentation !== "dialog") return;
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key !== "Escape") return;
+      event.preventDefault();
+      onCancelWithdrawal();
+    };
+    window.addEventListener("keydown", handleEscape);
+    return () => window.removeEventListener("keydown", handleEscape);
+  }, [candidateToWithdraw, onCancelWithdrawal, presentation]);
 
   useEffect(() => {
     if (!latestChange || latestChange.id === seenChangeId.current) return;
@@ -115,9 +128,41 @@ export function DependencyChangePanel({
         )
     : null;
 
+  function trapDialogFocus(event: React.KeyboardEvent<HTMLElement>) {
+    if (presentation !== "dialog" || event.key !== "Tab") return;
+    const focusable = Array.from(
+      event.currentTarget.querySelectorAll<HTMLElement>(
+        "button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled])",
+      ),
+    );
+    if (!focusable.length) return;
+    const first = focusable[0];
+    const last = focusable.at(-1)!;
+    if (event.shiftKey && document.activeElement === first) {
+      event.preventDefault();
+      last.focus();
+    } else if (!event.shiftKey && document.activeElement === last) {
+      event.preventDefault();
+      first.focus();
+    }
+  }
+
   return (
-    <section aria-labelledby="dependency-change-heading" className="grid scroll-mt-28 gap-4" id="dependencies" tabIndex={-1}>
-      <div className="flex items-start gap-3">
+    <section
+      aria-labelledby={
+        presentation === "dialog"
+          ? `${reasonId}-preview-heading`
+          : "dependency-change-heading"
+      }
+      className={
+        presentation === "dialog"
+          ? "fixed inset-0 z-[60] grid place-items-end overflow-y-auto bg-black/35 p-3 sm:place-items-center"
+          : "grid scroll-mt-28 gap-4"
+      }
+      id="dependencies"
+      tabIndex={-1}
+    >
+      {presentation === "section" ? <div className="flex items-start gap-3">
         <div className="rounded-full bg-[var(--color-brand-subtle)] p-2 text-[var(--color-brand)]">
           <GitBranch aria-hidden="true" size={20} />
         </div>
@@ -130,12 +175,18 @@ export function DependencyChangePanel({
             Review the exact downstream effects before evidence is withdrawn. Unrelated decisions remain unchanged.
           </p>
         </div>
-      </div>
+      </div> : null}
 
       {candidateToWithdraw ? (
         <section
           aria-labelledby={`${reasonId}-preview-heading`}
-          className="grid gap-4 rounded-[var(--radius-dialog)] border-2 border-[var(--color-danger)] bg-[var(--color-danger-subtle)] p-4 shadow-[var(--shadow-elevated)]"
+          aria-modal={presentation === "dialog" ? "true" : undefined}
+          className={`grid gap-4 rounded-[var(--radius-dialog)] border-2 border-[var(--color-danger)] bg-[var(--color-danger-subtle)] p-4 shadow-[var(--shadow-elevated)] ${
+            presentation === "dialog"
+              ? "max-h-[calc(100dvh-1.5rem)] w-full max-w-2xl overflow-y-auto"
+              : ""
+          }`}
+          onKeyDown={trapDialogFocus}
           role="alertdialog"
         >
           <div>
@@ -198,7 +249,7 @@ export function DependencyChangePanel({
         </section>
       ) : null}
 
-      {latestChange ? (
+      {presentation === "section" && latestChange ? (
         <section
           aria-labelledby="dependency-summary-heading"
           className="grid scroll-mt-6 gap-4 rounded-[var(--radius-card)] border-2 border-[var(--color-warning)] bg-[var(--color-warning-subtle)] p-4"
@@ -271,11 +322,11 @@ export function DependencyChangePanel({
             </span>
           </Alert>
         </section>
-      ) : (
+      ) : presentation === "section" ? (
         <Alert title="No dependency change recorded" tone="neutral">
           The workspace will retain a before-and-after summary here after the accepted 2025-04-02 task candidate is withdrawn.
         </Alert>
-      )}
+      ) : null}
 
       <p aria-atomic="true" aria-live="assertive" className="sr-only" role="status">
         {announcement}

@@ -92,11 +92,11 @@ function provenance(providerId: "groq" | "openai") {
     providerId === "groq"
       ? {
           providerId: "groq",
-          releaseConfigurationId: "groq-oss-free-v1",
-          requestedModel: "openai/gpt-oss-120b",
+          releaseConfigurationId: "groq-oss-20b-free-v1",
+          requestedModel: "openai/gpt-oss-20b",
           serviceTier: "unpaid",
           adapterVersion: "test",
-          returnedModel: "openai/gpt-oss-120b",
+          returnedModel: "openai/gpt-oss-20b",
           inferenceSetting: { kind: "reasoning_effort", value: "medium" },
           disclosureVersion: "1.0.0",
           providerTransmission: true,

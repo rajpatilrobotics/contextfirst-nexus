@@ -24,7 +24,7 @@ const REPORT_FILES = {
   "openai-quality-v1": "openai-quality-v1.report.json",
   "gemini-quality-v1": "gemini-quality-v1.report.json",
   "mistral-small-free-v1": "mistral-small-free-v1.report.json",
-  "groq-oss-free-v1": "groq-oss-free-v1.report.json",
+  "groq-oss-20b-free-v1": "groq-oss-20b-free-v1.report.json",
 } as const satisfies Partial<Record<
   LiveProviderReleaseConfiguration["releaseConfigurationId"],
   string
@@ -249,7 +249,7 @@ describe("TASK-026 static provider admission handoff", () => {
           reviewed.binding.expectedEvaluatedConfigurationDigest,
         );
       } else {
-        expect(releaseConfigurationId).toBe("groq-oss-free-v1");
+        expect(releaseConfigurationId).toBe("groq-oss-20b-free-v1");
         expect(currentExpectedDigest).not.toBe(
           reviewed.binding.expectedEvaluatedConfigurationDigest,
         );
@@ -257,25 +257,36 @@ describe("TASK-026 static provider admission handoff", () => {
     }
   });
 
-  it("starts v10 without inheriting v9 canary or rate-limit evidence", () => {
-    const report = loadReport("groq-oss-free-v1");
+  it("records only fresh 20B evidence without inheriting 120B evidence", () => {
+    const report = loadReport("groq-oss-20b-free-v1");
     const evidence = report.evidence as Array<Record<string, unknown>>;
     const liveEvidence = evidence.filter(
       (item) => item.executionRequirement === "live_model_run",
     );
 
     expect(report.adapterVersion).toBe(
-      "task-047-groq-bounded-review-boundary-v10",
+      "task-047-groq-20b-free-development-v2",
     );
     expect(liveEvidence).toHaveLength(27);
-    expect(liveEvidence.every((item) => item.status === "not_run")).toBe(true);
     expect(
-      liveEvidence.every(
+      liveEvidence.filter((item) => item.status === "passed"),
+    ).toHaveLength(5);
+    expect(
+      liveEvidence.filter((item) => item.status === "failed"),
+    ).toHaveLength(1);
+    expect(
+      liveEvidence.filter((item) => item.status === "not_run"),
+    ).toHaveLength(21);
+    expect(
+      liveEvidence
+        .filter((item) => item.status === "not_run")
+        .every(
         (item) =>
           item.actualProviderTransmission === false &&
           item.providerAttempts === undefined,
-      ),
+        ),
     ).toBe(true);
+    expect(JSON.stringify(liveEvidence)).not.toContain("gpt-oss-120b");
   });
 
   it("keeps every live option non-selectable while replay remains available", () => {

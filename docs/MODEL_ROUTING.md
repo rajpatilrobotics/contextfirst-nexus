@@ -23,7 +23,7 @@ P0 defines four live provider adapters and one local replay path:
 |---|---|---|---|---|
 | `mistral-small-free-v1` | Mistral | `mistral-small-2603` | First cost-conscious candidate for the exact bundled fixture | Static admission and deployed-account availability required; initially unselectable |
 | `gemini-quality-v1` | Google Gemini | `gemini-3.5-flash` | Second cost-conscious candidate for the exact bundled fixture | Evaluation and reviewed static admission required |
-| `groq-oss-free-v1` | Groq | `openai/gpt-oss-120b` | First browser-upload candidate when eligible | Evaluation, reviewed static admission, deployed configuration, and verified zero data retention required |
+| `groq-oss-20b-free-v1` | Groq | `openai/gpt-oss-20b` | Free-development browser-upload candidate when eligible | Evaluation, reviewed static admission, deployed configuration, and verified zero data retention required |
 | `openai-quality-v1` | OpenAI | `gpt-5.6-sol` | Paid quality fallback | Evaluation and reviewed static admission required |
 | `prepared-replay-v1` | Local fixture | Frozen replay output | Demo continuity when no live provider is used | Deterministic and visibly labelled |
 
@@ -83,6 +83,19 @@ DEC-051 records the bounded-output follow-up. V8 added concise proposal-count gu
 V9's first canary passed, but its next request exposed a normalization defect: Groq returned `HTTP 413` with safe code `rate_limit_exceeded`, which v9 mapped to `internal_safe_failure`. V9 is non-admitting. V10 changes only that exact operational classification to `provider_rate_limited`; it adds no retry and inherits no v9 evidence.
 
 V10 is implemented with a fresh zero-transmission evaluation baseline. Unrelated 413 responses still fail closed. Live v10 evaluation waits for the configured Groq project's free-tier limit to reset.
+
+The 120B candidate remains historical and non-admitting. The current
+free-development candidate is separately versioned as
+`groq-oss-20b-free-v1` using `openai/gpt-oss-20b`, low reasoning, strict JSON
+Schema output, a 4,096 completion ceiling, and tighter proposal bounds. A
+one-token diagnostic proved the configured account had 7,925 of 8,000
+per-minute tokens available; the earlier 20B v1 envelope itself was too large.
+The reduced v2 canary passed with two candidates and six exact citations.
+Three additional paced repetitions and the next batch's first repetition also
+passed. `EVAL-002` repetition 3 then returned
+`invalid_structured_response`; the runner stopped immediately. V2 therefore
+has five passes, one non-resumable quality failure, and twenty-one not-run
+repetitions. It is non-selectable and non-admitting.
 
 ### 4.1 Official screening sources
 
@@ -167,7 +180,7 @@ One browser analysis intent may enter the bounded server route only after canoni
 
 1. Mistral.
 2. Gemini.
-3. Groq `openai/gpt-oss-120b`.
+3. Groq `openai/gpt-oss-20b`.
 4. OpenAI.
 
 The complete order may be changed through the validated server-only setting described above. It is a consideration order, not a promise that all four providers are called. The two unpaid fixture-only releases are skipped for browser-uploaded packets. Each remaining release still needs its own frozen configuration, evaluation, reviewed static admission, credential, data-policy eligibility, and deployment approval.

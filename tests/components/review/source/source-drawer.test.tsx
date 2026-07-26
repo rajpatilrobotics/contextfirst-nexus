@@ -88,6 +88,35 @@ describe("TASK-020 source drawer", () => {
     invoker.remove();
   });
 
+  it("uses a focus-contained overlay without changing the underlying desktop workspace width", async () => {
+    const user = userEvent.setup();
+    const state = reviewState();
+    const onClose = vi.fn();
+
+    render(
+      <SourceDrawer
+        mode="desktop"
+        onClose={onClose}
+        onCommand={vi.fn()}
+        presentation="overlay"
+        selection={{
+          candidateId: "CAND-TASK-0402",
+          citationId: "CIT-D05-P1-S05",
+          invoker: null,
+        }}
+        state={state}
+      />,
+    );
+
+    const dialog = screen.getByRole("dialog", {
+      name: "Task and penalty log",
+    });
+    expect(dialog).toHaveAttribute("aria-modal", "true");
+    expect(dialog).toHaveClass("max-w-[520px]");
+    await user.keyboard("{Escape}");
+    expect(onClose).toHaveBeenCalledOnce();
+  });
+
   it("dispatches the exact central resolution payload and never enables source access optimistically", async () => {
     const user = userEvent.setup();
     const state = reviewState();

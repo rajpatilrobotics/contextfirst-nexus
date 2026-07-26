@@ -17,7 +17,7 @@ export const AI_BOUNDARY_VERSION = "1.0.0" as const;
 export const SHARED_PROMPT_VERSION = "1.0.0" as const;
 export const ADAPTER_VERSION = "task-047-shared-boundary-v5" as const;
 export const GROQ_ADAPTER_VERSION =
-  "task-047-groq-bounded-review-boundary-v10" as const;
+  "task-047-groq-20b-free-development-v2" as const;
 export const EVALUATION_DEFINITION_SET_DIGEST =
   "f33edcab4fb346591d31171f8cff8db60f944405c221afa7292facaa26221473" as const;
 

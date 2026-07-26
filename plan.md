@@ -1,4 +1,140 @@
+# Structured Analysis Lovable UX correction, 2026-07-26
+
+## 1. Goal
+
+Restore the approved compact Lovable Structured Analysis experience while
+preserving the browser-local deterministic run, canonical review commands,
+citations, reveal audit, dependency recalculation, persistence, and safety.
+
+## 2. Problem
+
+The lane selector and toolbar are close to Lovable, but opening exact source,
+editing a decision, or requesting withdrawal changes the whole page geometry.
+The source drawer compresses the master-detail workspace into narrow columns;
+reasoned-action forms expand inside the detail card; withdrawal appears far
+below the selected candidate; and the page becomes a long scroll instead of a
+focused review workspace.
+
+## 3. Proposed solution
+
+- Keep the Lovable header, single-row lanes, compact toolbar, 380px candidate
+  list, editorial tokens, typography, badges, and master-detail structure.
+- Give the candidate list and candidate detail their own bounded desktop
+  scrolling region so the header, lanes, filters, selection, and review actions
+  remain spatially stable.
+- Present exact source as a focused right-side overlay rather than shrinking
+  the workspace.
+- Present reason-required review forms and withdrawal confirmation as compact,
+  keyboard-safe overlays anchored to the selected candidate workflow.
+- Keep all canonical controls, source reveal warnings, command validation,
+  error states, focus restoration, and responsive stacking.
+
+## 4. Files to change
+
+- `features/analysis/structured/structured-analysis-workspace.tsx`
+- `features/review/source/source-drawer.tsx`
+- `features/review/candidate/candidate-review-card.tsx`
+- `features/review/dependency/dependency-change-panel.tsx` only if a small
+  presentation prop is required
+- focused Structured Analysis, source-drawer, review-action, and dependency
+  tests
+
+## 5. Step by step tasks
+
+1. Bound the desktop master-detail height and enable independent list/detail
+   scrolling without changing mobile stacking.
+2. Add a Structured Analysis overlay presentation for the canonical source
+   drawer, including Escape, focus containment, and focus restoration.
+3. Move compact reasoned-action forms into a focused dialog without changing
+   review commands or validation.
+4. Move withdrawal preview into a focused dialog and remove the permanent
+   below-workspace dependency panel from this route.
+5. Compare the same selected-candidate, source-open, edit-open, and withdrawal
+   states against the Lovable structure and the supplied screenshots.
+
+## 6. Acceptance criteria
+
+- At a typical laptop viewport, lanes and filters stay compact and the
+  candidate list/detail begin high on the screen.
+- Opening source never narrows the list or candidate detail.
+- Exact source, edit/reject/uncertain reasons, and withdrawal remain fully
+  canonical but no longer create a multi-screen vertical scroll.
+- The selected candidate and review actions remain visible and readable.
+- Mobile remains stacked and overlays fit without horizontal overflow.
+- No canonical logic, provider routing, document processing, analysis output,
+  audit, persistence, or export behavior changes.
+
+## 7. Testing plan
+
+- Focused Structured Analysis interaction and layout assertions.
+- Focused source drawer keyboard/focus tests.
+- Focused canonical review-action and withdrawal tests.
+- Typecheck, production build, and `git diff --check`.
+- Same-state laptop browser smoke for candidate selection, source, edit, and
+  withdrawal.
+
+## 8. Open questions
+
+- None. The supplied screenshots, current canonical behavior, and existing
+  Lovable source establish the required target.
+
 # Browser-created case Structured Analysis, 2026-07-26
+
+### Browser-local deterministic analysis continuity
+
+Add a zero-provider analysis option for browser-created cases so the judge
+journey does not depend on live API quota. It must consume only the current
+approved redacted analysis corpus, use deterministic transparent indicator
+rules, quote exact canonical segments, create cautious review proposals rather
+than conclusions, and persist through the existing browser-case analysis
+state. It must never claim to be AI, legal advice, a trafficking
+determination, or evidence validation. Purpose, document, masking, and corpus
+changes must invalidate it through the existing freshness contract.
+
+Reuse the current Structured Analysis Lovable presentation, canonical review
+actions, citation resolver, and downstream state shape. Add no dependency and
+do not weaken the live-provider evaluation or admission boundary.
+
+**Acceptance:** an approved browser-created packet can start deterministic
+analysis with zero network calls; results contain only exact current-corpus
+citations; unmatched packets show a truthful zero-result state; results survive
+reload; stale inputs require rerun; and focused analysis, routing, persistence,
+typecheck, build, and diff checks pass.
+
+### Groq 20B free-development candidate
+
+Use Groq `openai/gpt-oss-20b` as a separately versioned free-development
+candidate so work can continue without rotating accounts or spending OpenAI
+credits. Reuse the existing strict JSON Schema boundary, source-citation
+validation, ZDR requirement, canonical review workflow, and fail-closed
+admission rules. Preserve the 120B attempts as historical evidence; the 20B
+candidate must use a new release identity, adapter version, evaluated
+configuration digest, and fresh report. Run one bundled-fictional canary first.
+Do not enable production selection, send browser-uploaded data, or run a broad
+evaluation unless the exact 20B candidate passes that canary.
+
+**Acceptance:** the new candidate is represented truthfully, deterministic
+tests and typecheck pass, one live canary uses only the bundled fictional
+redacted fixture, and a failure stops without fallback or additional calls.
+
+The first 20B canary was rejected as `provider_rate_limited`. A one-token
+synthetic diagnostic then succeeded and reported 7,925 of 8,000 tokens
+remaining, proving the account quota was available and the analysis request
+envelope itself exceeded the free TPM window. V2 therefore reduces the
+completion ceiling and proposal bounds while keeping strict schema and
+canonical citation validation unchanged.
+
+V2's first bundled-fictional canary passed with two candidates and six exact
+citations. The report remains incomplete and non-admitting with twenty-six
+required live repetitions still not run. No browser-uploaded document was
+sent, and runtime selection remains disabled.
+
+Three additional paced repetitions passed. The next paced batch recorded one
+more pass, then `EVAL-002` repetition 3 returned
+`invalid_structured_response`. The runner stopped immediately and did not
+attempt the remaining twenty-one repetitions. V2 is non-admitting: five live
+repetitions passed, one failed, and six bundled-fictional transmissions
+occurred in total.
 
 ### Groq v8 bounded-output correction
 

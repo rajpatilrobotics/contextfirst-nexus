@@ -105,12 +105,12 @@ describe("TASK-016 deterministic evaluation", () => {
 
     const provider = {
       providerId: "groq",
-      releaseConfigurationId: "groq-oss-free-v1",
-      requestedModel: "openai/gpt-oss-120b",
+      releaseConfigurationId: "groq-oss-20b-free-v1",
+      requestedModel: "openai/gpt-oss-20b",
       serviceTier: "unpaid",
       adapterVersion: "test-strict-adapter",
-      returnedModel: "openai/gpt-oss-120b",
-      inferenceSetting: { kind: "reasoning_effort", value: "medium" },
+      returnedModel: "openai/gpt-oss-20b",
+      inferenceSetting: { kind: "reasoning_effort", value: "low" },
       disclosureVersion: "1.0.0",
       providerTransmission: true,
     } as const;

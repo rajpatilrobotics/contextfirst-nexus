@@ -21,6 +21,7 @@ type SourceDrawerProps = {
   state: CaseState;
   selection: SourceSelection | null;
   mode: SourceMode;
+  presentation?: "responsive" | "overlay";
   onClose: () => void;
   onCommand: CaseCommandDispatcher;
 };
@@ -135,7 +136,14 @@ export function CitationLink({
   );
 }
 
-export function SourceDrawer({ state, selection, mode, onClose, onCommand }: SourceDrawerProps) {
+export function SourceDrawer({
+  state,
+  selection,
+  mode,
+  presentation = "responsive",
+  onClose,
+  onCommand,
+}: SourceDrawerProps) {
   const headingId = useId();
   const headingRef = useRef<HTMLHeadingElement>(null);
   const quoteRef = useRef<HTMLDivElement>(null);
@@ -260,10 +268,17 @@ export function SourceDrawer({ state, selection, mode, onClose, onCommand }: Sou
     setRevealed(true);
   }
 
-  function trapMobileFocus(event: React.KeyboardEvent<HTMLElement>) {
-    if (mode !== "mobile" || event.key !== "Tab") return;
+  function trapDialogFocus(event: React.KeyboardEvent<HTMLElement>) {
+    if (
+      (mode !== "mobile" && presentation !== "overlay") ||
+      event.key !== "Tab"
+    ) {
+      return;
+    }
     const focusable = Array.from(
-      event.currentTarget.querySelectorAll<HTMLElement>("button:not([disabled]), [href], input:not([disabled])"),
+      event.currentTarget.querySelectorAll<HTMLElement>(
+        "button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled])",
+      ),
     );
     if (focusable.length === 0) return;
     const first = focusable[0];
@@ -278,7 +293,7 @@ export function SourceDrawer({ state, selection, mode, onClose, onCommand }: Sou
   }
 
   const body = (
-    <div className="grid gap-4" onKeyDown={trapMobileFocus}>
+    <div className="grid gap-4" onKeyDown={trapDialogFocus}>
       <div className="flex items-start justify-between gap-4">
         <div>
           <p className="cfn-type-label text-[var(--color-ink-muted)]">Exact masked source</p>
@@ -372,6 +387,21 @@ export function SourceDrawer({ state, selection, mode, onClose, onCommand }: Sou
       {commandError ? <p className="text-sm text-[var(--color-danger)]" role="alert">{commandError}</p> : null}
     </div>
   );
+
+  if (presentation === "overlay") {
+    return (
+      <div className="fixed inset-0 z-50 flex justify-end bg-black/35 p-3 sm:p-4">
+        <section
+          aria-labelledby={headingId}
+          aria-modal="true"
+          className="h-full w-full max-w-[520px] overflow-y-auto rounded-[var(--radius-dialog)] border border-[var(--color-border)] bg-[var(--color-surface)] p-4 shadow-[var(--shadow-elevated)] sm:p-5"
+          role="dialog"
+        >
+          {body}
+        </section>
+      </div>
+    );
+  }
 
   if (mode === "mobile") {
     return (

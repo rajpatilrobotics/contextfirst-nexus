@@ -37,8 +37,8 @@ const LIVE_RELEASES = [
   },
   {
     providerId: "groq",
-    releaseConfigurationId: "groq-oss-free-v1",
-    requestedModel: "openai/gpt-oss-120b",
+    releaseConfigurationId: "groq-oss-20b-free-v1",
+    requestedModel: "openai/gpt-oss-20b",
     serviceTier: "unpaid",
   },
 ] as const satisfies readonly LiveProviderReleaseConfiguration[];
@@ -47,7 +47,7 @@ const INFERENCE_BY_RELEASE = {
   "openai-quality-v1": { kind: "reasoning_effort", value: "medium" },
   "gemini-quality-v1": { kind: "thinking_level", value: "medium" },
   "mistral-small-free-v1": { kind: "reasoning_effort", value: "medium" },
-  "groq-oss-free-v1": { kind: "reasoning_effort", value: "medium" },
+  "groq-oss-20b-free-v1": { kind: "reasoning_effort", value: "low" },
 } as const satisfies Record<
   LiveProviderReleaseConfiguration["releaseConfigurationId"],
   ProviderReleaseInferenceSetting
@@ -252,21 +252,22 @@ export const REVIEWED_INCOMPLETE_REPORTS = {
       actualProviderTransmissions: 0,
     },
   ),
-  "groq-oss-free-v1": reviewedIncompleteReport(
+  "groq-oss-20b-free-v1": reviewedIncompleteReport(
     LIVE_RELEASES[3],
-    INFERENCE_BY_RELEASE["groq-oss-free-v1"],
-    "REPORT-GROQ-OSS-FREE-V1-V1",
-    "ccb8108f917cc938f152d9538ab86830a59b87c212e1b5ecb7bfe17cf5d62bf7",
-    "2026-07-16T00:00:00.000Z",
-    "66f4bd0071c16334ff227cede8cd9a506abb9ca6ad7dfe831c2890fc0aa73693",
-    "66f4bd0071c16334ff227cede8cd9a506abb9ca6ad7dfe831c2890fc0aa73693",
+    INFERENCE_BY_RELEASE["groq-oss-20b-free-v1"],
+    "REPORT-GROQ-OSS-20B-FREE-V1-V1",
+    "b2589e88cdbd797bf89cd83630e0c23f2f3dbb545bc34c0dde8963e68f459cf6",
+    "2026-07-26T08:07:01.578Z",
+    "7abc1f7de83752cdb86e10ab569eea9bf1684ab34ef10a22199bba70e6c7c3eb",
+    "7abc1f7de83752cdb86e10ab569eea9bf1684ab34ef10a22199bba70e6c7c3eb",
     {
-      passed: 0,
-      failed: 0,
+      passed: 5,
+      failed: 1,
       interrupted: 0,
-      notRun: 27,
-      actualProviderTransmissions: 0,
+      notRun: 21,
+      actualProviderTransmissions: 6,
     },
+    { passed: 3, failed: 0, notRun: 5 },
   ),
 } as const satisfies Partial<Record<
   LiveProviderReleaseConfiguration["releaseConfigurationId"],

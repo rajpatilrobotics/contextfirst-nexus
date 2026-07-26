@@ -37,6 +37,7 @@ import {
   type LocalPdfDocumentServiceResult,
 } from "../../../lib/documents";
 import { buildBrowserAnalysisIntent } from "../../../lib/analysis/browser-analysis-intent";
+import { buildBrowserDeterministicAnalysis } from "../../../lib/analysis/browser-deterministic-analysis";
 import { browserAnalysisSnapshotMatchesRecordMetadata } from "../../../lib/analysis/freshness";
 import { createBrowserAnalysisCaseState } from "../../../lib/state/browser-case-analysis";
 import type { CitationSourceContext } from "../../../lib/citations";
@@ -228,7 +229,7 @@ export function BrowserCaseStructuredAnalysisWorkspace({
     });
   }, [record, runtimeResult]);
 
-  async function startAnalysis() {
+  async function startLiveAnalysis() {
     if (!record || !runtimeResult || !acknowledged) return;
     setStatus("running");
     setMessage(null);
@@ -279,6 +280,52 @@ export function BrowserCaseStructuredAnalysisWorkspace({
     } catch {
       setMessage(
         "The analysis request did not complete. No partial result was saved.",
+      );
+      setStatus("failed");
+    }
+  }
+
+  async function startLocalAnalysis() {
+    if (!record || !runtimeResult) return;
+    setStatus("running");
+    setMessage(null);
+    const built = await buildBrowserAnalysisIntent({
+      record,
+      segments: runtimeResult.segments,
+    });
+    if (!built.ok) {
+      setMessage(built.reason);
+      setStatus("failed");
+      return;
+    }
+
+    try {
+      const sourceContext = localSourceContext(
+        record,
+        runtimeResult.segments,
+      );
+      const result = buildBrowserDeterministicAnalysis({
+        caseId,
+        approvedRedactedInputDigest:
+          built.intent.approvedRedactedInputDigest,
+        documents: sourceContext.documents,
+        segments: sourceContext.segments.filter((segment) =>
+          sourceContext.selectedSegmentIds.has(segment.id),
+        ),
+      });
+      const next = createBrowserAnalysisCaseState({
+        record,
+        sourceContext,
+        response: result,
+        approvedRedactedInputDigest:
+          built.intent.approvedRedactedInputDigest,
+      });
+      await analysisStore.save(caseId, next);
+      setState(next);
+      setStatus("ready");
+    } catch {
+      setMessage(
+        "Browser-local analysis failed safely. No partial result was saved.",
       );
       setStatus("failed");
     }
@@ -337,7 +384,7 @@ export function BrowserCaseStructuredAnalysisWorkspace({
     <BrowserCaseShell activeStage="analysis" record={record}>
       <div className="space-y-5">
         <SectionTitle
-          description="Analyze only the current approved redacted text. Provider output remains a source-grounded proposal for human review."
+          description="Analyze only the current approved redacted text. Browser-local rules create source-grounded review prompts without using an API or spending credits."
           eyebrow="Stage 3 · Analysis"
           title="Structured Analysis"
         />
@@ -372,10 +419,10 @@ export function BrowserCaseStructuredAnalysisWorkspace({
                 <h2 className="font-serif text-xl">Approved analysis input</h2>
               </div>
               <p className="mt-2 max-w-3xl text-sm text-muted-foreground">
-                Only approved redacted text is sent. Raw PDFs remain in this
-                browser. Free Mistral and Gemini are skipped for uploaded
-                packets under the current data policy; Groq is considered
-                before paid OpenAI when both are admitted and available.
+                Raw PDFs and extracted text remain in this browser. The
+                deterministic option checks transparent language patterns,
+                creates exact source citations, and never makes a legal
+                finding. An admitted live provider remains optional.
               </p>
             </div>
             <div className="flex flex-wrap gap-2">
@@ -389,6 +436,7 @@ export function BrowserCaseStructuredAnalysisWorkspace({
                     ? "Live service ready"
                     : "Live service unavailable"}
               </Chip>
+              <Chip tone="sage">Local analysis ready</Chip>
               <Chip tone="mute">
                 {record.documentPacket?.documents.length ?? 0} documents
               </Chip>
@@ -398,39 +446,14 @@ export function BrowserCaseStructuredAnalysisWorkspace({
             </div>
           </div>
 
-          <label className="mt-5 flex cursor-pointer items-start gap-3 rounded-lg border border-border bg-background/60 p-3 text-sm">
-            <input
-              checked={acknowledged}
-              className="mt-1 h-4 w-4"
-              onChange={(event) => setAcknowledged(event.target.checked)}
-              type="checkbox"
-            />
-            <span>
-              I confirm this packet contains only synthetic or authorized
-              public material, and I understand that its approved redacted text
-              may be sent to the admitted live provider shown in the resulting
-              provenance.
-            </span>
-          </label>
-
-          {serviceState === "unavailable" ? (
-            <p className="mt-3 text-xs leading-5 text-muted-foreground">
-              No browser-upload-eligible release is currently admitted and
-              enabled. Starting is disabled, and no provider call or credit
-              usage occurs.
-            </p>
-          ) : null}
-
           <div className="mt-4 flex flex-wrap items-center gap-3">
             <Button
               disabled={
                 !corpusReady ||
-                !acknowledged ||
-                serviceState !== "available" ||
                 status === "running" ||
                 !runtimeResult
               }
-              onClick={() => void startAnalysis()}
+              onClick={() => void startLocalAnalysis()}
             >
               {status === "running" ? (
                 <LoaderCircle
@@ -440,7 +463,9 @@ export function BrowserCaseStructuredAnalysisWorkspace({
               ) : (
                 <Sparkles aria-hidden="true" className="h-4 w-4" />
               )}
-              {status === "running" ? "Analyzing safely…" : "Start analysis"}
+              {status === "running"
+                ? "Analyzing safely…"
+                : "Run browser-local analysis"}
             </Button>
             <Link
               className="text-sm font-medium underline"
@@ -449,6 +474,52 @@ export function BrowserCaseStructuredAnalysisWorkspace({
               Review Documents
             </Link>
           </div>
+
+          <details className="mt-4 rounded-lg border border-border bg-background/60 p-3">
+            <summary className="cursor-pointer text-sm font-medium">
+              Optional live-provider analysis
+            </summary>
+            <p className="mt-2 text-xs leading-5 text-muted-foreground">
+              A live provider can offer broader language interpretation, but
+              only an admitted browser-upload release may receive approved
+              redacted text. Raw PDFs are never sent.
+            </p>
+            <label className="mt-3 flex cursor-pointer items-start gap-3 text-sm">
+              <input
+                checked={acknowledged}
+                className="mt-1 h-4 w-4"
+                onChange={(event) => setAcknowledged(event.target.checked)}
+                type="checkbox"
+              />
+              <span>
+                I confirm this packet contains only synthetic or authorized
+                public material, and I understand that its approved redacted
+                text may be sent to the admitted live provider shown in the
+                resulting provenance.
+              </span>
+            </label>
+            {serviceState === "unavailable" ? (
+              <p className="mt-3 text-xs leading-5 text-muted-foreground">
+                No browser-upload-eligible release is currently admitted and
+                enabled. No provider call or credit usage can occur.
+              </p>
+            ) : null}
+            <Button
+              className="mt-3"
+              disabled={
+                !corpusReady ||
+                !acknowledged ||
+                serviceState !== "available" ||
+                status === "running" ||
+                !runtimeResult
+              }
+              onClick={() => void startLiveAnalysis()}
+              variant="secondary"
+            >
+              <Sparkles aria-hidden="true" className="h-4 w-4" />
+              Start live analysis
+            </Button>
+          </details>
         </section>
       </div>
     </BrowserCaseShell>

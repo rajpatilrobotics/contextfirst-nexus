@@ -32,7 +32,7 @@ const CASE_ID = "CFN-CASE-ANALYSIS";
 const DIGEST = "d".repeat(64);
 const NOW = "2026-07-26T00:00:00.000Z";
 const TEXT =
-  "The authorized public source describes a work arrangement for review.";
+  "A recruiter advertised travel and later threatened the worker. An interpreter may be needed for the hearing.";
 
 function sourceSegment(): SourceSegment {
   return {
@@ -188,11 +188,11 @@ function successfulResponse(): BrowserAnalyzeResponse {
       mode: "live",
       provider: {
         providerId: "groq",
-        releaseConfigurationId: "groq-oss-free-v1",
-        requestedModel: "openai/gpt-oss-120b",
+        releaseConfigurationId: "groq-oss-20b-free-v1",
+        requestedModel: "openai/gpt-oss-20b",
         serviceTier: "unpaid",
         adapterVersion: "test",
-        returnedModel: "openai/gpt-oss-120b",
+        returnedModel: "openai/gpt-oss-20b",
         inferenceSetting: { kind: "reasoning_effort", value: "medium" },
         disclosureVersion: "1.0.0",
         providerTransmission: true,
@@ -291,11 +291,16 @@ describe("browser-created Structured Analysis workspace", () => {
     );
     expect(await screen.findByText("Live service ready")).toBeInTheDocument();
     await user.click(
+      screen.getByText("Optional live-provider analysis"),
+    );
+    await user.click(
       screen.getByRole("checkbox", {
         name: /I confirm this packet contains only synthetic or authorized public material/i,
       }),
     );
-    await user.click(screen.getByRole("button", { name: "Start analysis" }));
+    await user.click(
+      screen.getByRole("button", { name: "Start live analysis" }),
+    );
     expect(
       await screen.findByRole("region", {
         name: "Analysis completed with zero candidates",
@@ -359,5 +364,102 @@ describe("browser-created Structured Analysis workspace", () => {
       ).toBeInTheDocument(),
     );
     stale.unmount();
+  });
+
+  it("runs deterministic browser-local analysis without a provider call and persists exact cited lane candidates", async () => {
+    storeReadyCase();
+    const analysisStore = memoryAnalysisStore();
+    const file = new File(
+      [new Uint8Array([0x25, 0x50, 0x44, 0x46, 0x2d, 0x31, 0x2e, 0x37])],
+      "authorized-public.pdf",
+      { type: "application/pdf" },
+    );
+    const fileStore: BrowserCaseFileStore = {
+      async load() {
+        return [file];
+      },
+      async save() {},
+    };
+    const fetchMock = vi.fn(
+      async (_input: RequestInfo | URL, _init?: RequestInit) =>
+        new Response(
+        JSON.stringify({
+          schemaVersion: "1.0.0",
+          liveAnalysisEnabled: false,
+          replayEnabled: true,
+          options: multipleSelectableProviderOptions().map((option) =>
+            option.mode === "live"
+              ? {
+                  ...option,
+                  availabilityStatus: "disabled",
+                  selectable: false,
+                }
+              : option,
+          ),
+        }),
+          { status: 200, headers: { "Content-Type": "application/json" } },
+        ),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+    const user = userEvent.setup();
+
+    render(
+      <BrowserCaseStructuredAnalysisWorkspace
+        analysisStore={analysisStore}
+        caseId={CASE_ID}
+        fileStore={fileStore}
+        processSources={vi.fn(async () => processedResult())}
+      />,
+    );
+
+    expect(
+      await screen.findByRole("button", {
+        name: "Run browser-local analysis",
+      }),
+    ).toBeEnabled();
+    await user.click(
+      screen.getByRole("button", {
+        name: "Run browser-local analysis",
+      }),
+    );
+
+    expect(
+      await screen.findByText(
+        "Browser-local rules · no provider transmission",
+      ),
+    ).toBeInTheDocument();
+    const saved = analysisStore.snapshots.get(CASE_ID);
+    expect(saved?.analysisRuns[0]).toMatchObject({
+      mode: "deterministic_replay",
+      provider: {
+        adapterVersion: "browser-deterministic-analysis-v1",
+        providerTransmission: false,
+      },
+      status: "succeeded",
+    });
+    expect(
+      new Set(saved?.candidates.map((candidate) => candidate.lane)),
+    ).toEqual(
+      new Set([
+        "trafficking_indicators",
+        "protection_remedy_urgency",
+      ]),
+    );
+    expect(saved?.citations.every((citation) => {
+      const segment = saved.segments.find(
+        (item) => item.id === citation.segmentId,
+      );
+      return Boolean(
+        segment &&
+          citation.validationStatus === "exact_match" &&
+          segment.redactedText.slice(
+            citation.redactedSegmentRange.start,
+            citation.redactedSegmentRange.end,
+          ) === citation.quotedText,
+      );
+    })).toBe(true);
+    expect(
+      fetchMock.mock.calls.filter(([, init]) => init?.method === "POST"),
+    ).toHaveLength(0);
   });
 });
