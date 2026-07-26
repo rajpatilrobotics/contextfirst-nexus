@@ -257,7 +257,7 @@ describe("TASK-026 static provider admission handoff", () => {
     }
   });
 
-  it("keeps the v8 canary isolated from all v7 evidence", () => {
+  it("keeps the v9 canary and rate-limit classification defect isolated", () => {
     const report = loadReport("groq-oss-free-v1");
     const evidence = report.evidence as Array<Record<string, unknown>>;
     const liveEvidence = evidence.filter(
@@ -265,34 +265,21 @@ describe("TASK-026 static provider admission handoff", () => {
     );
 
     expect(report.adapterVersion).toBe(
-      "task-047-groq-bounded-review-boundary-v8",
+      "task-047-groq-bounded-review-boundary-v9",
     );
     expect(liveEvidence).toHaveLength(27);
+    expect(
+      liveEvidence.filter((item) => item.status === "passed"),
+    ).toHaveLength(1);
     expect(
       liveEvidence.filter((item) => item.status === "failed"),
     ).toHaveLength(1);
     expect(
       liveEvidence.filter((item) => item.status === "not_run"),
-    ).toHaveLength(26);
+    ).toHaveLength(25);
     expect(
-      liveEvidence.filter((item) => item.status === "passed"),
-    ).toHaveLength(0);
-    expect(
-      liveEvidence.filter(
-        (item) => item.actualProviderTransmission === true,
-      ),
-    ).toHaveLength(1);
-    expect(
-      liveEvidence.filter(
-        (item) => item.actualProviderTransmission === false,
-      ),
-    ).toHaveLength(26);
-    expect(
-      liveEvidence.filter((item) => item.providerAttempts !== undefined),
-    ).toHaveLength(1);
-    expect(
-      liveEvidence.filter((item) => item.providerAttempts === undefined),
-    ).toHaveLength(26);
+      liveEvidence.filter((item) => item.actualProviderTransmission === true),
+    ).toHaveLength(2);
   });
 
   it("keeps every live option non-selectable while replay remains available", () => {

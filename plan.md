@@ -17,6 +17,14 @@ ceiling is too small for medium reasoning. V8 is non-admitting. V9 will retain
 the proposal-count bounds but raise only the completion ceiling to 8,192
 tokens, then start another fresh exact-version canary.
 
+V9's first canary passed with four candidates and nine exact citations. Its
+next repetition received Groq `HTTP 413` with safe provider code
+`rate_limit_exceeded`. The adapter incorrectly mapped that operational
+condition to `internal_safe_failure`; v9 is therefore non-admitting. V10 must
+classify that exact status/code pair as `provider_rate_limited`, preserve the
+same request configuration, and begin fresh evidence after the free-tier limit
+resets.
+
 **Status:** Dynamic Structured Analysis implementation and focused verification
 are complete. The Groq boundary now uses the provider's strict structured-output
 path. Ten bounded repetitions passed using only the bundled fictional redacted

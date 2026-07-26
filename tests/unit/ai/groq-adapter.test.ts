@@ -87,7 +87,7 @@ describe("Groq native analysis adapter", () => {
       model: "openai/gpt-oss-120b",
       reasoning_effort: "medium",
       include_reasoning: false,
-      max_completion_tokens: 4096,
+      max_completion_tokens: 8192,
       response_format: {
         type: "json_schema",
         json_schema: { strict: true },

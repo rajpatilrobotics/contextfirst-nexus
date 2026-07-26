@@ -48,7 +48,7 @@ describe("TASK-023 System Card and provenance", () => {
     expect(screen.getByText("REPORT-MISTRAL-SMALL-FREE-V1-V1")).toBeInTheDocument();
     expect(screen.getByText("26fae46551dcbd9d6f3bd27aa202855053d8856c34bb5607c71788e566832774")).toBeInTheDocument();
     expect(screen.getByText("REPORT-GROQ-OSS-FREE-V1-V1")).toBeInTheDocument();
-    expect(screen.getByText("4ba6e6b9bf25a358181151dbc023e50a074f8711cbf9458194b26f38028d5ff9")).toBeInTheDocument();
+    expect(screen.getByText("51491fee39af4040f9340085b12103b96c2b74f290e54b41bf38fb85443d5b56")).toBeInTheDocument();
     expect(screen.getAllByText(/incomplete report is evidence, not runtime admission/i)).toHaveLength(4);
   });
 

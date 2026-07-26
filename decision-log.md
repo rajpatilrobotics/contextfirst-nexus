@@ -413,7 +413,7 @@ Changing a frozen decision requires:
 ### DEC-051: Groq bounded-output candidates require fresh evidence
 
 - Date: 2026-07-26
-- Status: V7 and v8 rejected; v9 candidate pending evaluation
+- Status: V7, v8, and v9 rejected; v10 classification correction pending
 - Decision: Preserve the v7 quality failure as non-admitting evidence. V8 added
   explicit proposal-count guidance, content-free rejection diagnostics, and a
   4,096 completion-token ceiling. Its first fictional-fixture canary stopped
@@ -421,6 +421,11 @@ Changing a frozen decision requires:
 - Next candidate: V9 retains strict JSON Schema, medium reasoning, no tools,
   no retry, at most ten candidates, at most three citations and five unknowns
   per candidate, and raises only the completion ceiling to 8,192 tokens.
+- V9 outcome: The first canary passed with exact citations. The next request
+  returned `HTTP 413` and safe provider code `rate_limit_exceeded`, which v9
+  incorrectly normalized to `internal_safe_failure`. V10 must treat only that
+  exact status/code combination as an operational `provider_rate_limited`
+  interruption. No automatic retry is added.
 - Evidence boundary: Every adapter version has a distinct evaluated-
   configuration digest and starts from zero live evidence. V7 or v8 passes
   cannot promote v9. Safe diagnostics record only stage and finish reason,
