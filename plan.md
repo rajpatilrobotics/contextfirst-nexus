@@ -1,5 +1,22 @@
 # Browser-created case Structured Analysis, 2026-07-26
 
+### Groq v8 bounded-output correction
+
+The v7 request is permanently non-admitting after one required repetition
+returned `invalid_structured_response`. The next candidate keeps Groq strict
+JSON Schema mode but adds provider-specific output budgets: at most ten
+candidates, at most three citations and five unknowns per candidate, concise
+non-empty text fields, and a 4,096 completion-token ceiling. Safe diagnostics
+may record only the rejection stage and finish reason—never provider content.
+The adapter version and evaluated-configuration digest must change, and v8
+must begin a fresh evaluation with no inherited v7 passes.
+
+The single v8 canary failed closed with safe diagnostic
+`finish_reason: length`; no content was logged. This proves the 4,096-token
+ceiling is too small for medium reasoning. V8 is non-admitting. V9 will retain
+the proposal-count bounds but raise only the completion ceiling to 8,192
+tokens, then start another fresh exact-version canary.
+
 **Status:** Dynamic Structured Analysis implementation and focused verification
 are complete. The Groq boundary now uses the provider's strict structured-output
 path. Ten bounded repetitions passed using only the bundled fictional redacted

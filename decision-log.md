@@ -410,6 +410,28 @@ Changing a frozen decision requires:
 - Authority: `docs/MODEL_ROUTING.md`, `docs/ARCHITECTURE.md`,
   `docs/CONTRACTS.md`, `docs/SAFETY_AND_DATA.md`
 
+### DEC-051: Groq bounded-output candidates require fresh evidence
+
+- Date: 2026-07-26
+- Status: V7 and v8 rejected; v9 candidate pending evaluation
+- Decision: Preserve the v7 quality failure as non-admitting evidence. V8 added
+  explicit proposal-count guidance, content-free rejection diagnostics, and a
+  4,096 completion-token ceiling. Its first fictional-fixture canary stopped
+  with `finish_reason: length`, so v8 is also non-admitting.
+- Next candidate: V9 retains strict JSON Schema, medium reasoning, no tools,
+  no retry, at most ten candidates, at most three citations and five unknowns
+  per candidate, and raises only the completion ceiling to 8,192 tokens.
+- Evidence boundary: Every adapter version has a distinct evaluated-
+  configuration digest and starts from zero live evidence. V7 or v8 passes
+  cannot promote v9. Safe diagnostics record only stage and finish reason,
+  never prompts, source text, output, identifiers, or credentials.
+- Official basis: Groq recommends explicit length instructions and
+  `max_completion_tokens`, and documents 65,536 maximum model output tokens.
+  The selected 8,192 ceiling remains bounded while avoiding the observed v8
+  truncation.
+- Authority: `plan.md`, `docs/MODEL_ROUTING.md`,
+  `docs/TESTING_AND_EVALUATION.md`
+
 ## 6. Rejected or deferred decisions
 
 ### DEC-030: General legal RAG and agentic tools

@@ -139,9 +139,24 @@ export async function runGroqAnalysis(
         provenance: returnedProvenance,
       };
     }
+    if (
+      typeof choice?.finish_reason === "string" &&
+      choice.finish_reason !== "stop"
+    ) {
+      logSafeStructuredRejection(
+        "finish_reason",
+        choice.finish_reason,
+      );
+      return {
+        ok: false,
+        failure: failure("invalid_structured_response"),
+        provenance: returnedProvenance,
+      };
+    }
 
     const content = choice?.message?.content;
     if (typeof content !== "string") {
+      logSafeStructuredRejection("content", "missing");
       return {
         ok: false,
         failure: failure("invalid_structured_response"),
@@ -153,6 +168,7 @@ export async function runGroqAnalysis(
     try {
       decoded = JSON.parse(content);
     } catch {
+      logSafeStructuredRejection("json_parse", "invalid");
       return {
         ok: false,
         failure: failure("invalid_structured_response"),
@@ -161,6 +177,7 @@ export async function runGroqAnalysis(
     }
     const proposal = ModelAnalysisProposalSchema.safeParse(decoded);
     if (!proposal.success) {
+      logSafeStructuredRejection("canonical_schema", "rejected");
       return {
         ok: false,
         failure: failure("invalid_structured_response"),
@@ -208,6 +225,7 @@ export function buildGroqRequest(input: ProviderPromptInput) {
           prompt.systemBoundary,
           prompt.requestedTasksAndSchema,
           prompt.definitions,
+          "Output budget: return at most 10 candidates. Each candidate must use concise, meaningful, non-whitespace text; include at most 3 short exact citations and at most 5 concise unknowns. Keep quotedText to the shortest sufficient exact source span.",
           "Return only JSON matching the supplied schema.",
         ].join("\n\n"),
       },
@@ -221,6 +239,7 @@ export function buildGroqRequest(input: ProviderPromptInput) {
     ],
     reasoning_effort: "medium",
     include_reasoning: false,
+    max_completion_tokens: 4096,
     response_format: {
       type: "json_schema",
       json_schema: {
@@ -231,6 +250,20 @@ export function buildGroqRequest(input: ProviderPromptInput) {
     },
     stream: false,
   } as const;
+}
+
+function logSafeStructuredRejection(stage: string, code: string) {
+  if (process.env.CFN_GROQ_SAFE_DIAGNOSTICS !== "1") return;
+  console.warn(
+    JSON.stringify(
+      safeLogEvent("groq_structured_response_rejected", {
+        providerId: GROQ_RELEASE.providerId,
+        releaseConfigurationId: GROQ_RELEASE.releaseConfigurationId,
+        stage,
+        code,
+      }),
+    ),
+  );
 }
 
 function buildGroqProvenance(

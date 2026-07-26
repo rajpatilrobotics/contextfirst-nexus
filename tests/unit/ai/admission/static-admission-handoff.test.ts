@@ -257,41 +257,42 @@ describe("TASK-026 static provider admission handoff", () => {
     }
   });
 
-  it("preserves ordered Groq interruption history after a successful resume", () => {
+  it("keeps the v8 canary isolated from all v7 evidence", () => {
     const report = loadReport("groq-oss-free-v1");
     const evidence = report.evidence as Array<Record<string, unknown>>;
-    const resumed = evidence.find(
-      (item) =>
-        Array.isArray(item.providerAttempts) &&
-        item.providerAttempts.some(
-          (attempt) =>
-            typeof attempt === "object" &&
-            attempt !== null &&
-            "outcome" in attempt &&
-            attempt.outcome === "interrupted",
-        ),
+    const liveEvidence = evidence.filter(
+      (item) => item.executionRequirement === "live_model_run",
     );
 
-    expect(resumed).toMatchObject({
-      status: "passed",
-      executionSource: "live_provider",
-      actualProviderTransmission: true,
-      terminalStatus: "succeeded",
-      providerAttempts: expect.arrayContaining([
-        expect.objectContaining({
-          attemptOrdinal: 1,
-          outcome: "interrupted",
-          interruptionClassification: "provider_rate_limited",
-          actualProviderTransmission: true,
-        }),
-        expect.objectContaining({
-          outcome: "completed",
-          interruptionClassification: null,
-          actualProviderTransmission: true,
-        }),
-      ]),
-    });
-
+    expect(report.adapterVersion).toBe(
+      "task-047-groq-bounded-review-boundary-v8",
+    );
+    expect(liveEvidence).toHaveLength(27);
+    expect(
+      liveEvidence.filter((item) => item.status === "failed"),
+    ).toHaveLength(1);
+    expect(
+      liveEvidence.filter((item) => item.status === "not_run"),
+    ).toHaveLength(26);
+    expect(
+      liveEvidence.filter((item) => item.status === "passed"),
+    ).toHaveLength(0);
+    expect(
+      liveEvidence.filter(
+        (item) => item.actualProviderTransmission === true,
+      ),
+    ).toHaveLength(1);
+    expect(
+      liveEvidence.filter(
+        (item) => item.actualProviderTransmission === false,
+      ),
+    ).toHaveLength(26);
+    expect(
+      liveEvidence.filter((item) => item.providerAttempts !== undefined),
+    ).toHaveLength(1);
+    expect(
+      liveEvidence.filter((item) => item.providerAttempts === undefined),
+    ).toHaveLength(26);
   });
 
   it("keeps every live option non-selectable while replay remains available", () => {

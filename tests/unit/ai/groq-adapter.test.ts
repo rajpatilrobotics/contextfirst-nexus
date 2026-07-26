@@ -87,6 +87,7 @@ describe("Groq native analysis adapter", () => {
       model: "openai/gpt-oss-120b",
       reasoning_effort: "medium",
       include_reasoning: false,
+      max_completion_tokens: 4096,
       response_format: {
         type: "json_schema",
         json_schema: { strict: true },
@@ -94,6 +95,12 @@ describe("Groq native analysis adapter", () => {
       stream: false,
     });
     expect(request.messages).toHaveLength(2);
+    expect(request.messages[0].content).toContain(
+      "return at most 10 candidates",
+    );
+    expect(request.messages[0].content).toContain(
+      "at most 3 short exact citations",
+    );
     expect(JSON.stringify(request)).not.toContain("apiKey");
   });
 
@@ -170,6 +177,31 @@ describe("Groq native analysis adapter", () => {
     const result = await runGroqAnalysis(canonicalInput(), {
       apiKey: "test-only",
       fetch: transport,
+    });
+
+    expect(result).toMatchObject({
+      ok: false,
+      failure: { classification: "invalid_structured_response" },
+    });
+  });
+
+  it("fails closed on a truncated completion before parsing content", async () => {
+    const result = await runGroqAnalysis(canonicalInput(), {
+      apiKey: "test-only",
+      fetch: vi.fn().mockResolvedValue(
+        new Response(
+          JSON.stringify({
+            model: "openai/gpt-oss-120b",
+            choices: [
+              {
+                finish_reason: "length",
+                message: { content: JSON.stringify(proposal) },
+              },
+            ],
+          }),
+          { status: 200 },
+        ),
+      ),
     });
 
     expect(result).toMatchObject({

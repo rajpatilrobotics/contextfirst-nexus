@@ -78,6 +78,8 @@ The following providers were screened using current official documentation. This
 
 DEC-046 freezes Groq `openai/gpt-oss-120b` as the third managed candidate. A native server adapter now uses Groq Chat Completions with `strict: true` JSON Schema output. Ten bounded fictional-fixture repetitions returned substantive exact-citation results, but one required repetition returned a non-resumable `invalid_structured_response`. The v7 adapter is therefore not admissible. The release remains disabled and unadmitted.
 
+DEC-051 records the bounded-output follow-up. V8 added concise proposal-count guidance and a 4,096 completion-token ceiling, but its first canary ended with the safely logged `finish_reason: length`. V8 is non-admitting. V9 retains the same strict schema and proposal bounds, raises only the completion ceiling to 8,192 tokens, and requires entirely fresh evidence.
+
 ### 4.1 Official screening sources
 
 The remaining research-only sources are registered as SCREEN-TECH-002 through SCREEN-TECH-008 in `docs/SOURCE_REGISTER.md`. Mistral is no longer a screening-only entry; its controlling selected-provider sources are TECH-025 through TECH-036.
