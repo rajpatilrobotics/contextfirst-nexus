@@ -25,6 +25,12 @@ classify that exact status/code pair as `provider_rate_limited`, preserve the
 same request configuration, and begin fresh evidence after the free-tier limit
 resets.
 
+V10 now implements that exact classification, keeps unrelated 413 responses
+fail-closed, and has a fresh zero-transmission baseline. Focused adapter,
+routing, admission, evaluation, contract, and Trust tests plus typecheck and
+the production build pass. Live v10 evaluation has not started because the
+Groq free-tier limit is still active.
+
 **Status:** Dynamic Structured Analysis implementation and focused verification
 are complete. The Groq boundary now uses the provider's strict structured-output
 path. Ten bounded repetitions passed using only the bundled fictional redacted

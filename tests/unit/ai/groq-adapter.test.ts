@@ -235,4 +235,54 @@ describe("Groq native analysis adapter", () => {
       failure: { classification: "provider_unavailable" },
     });
   });
+
+  it("classifies Groq's exact 413 rate-limit code as operational", async () => {
+    const result = await runGroqAnalysis(canonicalInput(), {
+      apiKey: "test-only",
+      fetch: vi.fn().mockResolvedValue(
+        new Response(
+          JSON.stringify({
+            error: {
+              code: "rate_limit_exceeded",
+              message: "not exposed to the application",
+            },
+          }),
+          { status: 413 },
+        ),
+      ),
+    });
+
+    expect(result).toMatchObject({
+      ok: false,
+      failure: {
+        classification: "provider_rate_limited",
+        retryableSameProvider: true,
+      },
+    });
+  });
+
+  it("keeps an unrelated 413 fail closed", async () => {
+    const result = await runGroqAnalysis(canonicalInput(), {
+      apiKey: "test-only",
+      fetch: vi.fn().mockResolvedValue(
+        new Response(
+          JSON.stringify({
+            error: {
+              code: "payload_too_large",
+              message: "not exposed to the application",
+            },
+          }),
+          { status: 413 },
+        ),
+      ),
+    });
+
+    expect(result).toMatchObject({
+      ok: false,
+      failure: {
+        classification: "internal_safe_failure",
+        retryableSameProvider: false,
+      },
+    });
+  });
 });

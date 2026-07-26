@@ -283,7 +283,12 @@ function classifyStatus(status: number, providerCode: string | null) {
   if (status === 401) return "provider_authentication_failed" as const;
   if (status === 403) return "provider_service_tier_unavailable" as const;
   if (status === 408) return "provider_timeout" as const;
-  if (status === 429) return "provider_rate_limited" as const;
+  if (
+    status === 429 ||
+    (status === 413 && providerCode === "rate_limit_exceeded")
+  ) {
+    return "provider_rate_limited" as const;
+  }
   if (
     status === 400 &&
     providerCode === "json_validate_failed"

@@ -413,7 +413,7 @@ Changing a frozen decision requires:
 ### DEC-051: Groq bounded-output candidates require fresh evidence
 
 - Date: 2026-07-26
-- Status: V7, v8, and v9 rejected; v10 classification correction pending
+- Status: V7, v8, and v9 rejected; v10 implemented and pending fresh evaluation
 - Decision: Preserve the v7 quality failure as non-admitting evidence. V8 added
   explicit proposal-count guidance, content-free rejection diagnostics, and a
   4,096 completion-token ceiling. Its first fictional-fixture canary stopped
