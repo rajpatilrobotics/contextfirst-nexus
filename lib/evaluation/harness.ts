@@ -20,7 +20,10 @@ import {
 } from "../review";
 import { scanProviderPayload, scanSafeShare } from "../redaction";
 import { createInitialCaseState } from "../state";
-import { ADAPTER_VERSION, SHARED_PROMPT_VERSION } from "../ai/server/types";
+import {
+  SHARED_PROMPT_VERSION,
+  adapterVersionForProvider,
+} from "../ai/server/types";
 import { expectedEvaluatedConfigurationDigest } from "../ai/server/admission";
 import { buildRecoveryOptions } from "../ai/server/recovery";
 import { canonicalDigest, canonicalJson } from "./canonical";
@@ -46,7 +49,7 @@ const GATE_ORDER = [
 
 type EvaluationArtifact = {
   schemaVersion: "1.0.0";
-  status: "passed" | "failed" | "not_run";
+  status: "passed" | "failed" | "interrupted" | "not_run";
   evidenceId: string;
   variantId: EvaluationDefinition["variantId"];
   fixtureId: string;
@@ -102,6 +105,7 @@ export const LIVE_RELEASES = [
   { providerId: "openai", releaseConfigurationId: "openai-quality-v1", requestedModel: "gpt-5.6-sol", serviceTier: "paid", inferenceSetting: { kind: "reasoning_effort", value: "medium" } },
   { providerId: "google_gemini", releaseConfigurationId: "gemini-quality-v1", requestedModel: "gemini-3.5-flash", serviceTier: "unpaid", inferenceSetting: { kind: "thinking_level", value: "medium" } },
   { providerId: "mistral", releaseConfigurationId: "mistral-small-free-v1", requestedModel: "mistral-small-2603", serviceTier: "unpaid", inferenceSetting: { kind: "reasoning_effort", value: "medium" } },
+  { providerId: "groq", releaseConfigurationId: "groq-oss-free-v1", requestedModel: "openai/gpt-oss-120b", serviceTier: "unpaid", inferenceSetting: { kind: "reasoning_effort", value: "medium" } },
 ] as const;
 
 function plannedRelease(release: typeof LIVE_RELEASES[number]) {
@@ -188,9 +192,10 @@ function runDefinitionControl(
   if (definition.variantId === "EVAL-007") {
     const raw = cfnDemoFixture.segments.map((segment) => segment.rawText).join("\n");
     const safe = cfnDemoFixture.segments.map((segment) => segment.redactedText).join("\n");
-    const rawScan = scanProviderPayload(raw);
-    const providerScan = scanProviderPayload(safe);
-    const shareScan = scanSafeShare(safe);
+    const sensitiveTerms = cfnDemoFixture.seededIdentifiers;
+    const rawScan = scanProviderPayload(raw, { sensitiveTerms });
+    const providerScan = scanProviderPayload(safe, { sensitiveTerms });
+    const shareScan = scanSafeShare(safe, { sensitiveTerms });
     return { passed: !rawScan.ok && providerScan.ok && shareScan.ok, observed: "Seeded patterns detected before masking and absent from provider/safe-share projections." };
   }
   if (definition.variantId === "EVAL-008") {
@@ -441,7 +446,7 @@ function buildIncompleteAdmissionReport(
     schemaVersion: VERSION,
     id: `REPORT-${release.releaseConfigurationId.toUpperCase()}-V1`,
     ...release,
-    adapterVersion: ADAPTER_VERSION,
+    adapterVersion: adapterVersionForProvider(release.providerId),
     inferenceSetting: release.inferenceSetting,
     disclosureVersion: VERSION,
     fixtureId: register.fixtureId,

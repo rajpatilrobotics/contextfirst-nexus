@@ -15,7 +15,7 @@ import { LIVE_PROVIDER_RELEASES } from "../registry";
 import {
   ADAPTER_VERSION,
   AI_BOUNDARY_VERSION,
-  type CanonicalProviderInput,
+  type ProviderPromptInput,
 } from "../types";
 
 const OPENAI_RELEASE = LIVE_PROVIDER_RELEASES[0];
@@ -58,7 +58,7 @@ export type OpenAIAnalysisFailure = {
 export type OpenAIAnalysisResult = OpenAIAnalysisSuccess | OpenAIAnalysisFailure;
 
 export type RunOpenAIAnalysisOptions = {
-  input: CanonicalProviderInput;
+  input: ProviderPromptInput;
   signal?: AbortSignal;
   client?: OpenAIResponsesClient;
 };
@@ -299,12 +299,20 @@ function mapOpenAIError(error: unknown): AnalysisFailure {
     if (error.status === 403) return failure("provider_service_tier_unavailable");
     if (error.status === 408) return failure("provider_timeout");
     if (error.status === 429) return failure("provider_rate_limited");
-    if (error.status && error.status >= 500) return failure("provider_unavailable");
+    if (error.status === 502 || error.status === 503) {
+      return failure("provider_unavailable");
+    }
+    if (error.status && error.status >= 500) {
+      return failure("internal_safe_failure");
+    }
   }
   if (error instanceof DOMException && error.name === "AbortError") {
     return failure("provider_timeout");
   }
-  return failure("provider_unavailable");
+  // A generic transport error does not prove that the provider never
+  // processed the request, so managed routing must stop instead of spending
+  // credits on another provider.
+  return failure("provider_timeout");
 }
 
 function failure(classification: FailureClassification): AnalysisFailure {

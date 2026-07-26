@@ -10,8 +10,11 @@ import {
   type EvidenceDependency,
 } from "../../contracts";
 import { z } from "zod";
-import { resolveCitation, type CitationFailureReason } from "../../citations";
-import type { CanonicalProviderInput } from "./types";
+import {
+  resolveCitation,
+  type CitationFailureReason,
+  type CitationSourceContext,
+} from "../../citations";
 
 type ModelAnalysisProposal = z.infer<typeof ModelAnalysisProposalSchema>;
 type QuarantinedProposal = z.infer<typeof QuarantinedProposalSchema>;
@@ -22,14 +25,22 @@ export type PostValidationResult = {
   quarantined: QuarantinedProposal[];
 };
 
+export type PostValidationInput = {
+  caseId: string;
+};
+
 const CREATED_AT = "2026-07-16T00:00:00.000Z" as const;
-const PROHIBITED = /\b(?:victim|traffick(?:ed|ing)|guilt|guilty|credib(?:le|ility)|case strength|risk score|eligibility score|dangerousness|priority score)\b/i;
+const PROHIBITED_SCORE =
+  /\b(?:case strength|credibility score|risk score|eligibility score|dangerousness score|priority score)\b/i;
+const PROHIBITED_STATUS_DETERMINATION =
+  /\b(?:(?:is|was|are|were|has been|have been)\s+(?:a\s+|an\s+)?(?:victim|trafficked|guilty|innocent|credible|incredible|eligible|ineligible|dangerous)|(?:confirmed|determined|established|proved|proven)\s+(?:as\s+)?(?:a\s+|an\s+)?(?:victim|trafficked|trafficking|guilt|guilty|innocence|eligibility|dangerousness))\b/i;
 const INJECTION = /\b(?:system override|ignore previous|developer message|hidden instruction|jailbreak)\b/i;
 
 export function postValidateAnalysisProposal(
   proposal: ModelAnalysisProposal,
-  input: CanonicalProviderInput,
+  input: PostValidationInput,
   runId: string,
+  sourceContext?: CitationSourceContext,
 ): PostValidationResult {
   const candidates: CaseCandidate[] = [];
   const citations: Citation[] = [];
@@ -49,17 +60,23 @@ export function postValidateAnalysisProposal(
 
     for (const [citationIndex, modelCitation] of candidate.citations.entries()) {
       const citationId = `CIT-${String(proposalOrdinal).padStart(4, "0")}-${String(citationIndex + 1).padStart(2, "0")}`;
-      const resolved = resolveCitation({
-        id: citationId,
-        analysisRunId: runId,
-        candidateId,
-        segmentId: modelCitation.segmentId,
-        quotedText: modelCitation.quotedText,
-        purpose: modelCitation.relationship === "context_only" ? "evidence_only" : "supporting_candidate",
-        claimedEvidenceNature: modelCitation.evidenceNature,
-        sourceEvidenceNature: modelCitation.evidenceNature,
-        now: CREATED_AT,
-      });
+      const resolved = resolveCitation(
+        {
+          id: citationId,
+          analysisRunId: runId,
+          candidateId,
+          segmentId: modelCitation.segmentId,
+          quotedText: modelCitation.quotedText,
+          purpose:
+            modelCitation.relationship === "context_only"
+              ? "evidence_only"
+              : "supporting_candidate",
+          claimedEvidenceNature: modelCitation.evidenceNature,
+          sourceEvidenceNature: modelCitation.evidenceNature,
+          now: CREATED_AT,
+        },
+        sourceContext,
+      );
       citations.push(resolved.citation);
 
       if (!resolved.ok && resolved.reason !== "ambiguous_exact_match") {
@@ -102,12 +119,12 @@ function buildCandidate(
   id: string,
   runId: string,
   dependencies: EvidenceDependency[],
-  input: CanonicalProviderInput,
+  input: PostValidationInput,
 ): CaseCandidate {
   const base = {
     id,
     revision: 0,
-    caseId: input.request.caseId,
+    caseId: input.caseId,
     analysisRunId: runId,
     lane: candidate.lane,
     title: candidate.title,
@@ -183,7 +200,12 @@ function policyReason(
 ): QuarantinedProposal["reasonCode"] | null {
   const joined = texts.join("\n");
   if (INJECTION.test(joined)) return "INJECTION_PROPAGATION";
-  if (PROHIBITED.test(joined)) return "PROHIBITED_CONCLUSION";
+  if (
+    PROHIBITED_SCORE.test(joined) ||
+    PROHIBITED_STATUS_DETERMINATION.test(joined)
+  ) {
+    return "PROHIBITED_CONCLUSION";
+  }
   return null;
 }
 

@@ -1,5 +1,13 @@
-import { AnalyzeRequestSchema, type AnalyzeRequest } from "../../contracts";
-import { cfnDemoFixture, getCfnDemoSegment } from "../../fixtures";
+import {
+  AnalyzeRequestSchema,
+  PrivateLiveEvaluationRequestSchema,
+  type AnalyzeRequest,
+} from "../../contracts";
+import {
+  cfnDemoEvaluationDefinitions,
+  cfnDemoFixture,
+  getCfnDemoSegment,
+} from "../../fixtures";
 import {
   applyLeakScanResult,
   buildRedactedSegments,
@@ -143,6 +151,113 @@ export function serializeEvidence(segments: readonly RedactedSegment[]): string 
       };
     }),
   });
+}
+
+export function buildFrozenEvaluationProviderInput(
+  value: unknown,
+): { ok: true; input: CanonicalProviderInput } | { ok: false; reason: string } {
+  const parsed = PrivateLiveEvaluationRequestSchema.safeParse(value);
+  if (!parsed.success) return { ok: false, reason: "invalid_evaluation_request" };
+  const request = parsed.data;
+  const definition = cfnDemoEvaluationDefinitions.variants.find(
+    (item) => item.variantId === request.evaluationVariantId,
+  );
+  if (
+    !definition ||
+    request.caseId !== CFN_DEMO_FIXTURE_BINDING.caseId ||
+    request.fixtureVersion !== CFN_DEMO_FIXTURE_BINDING.fixtureVersion ||
+    request.canonicalFixtureDigest !== CFN_DEMO_FIXTURE_BINDING.canonicalFixtureDigest ||
+    request.evaluationInputPacketId !== definition.inputPacket.id ||
+    request.evaluationInputPacketDigest !== definition.inputPacket.packetDigest ||
+    request.approvedRedactedInputDigest !==
+      definition.inputPacket.approvedRedactedInputDigest ||
+    request.selectedSegmentIds.join("|") !==
+      definition.inputPacket.selectedSegmentIds.join("|")
+  ) {
+    return { ok: false, reason: "evaluation_binding_mismatch" };
+  }
+
+  const release = LIVE_PROVIDER_RELEASES.find(
+    (candidate) =>
+      candidate.providerId === request.release.providerId &&
+      candidate.releaseConfigurationId ===
+        request.release.releaseConfigurationId &&
+      candidate.serviceTier === request.release.serviceTier,
+  );
+  if (!release) return { ok: false, reason: "evaluation_release_mismatch" };
+
+  const sourceSegments = request.selectedSegmentIds.map((segmentId) =>
+    getCfnDemoSegment(segmentId),
+  );
+  if (sourceSegments.some((segment) => segment === null)) {
+    return { ok: false, reason: "evaluation_source_unavailable" };
+  }
+  const selectedSegments: RedactedSegment[] = sourceSegments.map((segment) => {
+    if (!segment) throw new Error("Evaluation segment disappeared.");
+    return {
+      segmentId: segment.id,
+      rawText: segment.redactedText,
+      redactedText: segment.redactedText,
+      map: {
+        version: "1.0.0",
+        segmentId: segment.id,
+        originalLength: segment.redactedText.length,
+        redactedLength: segment.redactedText.length,
+        entries: [],
+      },
+    };
+  });
+  const serializedEvidence = serializeEvidence(selectedSegments);
+  const leakScan = scanProviderPayload(serializedEvidence, {
+    sensitiveTerms: cfnDemoFixture.seededIdentifiers.filter(
+      (identifier) => identifier !== CFN_DEMO_FIXTURE_BINDING.caseId,
+    ),
+  });
+  if (!leakScan.ok) return { ok: false, reason: "evaluation_leak_detected" };
+
+  const analyzeRequest = AnalyzeRequestSchema.parse({
+    schemaVersion: "1.0.0",
+    caseId: request.caseId,
+    fixtureVersion: request.fixtureVersion,
+    canonicalFixtureDigest: request.canonicalFixtureDigest,
+    purposeBriefId: "PURPOSE-DEMO-001",
+    purposeContext: {
+      practitionerRole: "demo_evaluator",
+      jurisdictionCode: "unspecified",
+      sourceLanguage: "en",
+      requestedExport: "full_practitioner_handoff",
+    },
+    maskReviewApproved: true,
+    leakScanStatus: "passed",
+    requestedMode: "live",
+    providerSelection: request.release,
+    providerDisclosureAcknowledgement: {
+      id: `ACK-EVAL-${request.callOrdinal}`,
+      schemaVersion: "1.0.0",
+      ...request.release,
+      disclosureVersion: "1.0.0",
+      dataFlowAcknowledged: true,
+      retentionAndTrainingUseAcknowledged: true,
+      serviceTierAcknowledged: true,
+      acknowledgedAt: request.approval.approvedAt,
+    },
+    selectedSegmentIds: request.selectedSegmentIds,
+    maskApprovals: [],
+  });
+
+  return {
+    ok: true,
+    input: {
+      schemaVersion: AI_BOUNDARY_VERSION,
+      promptVersion: SHARED_PROMPT_VERSION,
+      request: analyzeRequest,
+      release,
+      fixtureBinding: CFN_DEMO_FIXTURE_BINDING,
+      selectedSegments,
+      serializedEvidence,
+      inputByteLength: Buffer.byteLength(serializedEvidence, "utf8"),
+    },
+  };
 }
 
 function validateFixtureBinding(request: AnalyzeRequest): ReturnType<typeof makePreflightError> | null {

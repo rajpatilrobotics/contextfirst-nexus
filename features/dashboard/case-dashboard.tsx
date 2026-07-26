@@ -15,6 +15,9 @@ import {
   persistBrowserCaseRegistry,
   type BrowserCaseRegistry,
 } from "../../lib/cases";
+import { browserCaseAnalysisStore } from "../../lib/cases/browser-case-analysis-store";
+import type { CaseState } from "../../lib/contracts";
+import { browserAnalysisSnapshotMatchesRecordMetadata } from "../../lib/analysis/freshness";
 
 type NewCaseDraft = {
   assignedPractitioner: string;
@@ -38,6 +41,9 @@ export function CaseDashboard() {
   const [draft, setDraft] = useState<NewCaseDraft>(EMPTY_DRAFT);
   const [formError, setFormError] = useState<string | null>(null);
   const [storageMessage, setStorageMessage] = useState<string | null>(null);
+  const [analysisSnapshots, setAnalysisSnapshots] = useState<
+    Record<string, CaseState | null>
+  >({});
 
   useEffect(() => {
     const loaded = loadBrowserCaseRegistry(window.localStorage);
@@ -47,6 +53,15 @@ export function CaseDashboard() {
       persistBrowserCaseRegistry(window.localStorage, loaded.registry);
     }
     setHydrated(true);
+    void Promise.all(
+      loaded.registry.cases.map(async (record) => {
+        try {
+          return [record.id, await browserCaseAnalysisStore.load(record.id)] as const;
+        } catch {
+          return [record.id, null] as const;
+        }
+      }),
+    ).then((entries) => setAnalysisSnapshots(Object.fromEntries(entries)));
   }, []);
 
   function closeModal() {
@@ -84,6 +99,13 @@ export function CaseDashboard() {
       total + (record.documentPacket?.documents.length ?? 0),
     0,
   );
+  const currentAnalysisCount = registry.cases.filter((record) => {
+    const snapshot = analysisSnapshots[record.id];
+    return Boolean(
+      snapshot &&
+        browserAnalysisSnapshotMatchesRecordMetadata(snapshot, record),
+    );
+  }).length;
 
   return (
     <>
@@ -98,8 +120,9 @@ export function CaseDashboard() {
             </h1>
             <p className="mt-2 max-w-2xl text-sm text-muted-foreground">
               Create and reopen independent fictional cases stored only in this
-              browser. Purpose Brief and browser-local Documents are connected;
-              analysis and later stages are not yet available for created cases.
+              browser. Purpose Brief, browser-local Documents, and Structured
+              Analysis are connected; later planning and export stages remain
+              unavailable for created cases.
             </p>
           </div>
           <button
@@ -127,7 +150,7 @@ export function CaseDashboard() {
             value={completePurposeCount}
           />
           <SummaryMetric label="Documents" value={documentCount} />
-          <SummaryMetric label="Analysis" value="Unavailable" />
+          <SummaryMetric label="Analysis complete" value={currentAnalysisCount} />
           <SummaryMetric label="Planning" value="Unavailable" />
           <SummaryMetric label="Export" value="Unavailable" />
         </div>
@@ -168,11 +191,30 @@ export function CaseDashboard() {
             </div>
           ) : (
             <div className="grid gap-4 lg:grid-cols-3">
-              {registry.cases.map((record) => (
+              {registry.cases.map((record) => {
+                const analysis = analysisSnapshots[record.id];
+                const analysisCurrent = Boolean(
+                  analysis &&
+                    browserAnalysisSnapshotMatchesRecordMetadata(
+                      analysis,
+                      record,
+                    ),
+                );
+                const analysisHref = `/case/${record.id}/analysis`;
+                const documentsReady =
+                  record.documentPacket?.masking.reviewStatus === "approved" &&
+                  record.documentPacket.masking.leakScanStatus === "passed" &&
+                  !record.documentPacket.coverage.hasConsequentialOpenIssue;
+                const workspaceHref = analysisCurrent
+                  ? analysisHref
+                  : record.documentPacket
+                    ? `/case/${record.id}/documents`
+                    : `/case/${record.id}/purpose`;
+                return (
                 <a
                   aria-label={`Open workspace for ${record.personAlias} (${record.displayReference})`}
                   className="group flex cursor-pointer flex-col rounded-xl border border-border bg-card p-5 text-left no-underline transition hover:border-[color:var(--amber)] hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--amber)]"
-                  href={`/case/${record.id}/purpose`}
+                  href={workspaceHref}
                   key={record.id}
                 >
                   <div className="flex items-start justify-between gap-3">
@@ -188,8 +230,12 @@ export function CaseDashboard() {
                         {record.personAlias}
                       </div>
                     </div>
-                    <Chip tone={record.purposeBrief ? "sage" : "amber"}>
-                      {record.purposeBrief ? "Purpose complete" : "Purpose not started"}
+                    <Chip tone={analysisCurrent || record.purposeBrief ? "sage" : "amber"}>
+                      {analysisCurrent
+                        ? "Analysis complete"
+                        : record.purposeBrief
+                          ? "Purpose complete"
+                          : "Purpose not started"}
                     </Chip>
                   </div>
                   <dl className="mt-4 grid grid-cols-2 gap-x-4 gap-y-2 text-xs">
@@ -214,8 +260,14 @@ export function CaseDashboard() {
                       </dd>
                     </div>
                     <div>
-                      <dt className="text-muted-foreground">Analysis &amp; export</dt>
-                      <dd>Not available</dd>
+                      <dt className="text-muted-foreground">Analysis</dt>
+                      <dd>
+                        {analysisCurrent && analysis
+                          ? `${analysis.candidates.length} candidate${analysis.candidates.length === 1 ? "" : "s"}`
+                          : documentsReady
+                            ? "Ready to start"
+                            : "Complete Documents first"}
+                      </dd>
                     </div>
                   </dl>
                   <div className="mt-4 flex items-center justify-between border-t border-border pt-3 text-xs">
@@ -228,7 +280,8 @@ export function CaseDashboard() {
                     </span>
                   </div>
                 </a>
-              ))}
+                );
+              })}
             </div>
           )}
         </section>

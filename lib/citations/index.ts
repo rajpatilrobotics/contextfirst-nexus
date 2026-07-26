@@ -1,6 +1,7 @@
 import type {
   Citation,
   CitationResolutionDecision,
+  DocumentRecord,
   EvidenceNature,
   SourceSegment,
 } from "../contracts";
@@ -16,6 +17,13 @@ type CitationValidationStatus = Citation["validationStatus"];
 type ResolutionMethod = "exact_codepoint" | "normalized_unique_lookup";
 
 export type CitationPurpose = "supporting_candidate" | "evidence_only";
+
+export type CitationSourceContext = {
+  caseId: string;
+  documents: readonly DocumentRecord[];
+  segments: SourceSegment[];
+  selectedSegmentIds: ReadonlySet<string>;
+};
 
 export type CitationProposal = {
   id?: string;
@@ -82,7 +90,13 @@ const TOKEN_PATTERN = /\[[A-Z0-9_]+\]/g;
 
 const selectedSegmentIds = new Set(getCfnDemoSelectedSegmentIds());
 const segments = cfnDemoFixture.segments as SourceSegment[];
-const documents = cfnDemoFixture.documents;
+const documents = cfnDemoFixture.documents as DocumentRecord[];
+const DEFAULT_SOURCE_CONTEXT: CitationSourceContext = {
+  caseId: CASE_ID,
+  documents,
+  segments,
+  selectedSegmentIds,
+};
 
 function citationId(proposal: Pick<CitationProposal, "id" | "candidateId">): string {
   return proposal.id ?? `CITATION-${proposal.candidateId ?? "UNASSIGNED"}`;
@@ -126,20 +140,26 @@ function findNormalizedMatches(text: string, quote: string): CharacterRange[] {
   return matches;
 }
 
-function pageForSegment(segment: SourceSegment) {
+function pageForSegment(
+  segment: SourceSegment,
+  context: CitationSourceContext,
+) {
   if (!segment.pageId) {
     return null;
   }
 
   return (
-    documents
+    context.documents
       .find((document) => document.id === segment.documentId)
       ?.pages.find((page) => page.id === segment.pageId) ?? null
   );
 }
 
-function isSourceUnavailable(segment: SourceSegment): boolean {
-  const page = pageForSegment(segment);
+function isSourceUnavailable(
+  segment: SourceSegment,
+  context: CitationSourceContext,
+): boolean {
+  const page = pageForSegment(segment, context);
   return (
     segment.extractionQuality === "unavailable" ||
     !segment.pageId ||
@@ -161,10 +181,11 @@ function baseCitation(
   proposal: CitationProposal,
   segment: SourceSegment | null,
   status: CitationValidationStatus,
+  context: CitationSourceContext,
 ): Omit<Citation, "validationStatus"> & { validationStatus: CitationValidationStatus } {
   return {
     id: citationId(proposal),
-    caseId: CASE_ID,
+    caseId: context.caseId,
     analysisRunId: proposal.analysisRunId,
     documentId: segment?.documentId ?? proposal.documentId ?? "D00",
     pageNumber: segment?.pageNumber ?? proposal.pageNumber,
@@ -191,12 +212,13 @@ function failedCitation(
   status: Exclude<CitationValidationStatus, "exact_match" | "manually_resolved">,
   reason: CitationFailureReason,
   ambiguityOptions: AmbiguityOption[] = [],
+  context: CitationSourceContext = DEFAULT_SOURCE_CONTEXT,
 ): CitationResolutionResult {
   return {
     ok: false,
     reason,
     ambiguityOptions,
-    citation: baseCitation(proposal, segment, status) as Citation,
+    citation: baseCitation(proposal, segment, status, context) as Citation,
   };
 }
 
@@ -321,10 +343,18 @@ function successCitation(
   segment: SourceSegment,
   range: CharacterRange,
   method: ResolutionMethod | "manual_segment_selection",
+  context: CitationSourceContext,
 ): CitationResolutionResult {
   const sourceSegmentRange = mapRange(segment, range, proposal.segmentRedactionMaps);
   if (!sourceSegmentRange || segment.boundingBoxes.length === 0) {
-    return failedCitation(proposal, segment, "invalidated", "invalid_redaction_map");
+    return failedCitation(
+      proposal,
+      segment,
+      "invalidated",
+      "invalid_redaction_map",
+      [],
+      context,
+    );
   }
 
   const manual = method === "manual_segment_selection";
@@ -334,7 +364,7 @@ function successCitation(
     ambiguityOptions: [],
     citation: {
       id: citationId(proposal),
-      caseId: CASE_ID,
+      caseId: context.caseId,
       analysisRunId: proposal.analysisRunId,
       documentId: segment.documentId,
       pageNumber: segment.pageNumber,
@@ -357,26 +387,34 @@ function successCitation(
   };
 }
 
-function eligibleSegments(proposal: CitationProposal): SourceSegment[] {
+function eligibleSegments(
+  proposal: CitationProposal,
+  context: CitationSourceContext,
+): SourceSegment[] {
   if (proposal.segmentId) {
-    const segment = segments.find((item) => item.id === proposal.segmentId);
+    const segment = context.segments.find(
+      (item) => item.id === proposal.segmentId,
+    );
     return segment ? [segment] : [];
   }
 
-  return segments.filter((segment) => matchesClaimedLocation(segment, proposal));
+  return context.segments.filter((segment) =>
+    matchesClaimedLocation(segment, proposal),
+  );
 }
 
 function validateSegment(
   proposal: CitationProposal,
   segment: SourceSegment,
+  context: CitationSourceContext,
 ): CitationFailureReason | null {
-  if (!selectedSegmentIds.has(segment.id)) {
+  if (!context.selectedSegmentIds.has(segment.id)) {
     return "segment_not_allowlisted";
   }
   if (!matchesClaimedLocation(segment, proposal)) {
     return "location_mismatch";
   }
-  if (isSourceUnavailable(segment)) {
+  if (isSourceUnavailable(segment, context)) {
     return "source_unavailable";
   }
   if ((proposal.purpose ?? "supporting_candidate") === "supporting_candidate" && segment.supportEligibility !== "candidate_eligible") {
@@ -392,33 +430,72 @@ function validateSegment(
   return null;
 }
 
-export function resolveCitation(proposal: CitationProposal): CitationResolutionResult {
+export function resolveCitation(
+  proposal: CitationProposal,
+  context: CitationSourceContext = DEFAULT_SOURCE_CONTEXT,
+): CitationResolutionResult {
   const quote = proposal.quotedText;
   if (quote.trim().length === 0) {
-    return failedCitation(proposal, null, "not_found", "empty_quote");
+    return failedCitation(proposal, null, "not_found", "empty_quote", [], context);
   }
-  if (proposal.documentId && !documents.some((document) => document.id === proposal.documentId)) {
-    return failedCitation(proposal, null, "source_unavailable", "unknown_document");
+  if (
+    proposal.documentId &&
+    !context.documents.some(
+      (document) => document.id === proposal.documentId,
+    )
+  ) {
+    return failedCitation(
+      proposal,
+      null,
+      "source_unavailable",
+      "unknown_document",
+      [],
+      context,
+    );
   }
   if (proposal.pageId) {
-    const page = documents.flatMap((document) => document.pages).find((item) => item.id === proposal.pageId);
+    const page = context.documents
+      .flatMap((document) => document.pages)
+      .find((item) => item.id === proposal.pageId);
     if (!page || page.availability !== "available") {
-      return failedCitation(proposal, null, "source_unavailable", page ? "source_unavailable" : "unknown_page");
+      return failedCitation(
+        proposal,
+        null,
+        "source_unavailable",
+        page ? "source_unavailable" : "unknown_page",
+        [],
+        context,
+      );
     }
   }
 
-  const candidates = eligibleSegments(proposal);
+  const candidates = eligibleSegments(proposal, context);
   if (proposal.segmentId && candidates.length === 0) {
-    return failedCitation(proposal, null, "source_unavailable", "unknown_segment");
+    return failedCitation(
+      proposal,
+      null,
+      "source_unavailable",
+      "unknown_segment",
+      [],
+      context,
+    );
   }
 
   const exactMatches = candidates.flatMap((segment) =>
     findAll(segment.redactedText, quote).map((range) => ({ segment, range })),
   );
-  const viableExactMatches = exactMatches.filter(({ segment }) => validateSegment(proposal, segment) === null);
+  const viableExactMatches = exactMatches.filter(
+    ({ segment }) => validateSegment(proposal, segment, context) === null,
+  );
 
   if (viableExactMatches.length === 1) {
-    return successCitation(proposal, viableExactMatches[0].segment, viableExactMatches[0].range, "exact_codepoint");
+    return successCitation(
+      proposal,
+      viableExactMatches[0].segment,
+      viableExactMatches[0].range,
+      "exact_codepoint",
+      context,
+    );
   }
 
   if (viableExactMatches.length > 1) {
@@ -438,18 +515,33 @@ export function resolveCitation(proposal: CitationProposal): CitationResolutionR
         "ambiguous_match",
         "ambiguous_exact_match",
         ambiguityOptions,
+        context,
       );
     }
 
-    return failedCitation(proposal, viableExactMatches[0].segment, "ambiguous_match", "unsafe_normalized_ambiguity");
+    return failedCitation(
+      proposal,
+      viableExactMatches[0].segment,
+      "ambiguous_match",
+      "unsafe_normalized_ambiguity",
+      [],
+      context,
+    );
   }
 
   const firstExact = exactMatches[0]?.segment ?? candidates[0] ?? null;
   if (firstExact) {
-    const segmentFailure = validateSegment(proposal, firstExact);
+    const segmentFailure = validateSegment(proposal, firstExact, context);
     if (segmentFailure) {
       const status = segmentFailure === "source_unavailable" ? "source_unavailable" : "semantic_mismatch";
-      return failedCitation(proposal, firstExact, status, segmentFailure);
+      return failedCitation(
+        proposal,
+        firstExact,
+        status,
+        segmentFailure,
+        [],
+        context,
+      );
     }
   }
 
@@ -457,7 +549,7 @@ export function resolveCitation(proposal: CitationProposal): CitationResolutionR
     findNormalizedMatches(segment.redactedText, quote).map((range) => ({ segment, range })),
   );
   const viableNormalizedMatches = normalizedMatches.filter(
-    ({ segment }) => validateSegment(proposal, segment) === null,
+    ({ segment }) => validateSegment(proposal, segment, context) === null,
   );
 
   if (viableNormalizedMatches.length === 1) {
@@ -466,6 +558,7 @@ export function resolveCitation(proposal: CitationProposal): CitationResolutionR
       viableNormalizedMatches[0].segment,
       viableNormalizedMatches[0].range,
       "normalized_unique_lookup",
+      context,
     );
   }
 
@@ -475,15 +568,25 @@ export function resolveCitation(proposal: CitationProposal): CitationResolutionR
       viableNormalizedMatches[0].segment,
       "ambiguous_match",
       "unsafe_normalized_ambiguity",
+      [],
+      context,
     );
   }
 
-  return failedCitation(proposal, firstExact, "not_found", "quote_not_found");
+  return failedCitation(
+    proposal,
+    firstExact,
+    "not_found",
+    "quote_not_found",
+    [],
+    context,
+  );
 }
 
 export function resolveManualCitation(
   previous: CitationResolutionResult,
   selection: ManualCitationSelection,
+  context: CitationSourceContext = DEFAULT_SOURCE_CONTEXT,
 ): { citation: Citation; decision: CitationResolutionDecision } | { citation: Citation; reason: CitationFailureReason } {
   const selected = previous.ambiguityOptions.find(
     (option) =>
@@ -491,7 +594,10 @@ export function resolveManualCitation(
       option.redactedSegmentRange.start === selection.selectedRedactedSegmentRange.start &&
       option.redactedSegmentRange.end === selection.selectedRedactedSegmentRange.end,
   );
-  const segment = segments.find((item) => item.id === selection.selectedSegmentId) ?? null;
+  const segment =
+    context.segments.find(
+      (item) => item.id === selection.selectedSegmentId,
+    ) ?? null;
 
   if (!selected || !segment || previous.citation.validationStatus !== "ambiguous_match") {
     return {
@@ -506,6 +612,7 @@ export function resolveManualCitation(
         },
         segment,
         "invalidated",
+        context,
       ) as Citation,
       reason: "invalid_manual_selection",
     };
@@ -524,6 +631,7 @@ export function resolveManualCitation(
     segment,
     selection.selectedRedactedSegmentRange,
     "manual_segment_selection",
+    context,
   );
 
   if (!resolved.ok) {
@@ -534,7 +642,7 @@ export function resolveManualCitation(
     citation: resolved.citation,
     decision: {
       id: selection.decisionId,
-      caseId: CASE_ID,
+      caseId: context.caseId,
       analysisRunId: selection.analysisRunId,
       candidateId: selection.candidateId,
       citationId: selection.citationId,

@@ -171,8 +171,10 @@ function useSourceMode(): SourceMode {
 
 function AnalysisHeader({
   candidates,
+  documentsHref,
 }: {
   candidates: CaseCandidate[];
+  documentsHref: string;
 }) {
   const pending = candidates.filter(candidateRequiresPendingReview).length;
   const reviewed = candidates.filter((candidate) =>
@@ -203,7 +205,7 @@ function AnalysisHeader({
       </div>
       <a
         className="inline-flex h-8 shrink-0 items-center gap-1.5 rounded-md border border-border bg-card px-3 text-sm hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-        href="/case/demo/documents"
+        href={documentsHref}
       >
         <Sparkles
           aria-hidden="true"
@@ -639,7 +641,11 @@ function CandidateDetail({
   );
 }
 
-export function StructuredAnalysisWorkspace() {
+export function StructuredAnalysisWorkspace({
+  documentsHref = "/case/demo/documents",
+}: {
+  documentsHref?: string;
+} = {}) {
   const { state, dispatchCaseCommand } = useCaseState();
   const sourceMode = useSourceMode();
   const workspaceRef = useRef<HTMLDivElement>(null);
@@ -774,7 +780,10 @@ export function StructuredAnalysisWorkspace() {
 
   const sharedHeader = (
     <>
-      <AnalysisHeader candidates={presentationCandidates} />
+      <AnalysisHeader
+        candidates={presentationCandidates}
+        documentsHref={documentsHref}
+      />
       <LaneSelector
         activeLane={activeLane}
         candidates={presentationCandidates}
@@ -806,7 +815,7 @@ export function StructuredAnalysisWorkspace() {
           The active failed run is not displayed as partial or successful
           analysis. No candidate detail is inferred from it.
         </Alert>
-        <StateLink href="/case/demo/intake">Return to Documents</StateLink>
+        <StateLink href={documentsHref}>Return to Documents</StateLink>
       </div>
     );
   }
@@ -820,7 +829,7 @@ export function StructuredAnalysisWorkspace() {
           selected sources, fixture, or guidance provenance. Its candidates are
           not presented as current analysis.
         </Alert>
-        <StateLink href="/case/demo/intake">Review readiness and rerun</StateLink>
+        <StateLink href={documentsHref}>Review readiness and rerun</StateLink>
       </div>
     );
   }
@@ -845,7 +854,7 @@ export function StructuredAnalysisWorkspace() {
             </ul>
           </Alert>
         )}
-        <StateLink href="/case/demo/intake">Open Documents</StateLink>
+        <StateLink href={documentsHref}>Open Documents</StateLink>
       </div>
     );
   }

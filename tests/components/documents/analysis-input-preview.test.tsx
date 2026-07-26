@@ -73,6 +73,7 @@ describe("AnalysisInputPreview", () => {
     const user = userEvent.setup();
     render(
       <AnalysisInputPreview
+        analysisHref="/case/CFN-CASE-DYNAMIC001/analysis"
         corpusResult={{ ok: true, corpus }}
         runtimeAvailable
       />,
@@ -81,7 +82,7 @@ describe("AnalysisInputPreview", () => {
     expect(screen.getByText("Approved corpus ready")).toBeInTheDocument();
     expect(screen.getByText("1/2 sources classified")).toBeInTheDocument();
     expect(
-      screen.getByText(/Structured Analysis for browser-created cases remains unavailable/i),
+      screen.getByText(/stays in this browser until you explicitly start analysis/i),
     ).toBeInTheDocument();
     expect(
       screen.getByText(/cannot prove that every name or ambiguous personal detail was found/i),
@@ -89,6 +90,9 @@ describe("AnalysisInputPreview", () => {
     expect(
       screen.getByText(/1 packet page omitted because no extractable text/i),
     ).toBeInTheDocument();
+    expect(
+      screen.getByRole("link", { name: "Continue to Structured Analysis" }),
+    ).toHaveAttribute("href", "/case/CFN-CASE-DYNAMIC001/analysis");
 
     await user.type(
       screen.getByLabelText("Search approved redacted analysis text"),

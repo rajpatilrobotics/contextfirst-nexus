@@ -8,6 +8,7 @@ import {
 import { expectedEvaluatedConfigurationDigest, getAdmissionRecord } from "./admission";
 import {
   ADAPTER_VERSION,
+  adapterVersionForProvider,
   type LiveProviderReleaseRegistryEntry,
   type ProviderAvailabilityOptions,
   type ProviderReleaseRegistryEntry,
@@ -35,6 +36,12 @@ export const LIVE_PROVIDER_RELEASES = [
     requestedModel: "mistral-small-2603",
     serviceTier: "unpaid",
   },
+  {
+    providerId: "groq",
+    releaseConfigurationId: "groq-oss-free-v1",
+    requestedModel: "openai/gpt-oss-120b",
+    serviceTier: "unpaid",
+  },
 ] as const satisfies readonly LiveProviderReleaseConfiguration[];
 
 export const REPLAY_RELEASE = {
@@ -48,20 +55,22 @@ export const PROVIDER_REGISTRY = [
   liveEntry(LIVE_PROVIDER_RELEASES[0], {
     displayName: "OpenAI",
     modelDisplayName: "GPT-5.6 Sol",
-    modelAliasDisclosure: "Frozen OpenAI quality release for the synthetic demo fixture.",
+    modelAliasDisclosure:
+      "Frozen paid OpenAI quality release for approved redacted input.",
     inferenceSetting: { kind: "reasoning_effort", value: "medium" },
     disclosure: {
       schemaVersion: "1.0.0",
       disclosureVersion: "1.0.0",
       serviceTierLabel: "Paid live provider",
-      dataFlowSummary: "Approved redacted synthetic fixture evidence is sent to OpenAI for one analysis run.",
+      dataFlowSummary:
+        "Approved redacted synthetic or authorized-public evidence may be sent to OpenAI for one analysis run.",
       storageMode: "openai_store_false",
       retentionSetting: "openai_store_false",
       retentionLimitation: "Requests are sent with provider storage disabled for this release.",
       trainingUseDisclosure: "This boundary does not permit use of the synthetic case for model training.",
       providerContentCategories: ["approved redacted synthetic evidence", "purpose metadata"],
       processingRegion: null,
-      allowedDataOrigins: ["bundled_synthetic"],
+      allowedDataOrigins: ["bundled_synthetic", "browser_local"],
       providerTransmission: true,
       rawPdfSentToProvider: false,
       toolsEnabled: false,
@@ -117,6 +126,36 @@ export const PROVIDER_REGISTRY = [
       lastVerified: LAST_VERIFIED,
     },
   }),
+  liveEntry(LIVE_PROVIDER_RELEASES[3], {
+    displayName: "Groq",
+    modelDisplayName: "GPT-OSS 120B",
+    modelAliasDisclosure: "Frozen Groq free-tier evaluation candidate.",
+    inferenceSetting: { kind: "reasoning_effort", value: "medium" },
+    disclosure: {
+      schemaVersion: "1.0.0",
+      disclosureVersion: "1.0.0",
+      serviceTierLabel: "Free live-provider evaluation candidate",
+      dataFlowSummary:
+        "Approved redacted synthetic or authorized-public browser-local evidence may be sent to Groq only after exact admission and zero-data-retention verification pass.",
+      storageMode: "groq_stateless_free",
+      retentionSetting: "groq_zero_data_retention",
+      retentionLimitation:
+        "Zero data retention must be enabled and verified for the configured project before use.",
+      trainingUseDisclosure:
+        "Provider content is not authorized for model training by this release.",
+      providerContentCategories: [
+        "approved redacted synthetic evidence",
+        "purpose metadata",
+      ],
+      processingRegion: null,
+      allowedDataOrigins: ["bundled_synthetic", "browser_local"],
+      providerTransmission: true,
+      rawPdfSentToProvider: false,
+      toolsEnabled: false,
+      acknowledgementRequired: true,
+      lastVerified: LAST_VERIFIED,
+    },
+  }),
   {
     kind: "replay",
     release: REPLAY_RELEASE,
@@ -124,7 +163,7 @@ export const PROVIDER_REGISTRY = [
     modelDisplayName: "Frozen replay output",
     modelAliasDisclosure: "Bundled deterministic replay, not a live AI provider.",
     adapterVersion: ADAPTER_VERSION,
-    displayOrder: 4,
+    displayOrder: 5,
     inferenceSetting: { kind: "not_applicable", value: "not_applicable" },
     disclosure: {
       schemaVersion: "1.0.0",
@@ -148,7 +187,9 @@ export const PROVIDER_REGISTRY = [
 ] as const satisfies readonly ProviderReleaseRegistryEntry[];
 
 export function getProviderRegistry(): readonly ProviderReleaseRegistryEntry[] {
-  return PROVIDER_REGISTRY;
+  return [...PROVIDER_REGISTRY].sort(
+    (left, right) => left.displayOrder - right.displayOrder,
+  );
 }
 
 export function getRegistryEntry(
@@ -209,7 +250,9 @@ export function buildAnalyzeAvailabilityResponse(options: ProviderAvailabilityOp
     schemaVersion: "1.0.0",
     liveAnalysisEnabled: options.liveAnalysisEnabled === true,
     replayEnabled: true,
-    options: PROVIDER_REGISTRY.map((entry) => projectProviderOption(entry, options)),
+    options: getProviderRegistry().map((entry) =>
+      projectProviderOption(entry, options),
+    ),
   });
 }
 
@@ -228,8 +271,8 @@ function liveEntry(
   return {
     kind: "live",
     release,
-    adapterVersion: ADAPTER_VERSION,
-    displayOrder: ProviderDisplayOrderById[release.providerId] as 1 | 2 | 3,
+    adapterVersion: adapterVersionForProvider(release.providerId),
+    displayOrder: ProviderDisplayOrderById[release.providerId] as 1 | 2 | 3 | 4,
     enabled: true,
     staticServiceTierAvailability: "available",
     admission,

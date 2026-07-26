@@ -16,6 +16,7 @@ import { buildCanonicalProviderInput } from "./canonical-input";
 import { runOpenAIAnalysis } from "./adapters/openai";
 import { geminiAdapter } from "./adapters/gemini";
 import { runMistralAnalysis } from "./adapters/mistral";
+import { runGroqAnalysis } from "./adapters/groq";
 import { buildRecoveryOptions } from "./recovery";
 import { failure, normalizeAdapterResult, type AnalysisFailureLike } from "./normalize";
 import { postValidateAnalysisProposal } from "./post-validate";
@@ -29,6 +30,7 @@ export type AdapterOverrides = {
   openai?: typeof runOpenAIAnalysis;
   gemini?: typeof geminiAdapter.analyze;
   mistral?: typeof runMistralAnalysis;
+  groq?: typeof runGroqAnalysis;
 };
 
 type StartedLiveApiError = typeof StartedLiveApiErrorSchema._output;
@@ -85,10 +87,12 @@ export async function analyze(value: unknown, adapters: AdapterOverrides = {}): 
 }
 
 function hasAdapterOverride(adapters: AdapterOverrides): boolean {
-  return Boolean(adapters.openai || adapters.gemini || adapters.mistral);
+  return Boolean(
+    adapters.openai || adapters.gemini || adapters.mistral || adapters.groq,
+  );
 }
 
-async function runSelectedProvider(
+export async function runSelectedProvider(
   input: CanonicalProviderInput,
   adapters: AdapterOverrides,
 ): Promise<AnalyzeResult> {
@@ -104,7 +108,11 @@ async function runSelectedProvider(
       return failedResponse(input, runId, startedAt, normalized.failure, normalized.provenance, normalized.tokenUsage);
     }
 
-    const validated = postValidateAnalysisProposal(normalized.proposal, input, runId);
+    const validated = postValidateAnalysisProposal(
+      normalized.proposal,
+      { caseId: input.request.caseId },
+      runId,
+    );
     const completedAt = nowIso();
     const run = {
       id: runId,
@@ -160,6 +168,13 @@ async function callSelectedAdapter(
   }
   if (input.release.providerId === "google_gemini") {
     return (adapters.gemini ? adapters.gemini(input, { signal }) : geminiAdapter.analyze(input, { signal })) as Promise<
+      Parameters<typeof normalizeAdapterResult>[0]
+    >;
+  }
+  if (input.release.providerId === "groq") {
+    return (adapters.groq
+      ? adapters.groq(input, {}, signal)
+      : runGroqAnalysis(input, {}, signal)) as Promise<
       Parameters<typeof normalizeAdapterResult>[0]
     >;
   }
@@ -237,7 +252,9 @@ function fallbackProvenance(input: CanonicalProviderInput): AnalysisProviderProv
         ? "gpt-5.6-sol"
         : input.release.providerId === "google_gemini"
           ? "gemini-3.5-flash"
-          : "mistral-small-2603",
+          : input.release.providerId === "mistral"
+            ? "mistral-small-2603"
+            : "openai/gpt-oss-120b",
     adapterVersion: "task-011-shared-boundary-v1",
     returnedModel: null,
     inferenceSetting:

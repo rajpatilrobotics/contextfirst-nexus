@@ -3,7 +3,7 @@
   "fixtureId": "CFN-DEMO-001",
   "fixtureVersion": "1.0.0",
   "canonicalFixtureDigest": "ede4457873700cc4bce1bb5fad29c89a4e25d2e6ca7ccd33c323a2ce8ac5809c",
-  "evaluationDefinitionSetDigest": "649b10f68d8a445e79c626efa63ede464cc19b7a82ffab5785c8dcd84b4f2683",
+  "evaluationDefinitionSetDigest": "f33edcab4fb346591d31171f8cff8db60f944405c221afa7292facaa26221473",
   "variants": [
     {
       "schemaVersion": "1.0.0",
@@ -58,7 +58,9 @@
       "split": "development",
       "applicableReleaseScope": "all_frozen_live_releases",
       "gateNames": [
+        "consequential_review_blocking",
         "invalid_citation_rejection",
+        "dependency_recalculation",
         "prohibited_conclusion_blocking"
       ],
       "expectedChecks": [
@@ -136,7 +138,7 @@
       "split": "held_out",
       "applicableReleaseScope": "all_frozen_live_releases",
       "gateNames": [
-        "invalid_citation_rejection",
+        "required_abstention",
         "prohibited_conclusion_blocking"
       ],
       "expectedChecks": [
@@ -214,7 +216,7 @@
       "split": "development",
       "applicableReleaseScope": "all_frozen_live_releases",
       "gateNames": [
-        "invalid_citation_rejection",
+        "consequential_review_blocking",
         "prohibited_conclusion_blocking"
       ],
       "expectedChecks": [
@@ -292,7 +294,7 @@
       "split": "development",
       "applicableReleaseScope": "all_frozen_live_releases",
       "gateNames": [
-        "invalid_citation_rejection",
+        "consequential_review_blocking",
         "prohibited_conclusion_blocking"
       ],
       "expectedChecks": [
@@ -370,7 +372,7 @@
       "split": "held_out",
       "applicableReleaseScope": "all_frozen_live_releases",
       "gateNames": [
-        "invalid_citation_rejection",
+        "cooperation_invariance",
         "prohibited_conclusion_blocking"
       ],
       "expectedChecks": [
@@ -448,7 +450,7 @@
       "split": "held_out",
       "applicableReleaseScope": "all_frozen_live_releases",
       "gateNames": [
-        "invalid_citation_rejection",
+        "cooperation_invariance",
         "prohibited_conclusion_blocking"
       ],
       "expectedChecks": [
@@ -526,7 +528,7 @@
       "split": "development",
       "applicableReleaseScope": "all_frozen_live_releases",
       "gateNames": [
-        "invalid_citation_rejection",
+        "injection_containment",
         "prohibited_conclusion_blocking"
       ],
       "expectedChecks": [
@@ -604,8 +606,7 @@
       "split": "development",
       "applicableReleaseScope": "all_frozen_live_releases",
       "gateNames": [
-        "invalid_citation_rejection",
-        "prohibited_conclusion_blocking"
+        "declared_identifier_exclusion"
       ],
       "expectedChecks": [
         {
@@ -737,8 +738,7 @@
       "split": "held_out",
       "applicableReleaseScope": "all_frozen_live_releases",
       "gateNames": [
-        "invalid_citation_rejection",
-        "prohibited_conclusion_blocking"
+        "consequential_review_blocking"
       ],
       "expectedChecks": [
         {
@@ -870,7 +870,7 @@
       "split": "held_out",
       "applicableReleaseScope": "all_frozen_live_releases",
       "gateNames": [
-        "invalid_citation_rejection",
+        "required_abstention",
         "prohibited_conclusion_blocking"
       ],
       "expectedChecks": [
@@ -948,8 +948,7 @@
       "split": "held_out",
       "applicableReleaseScope": "all_frozen_live_releases",
       "gateNames": [
-        "invalid_citation_rejection",
-        "prohibited_conclusion_blocking"
+        "invalid_citation_rejection"
       ],
       "expectedChecks": [
         {
@@ -1081,7 +1080,7 @@
       "split": "held_out",
       "applicableReleaseScope": "all_frozen_live_releases",
       "gateNames": [
-        "invalid_citation_rejection",
+        "required_abstention",
         "prohibited_conclusion_blocking"
       ],
       "expectedChecks": [
@@ -1159,8 +1158,7 @@
       "split": "development",
       "applicableReleaseScope": "all_frozen_live_releases",
       "gateNames": [
-        "invalid_citation_rejection",
-        "prohibited_conclusion_blocking"
+        "dependency_recalculation"
       ],
       "expectedChecks": [
         {
@@ -1292,8 +1290,7 @@
       "split": "development",
       "applicableReleaseScope": "all_frozen_live_releases",
       "gateNames": [
-        "invalid_citation_rejection",
-        "prohibited_conclusion_blocking"
+        "consequential_review_blocking"
       ],
       "expectedChecks": [
         {

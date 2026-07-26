@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { Search, ShieldCheck, TriangleAlert } from "lucide-react";
 import { useMemo, useState } from "react";
 import { Chip } from "../../components/lovable/nexus-ui";
@@ -26,10 +27,12 @@ function readableNumber(value: number) {
 }
 
 export function AnalysisInputPreview({
+  analysisHref,
   corpusResult,
   embedded = false,
   runtimeAvailable,
 }: {
+  analysisHref?: string;
   corpusResult: AnalysisCorpusResult | null;
   embedded?: boolean;
   runtimeAvailable: boolean;
@@ -124,11 +127,19 @@ export function AnalysisInputPreview({
             </div>
             <p className="mt-1 max-w-3xl text-xs leading-5 text-muted-foreground">
               {corpus
-                ? "This is the current approved redacted text projection. It stays in this browser and is not sent to a model. The deterministic scan cannot prove that every name or ambiguous personal detail was found. Structured Analysis for browser-created cases remains unavailable."
+                ? "This is the current approved redacted text projection. It stays in this browser until you explicitly start analysis. Raw PDFs are never sent to a provider, and the deterministic scan cannot prove that every name or ambiguous personal detail was found."
                 : blockedCopy}
             </p>
           </div>
         </div>
+        {corpus && analysisHref ? (
+          <Link
+            className="inline-flex min-h-9 shrink-0 items-center justify-center rounded-md border border-[var(--color-brand)] bg-[var(--color-brand)] px-3 py-2 text-xs font-semibold !text-white hover:bg-[var(--color-brand-hover)]"
+            href={analysisHref}
+          >
+            Continue to Structured Analysis
+          </Link>
+        ) : null}
       </div>
 
       {corpus ? (

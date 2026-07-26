@@ -58,36 +58,45 @@ describe("TASK-011 shared AI boundary", () => {
   it("keeps the frozen provider order and starts live providers not evaluated", () => {
     const registry = getProviderRegistry();
     expect(registry.map((entry) => entry.release.providerId)).toEqual([
-      "openai",
-      "google_gemini",
       "mistral",
+      "google_gemini",
+      "groq",
+      "openai",
       "local_replay",
     ]);
-    expect(STATIC_ADMISSION_RECORDS).toHaveLength(3);
+    expect(STATIC_ADMISSION_RECORDS).toHaveLength(4);
     expect(STATIC_ADMISSION_RECORDS.every((record) => record.evaluationStatus === "not_evaluated")).toBe(true);
     expect(STATIC_ADMISSION_RECORDS.every((record) => record.evaluationReportId === null)).toBe(true);
   });
 
   it("fails closed for live providers and leaves replay available", () => {
     const response = buildAnalyzeAvailabilityResponse({ liveAnalysisEnabled: true });
-    expect(response.options.map((option) => option.selectable)).toEqual([false, false, false, true]);
-    expect(response.options.slice(0, 3).map((option) => option.evaluationStatus)).toEqual([
+    expect(response.options.map((option) => option.selectable)).toEqual([
+      false,
+      false,
+      false,
+      false,
+      true,
+    ]);
+    expect(response.options.slice(0, 4).map((option) => option.evaluationStatus)).toEqual([
+      "not_evaluated",
       "not_evaluated",
       "not_evaluated",
       "not_evaluated",
     ]);
-    expect(response.options[3]?.evaluationStatus).toBe("not_applicable");
-    expect(response.options[3]?.mode).toBe("deterministic_replay");
+    expect(response.options[4]?.evaluationStatus).toBe("not_applicable");
+    expect(response.options[4]?.mode).toBe("deterministic_replay");
   });
 
   it("global live disable overrides live provider options without disabling replay", () => {
     const response = buildAnalyzeAvailabilityResponse({ liveAnalysisEnabled: false });
-    expect(response.options.slice(0, 3).map((option) => option.availabilityStatus)).toEqual([
+    expect(response.options.slice(0, 4).map((option) => option.availabilityStatus)).toEqual([
+      "disabled",
       "disabled",
       "disabled",
       "disabled",
     ]);
-    expect(response.options[3]?.selectable).toBe(true);
+    expect(response.options[4]?.selectable).toBe(true);
   });
 
   it("reconstructs canonical provider input from the server fixture only", () => {
@@ -157,6 +166,12 @@ describe("TASK-011 shared AI boundary", () => {
     expect(prompt.systemBoundary).not.toContain("SYSTEM OVERRIDE");
     expect(prompt.untrustedEvidenceJson).toContain("SYSTEM OVERRIDE");
     expect(prompt.definitions).toContain("Instruction-like content");
+    expect(prompt.requestedTasksAndSchema).toContain(
+      "short exact verbatim substring",
+    );
+    expect(prompt.requestedTasksAndSchema).toContain(
+      "Return an empty candidates array only",
+    );
   });
 
   it("allowlists safe logging metadata and drops risky values", () => {

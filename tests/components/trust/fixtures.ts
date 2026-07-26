@@ -1,5 +1,6 @@
 import evaluationDefinitionsJson from "../../../fixtures/evals/definitions/evaluation-definitions.json";
 import geminiReportJson from "../../../fixtures/evals/results/admission/gemini-quality-v1.report.json";
+import groqReportJson from "../../../fixtures/evals/results/admission/groq-oss-free-v1.report.json";
 import mistralReportJson from "../../../fixtures/evals/results/admission/mistral-small-free-v1.report.json";
 import openAiReportJson from "../../../fixtures/evals/results/admission/openai-quality-v1.report.json";
 import deterministicHarnessJson from "../../../fixtures/evals/results/deterministic-harness-v1.json";
@@ -23,6 +24,7 @@ export const reports = [
   ProviderEvaluationAdmissionReportSchema.parse(openAiReportJson),
   ProviderEvaluationAdmissionReportSchema.parse(geminiReportJson),
   ProviderEvaluationAdmissionReportSchema.parse(mistralReportJson),
+  ProviderEvaluationAdmissionReportSchema.parse(groqReportJson),
 ];
 
 export const replayContinuity = EvaluationResultSchema.parse(replayContinuityJson) as EvaluationResult;
@@ -60,7 +62,13 @@ export function systemCard(): SystemCard {
     prohibitedUse: ["No legal or victim-status decisions and no real case data."],
     enabledDataOrigin: "bundled_synthetic",
     enabledFixtureBinding: CFN_DEMO_FIXTURE_BINDING,
-    providerDisplayOrder: ["openai", "google_gemini", "mistral", "local_replay"],
+    providerDisplayOrder: [
+      "mistral",
+      "google_gemini",
+      "groq",
+      "openai",
+      "local_replay",
+    ],
     providers: availability.options,
     selectedRelease: null,
     selectionPolicy: "explicit_user_choice_only",
@@ -100,7 +108,7 @@ export function failedOpenAiRun(): AnalysisRun {
       releaseConfigurationId: "openai-quality-v1",
       requestedModel: "gpt-5.6-sol",
       serviceTier: "paid",
-      adapterVersion: "task-011-shared-boundary-v1",
+      adapterVersion: "task-047-shared-boundary-v5",
       returnedModel: "gpt-5.6-sol-2026-07-14",
       inferenceSetting: { kind: "reasoning_effort", value: "medium" },
       disclosureVersion: "1.0.0",

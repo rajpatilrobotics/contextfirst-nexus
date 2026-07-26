@@ -520,7 +520,7 @@ function currentIso(now?: () => Date): string {
   return (now?.() ?? new Date()).toISOString();
 }
 
-const MODEL_ANALYSIS_JSON_SCHEMA = {
+export const MODEL_ANALYSIS_JSON_SCHEMA = {
   type: "object",
   additionalProperties: false,
   required: ["candidates"],
@@ -533,6 +533,7 @@ const MODEL_ANALYSIS_JSON_SCHEMA = {
         required: [
           "proposedId",
           "kind",
+          "lane",
           "title",
           "proposedText",
           "assertionMode",
@@ -547,8 +548,8 @@ const MODEL_ANALYSIS_JSON_SCHEMA = {
             enum: [
               "review_lane_item",
               "context_gap",
-              "citation_need",
-              "contradiction_or_uncertainty",
+              "contradiction",
+              "provenance_limitation",
             ],
           },
           lane: {
@@ -565,9 +566,10 @@ const MODEL_ANALYSIS_JSON_SCHEMA = {
             type: "string",
             enum: [
               "positive_proposition",
-              "negative_proposition",
-              "uncertainty_or_gap",
-              "needs_human_review",
+              "limitation",
+              "gap",
+              "unknown_state",
+              "neutral_procedural_fact",
             ],
           },
           reviewQuestion: { type: "string" },
@@ -584,10 +586,9 @@ const MODEL_ANALYSIS_JSON_SCHEMA = {
                   type: "string",
                   enum: [
                     "supports",
-                    "partially_supports",
+                    "limits",
                     "contradicts",
-                    "context_for",
-                    "requires_resolution",
+                    "context_only",
                   ],
                 },
                 evidenceNature: {

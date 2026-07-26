@@ -53,7 +53,7 @@ export function buildRecoveryOptions(
         automatic: false,
         action: "use_deterministic_replay",
         targetReleaseConfigurationId: "prepared-replay-v1",
-        displayOrder: 4,
+        displayOrder: 5,
         requiresDisclosureAcknowledgement: true,
         startsNewRun: true,
       }),
@@ -66,7 +66,7 @@ export function buildRecoveryOptions(
       automatic: false,
       action: "return_to_purpose",
       targetReleaseConfigurationId: null,
-      displayOrder: 5,
+      displayOrder: 6,
       requiresDisclosureAcknowledgement: false,
       startsNewRun: false,
     }),
@@ -78,5 +78,6 @@ export function buildRecoveryOptions(
 function labelForRelease(releaseConfigurationId: LiveProviderReleaseConfigurationId): string {
   if (releaseConfigurationId === "openai-quality-v1") return "OpenAI";
   if (releaseConfigurationId === "gemini-quality-v1") return "Google Gemini";
-  return "Mistral";
+  if (releaseConfigurationId === "mistral-small-free-v1") return "Mistral";
+  return "Groq";
 }

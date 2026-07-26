@@ -14,13 +14,19 @@ describe("TASK-023 System Card and provenance", () => {
     const { container } = render(<SystemCardPanel card={card} />);
     const providerCards = Array.from(container.querySelectorAll("[data-provider-id]"));
     expect(providerCards.map((item) => item.getAttribute("data-provider-id"))).toEqual([
-      "openai",
-      "google_gemini",
       "mistral",
+      "google_gemini",
+      "groq",
+      "openai",
       "local_replay",
     ]);
 
-    for (const providerId of ["openai", "google_gemini", "mistral"]) {
+    for (const providerId of [
+      "openai",
+      "google_gemini",
+      "mistral",
+      "groq",
+    ]) {
       const provider = container.querySelector(`[data-provider-id="${providerId}"]`);
       if (!provider) throw new Error(`Missing ${providerId} provider card`);
       expect(within(provider as HTMLElement).getAllByText("Not evaluated").length).toBeGreaterThan(0);
@@ -28,7 +34,7 @@ describe("TASK-023 System Card and provenance", () => {
       expect(within(provider as HTMLElement).getByText("No report accepted by the static admission record")).toBeInTheDocument();
     }
 
-    const replay = providerCards[3] as HTMLElement;
+    const replay = providerCards[4] as HTMLElement;
     expect(within(replay).getAllByText("Not applicable").length).toBeGreaterThan(0);
     expect(within(replay).getByText("Selectable", { selector: "span" })).toBeInTheDocument();
   });
@@ -36,12 +42,14 @@ describe("TASK-023 System Card and provenance", () => {
   it("binds exact report identities and digests without promoting admission", () => {
     render(<SystemCardPanel card={systemCard()} />);
     expect(screen.getByText("REPORT-OPENAI-QUALITY-V1-V1")).toBeInTheDocument();
-    expect(screen.getByText("4151cc9ff1ee73b5e2fd28157eacd0dc30fb9d3fac56ad2323cbb3da0494a0a2")).toBeInTheDocument();
+    expect(screen.getByText("af1f3508e6901cd64cc939a085549c773d428e535d424fe08886e3871869dad2")).toBeInTheDocument();
     expect(screen.getByText("REPORT-GEMINI-QUALITY-V1-V1")).toBeInTheDocument();
-    expect(screen.getByText("a334c3abb2d04349345294ee4631cbc907933cc4ac4e97a9ed9fea12efa04213")).toBeInTheDocument();
+    expect(screen.getByText("dc28aff7b9c228e5729b857da3bc1d72bafb713152ee295b4ece0084a2a258c2")).toBeInTheDocument();
     expect(screen.getByText("REPORT-MISTRAL-SMALL-FREE-V1-V1")).toBeInTheDocument();
-    expect(screen.getByText("fdfe95ffba0d3c85a24bddfd48dae6289288bd2595fd6ff874ef2864155c9be8")).toBeInTheDocument();
-    expect(screen.getAllByText(/incomplete report is evidence, not runtime admission/i)).toHaveLength(3);
+    expect(screen.getByText("26fae46551dcbd9d6f3bd27aa202855053d8856c34bb5607c71788e566832774")).toBeInTheDocument();
+    expect(screen.getByText("REPORT-GROQ-OSS-FREE-V1-V1")).toBeInTheDocument();
+    expect(screen.getByText("5f914af49beb0a915c96ad35e6c0cc7721a94cd5cd11d977445c1f4a3b2e1d57")).toBeInTheDocument();
+    expect(screen.getAllByText(/incomplete report is evidence, not runtime admission/i)).toHaveLength(4);
   });
 
   it("keeps missing or test-only passed report evidence from dynamically promoting admission", () => {
@@ -75,7 +83,7 @@ describe("TASK-023 System Card and provenance", () => {
     if (!mistral) throw new Error("Missing Mistral provider card");
     const scope = within(mistral as HTMLElement);
     expect(scope.getByText("REPORT-MISTRAL-SMALL-FREE-V1-V1")).toBeInTheDocument();
-    expect(scope.getByText("fdfe95ffba0d3c85a24bddfd48dae6289288bd2595fd6ff874ef2864155c9be8")).toBeInTheDocument();
+    expect(scope.getByText("26fae46551dcbd9d6f3bd27aa202855053d8856c34bb5607c71788e566832774")).toBeInTheDocument();
     expect(scope.getByText("Passed", { selector: "span" })).toBeInTheDocument();
     expect(scope.getAllByText("Not evaluated").length).toBeGreaterThan(0);
     expect(scope.getByText("Not selectable", { selector: "span" })).toBeInTheDocument();

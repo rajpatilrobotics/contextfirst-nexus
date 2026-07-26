@@ -15,9 +15,9 @@ The controlling order is:
 
 ### 1.1 Approved routing migration
 
-DEC-045 supersedes browser-controlled provider selection and switching. TASK-039 simplifies the replay-only public Purpose flow and automatically binds exactly one selectable local replay release. TASK-040 must first reconcile the contracts and this architecture before implementing any future server-managed live routing.
+DEC-045 supersedes browser-controlled provider selection and switching. TASK-039 simplified the replay-only public Purpose flow and automatically binds exactly one selectable local replay release. DEC-046 reconciles the provider-neutral browser intent and managed routing order without admitting or enabling a live release.
 
-The future live order is OpenAI, Gemini, Mistral, then a separately evaluated and statically admitted fourth provider. Groq `openai/gpt-oss-120b` is only an evaluation candidate. Replay remains a separate local execution path, never a live fallback. The `ENABLE_LIVE_ANALYSIS` server gate, static admission, credentials, spend approval, and separate production approval remain mandatory.
+The default managed live consideration order is Mistral, Gemini, Groq, then OpenAI. A strict server-only configuration may reorder the complete registered set, but invalid values fail closed before any provider call and cannot alter admission or eligibility. Data-ineligible, unconfigured, or unadmitted releases are skipped without a provider call. Free Mistral and unpaid Gemini remain exact-bundled-fixture-only, so browser-uploaded packets skip directly to an eligible admitted Groq release and then paid OpenAI under the default order. Replay remains a separate local execution path, never a live fallback. The `ENABLE_LIVE_ANALYSIS` server gate, static admission, credentials, spend approval, and separate production approval remain mandatory.
 
 Any implementation task that needs to change a frozen choice must stop, record the proposed change in `decision-log.md`, and obtain coordinator approval before dependent work continues.
 
@@ -72,11 +72,11 @@ There is no P0 database, background worker, vector database, durable server case
 | P0 input | The bundled synthetic, text-based PDF packet only | Gives reliable coverage and protects against accidental real-case processing |
 | OCR | Not supported in P0 | Image-only or unreadable pages must be labelled unavailable instead of silently guessed |
 | Validation | `zod@4.4.3` schemas plus deterministic semantic checks | Schema validity alone cannot establish citation or review validity |
-| Live AI providers | OpenAI Responses API, Google Gemini API, and Mistral Chat Completions API behind server-only provider adapters | Keeps provider-specific behavior inside one narrow, testable boundary |
+| Live AI providers | Native server-only Mistral, Google Gemini, Groq, and OpenAI adapters behind one provider-neutral boundary | Keeps provider-specific behavior inside one narrow, testable boundary |
 | Quality baseline | Evaluated release configuration for `gpt-5.6-sol`, reasoning effort `medium` | Accuracy-first baseline for the synthetic evaluation set |
 | Secondary live provider | Evaluated release configuration for `gemini-3.5-flash` | Adds a cost-conscious recovery option behind the same gates |
 | Third live provider candidate | Unpaid `mistral-small-free-v1` for `mistral-small-2603`, reasoning effort `medium` | Adds a direct free-tier recovery option that remains unselectable until evaluation passes |
-| Provider routing | Static server-side release registry, version-controlled admission record, and explicit manual selection and recovery | Prevents arbitrary models, environment-based promotion, and silent cross-provider transmission |
+| Provider routing | Static server-side release registry, version-controlled admission, and bounded managed consideration order | Prevents arbitrary models, environment-based promotion, and unsafe cross-provider transmission |
 | Replay | Version-matched bundled deterministic replay outside live-provider routing | Keeps the judged flow available while clearly distinguishing replay from live AI |
 | PDF export | `@react-pdf/renderer@4.5.1`, loaded only on the export route | Produces a structured local PDF without a separate rendering service |
 | JSON export | Native browser `Blob` download | Preserves the exact versioned handoff contract |
@@ -247,9 +247,9 @@ The server:
 6. verifies a current provider-specific acknowledgement and rejects an arbitrary provider, endpoint, model, or API key supplied by the browser;
 7. wraps document content as untrusted JSON data separate from application instructions;
 8. gives the selected model no tools, credentials, files, search, agents, conversations, browsing, memory, or external action capability;
-9. requests the one common strict structured proposal shared by all three live-provider adapters with streaming disabled;
-10. applies `store: false` for OpenAI, uses the frozen stateless request path for Gemini, and uses one stateless, non-streaming JSON Schema Chat Completions request with disabled SDK retries for Mistral;
-11. rejects a timeout or invalid response without a prose fallback or silent call to another provider;
+9. requests the one common strict structured proposal shared by all four live-provider adapters with streaming disabled;
+10. applies `store: false` for OpenAI, uses the frozen stateless request path for Gemini, and uses stateless, non-streaming JSON Schema requests with disabled retries for Mistral and Groq;
+11. rejects a timeout or invalid response without a prose fallback or cross-provider safety bypass;
 12. performs the same schema, ID, citation, leak, instruction-propagation, and prohibited-output validation after any live-provider adapter;
 13. returns only one validated `CaseCandidate[]` collection plus a terminal live execution result and safe provider metadata, with no parallel timeline, Nexus, or context-gap arrays, browser case history, or recovery-link claim.
 
@@ -259,7 +259,7 @@ If the browser loses the network, receives no response, or cannot parse the resp
 
 The route uses `runtime = "nodejs"`, `maxDuration = 60`, and `Cache-Control: no-store`. It enforces JSON content type, checks the expected same-origin browser path where practical, and rejects request bodies above 1 MB. Each live-provider adapter has a 45-second timeout and the browser abort timeout is 55 seconds. A false public UI flag can never enable a server-disabled route. When the public flag is true but the server flag is false, the UI presents Live analysis unavailable and offers the explicit replay option. These controls narrow misuse but do not constitute production authentication.
 
-Provider data handling is not treated as interchangeable. OpenAI retention limitations must match the configured account and published API controls. Google's unpaid Gemini terms permit submitted content and generated responses to be used to improve Google products and to be processed by human reviewers. Mistral's current free-service documentation permits input and output to be used for training unless the account opts out, describes retention of API request data for up to 30 days for safety and abuse monitoring, and does not offer zero data retention on the free tier. Therefore, unpaid Gemini and Mistral are restricted to the exact bundled synthetic fixture and are prohibited for any future real, private, confidential, client, or survivor material. OpenAI `store: false`, the stateless Gemini request path, and a stateless Mistral request are not described as zero retention. The provider-specific disclosure and system card must state the actual configured service tier, training-use setting when known, retention limitation, and processing-region limitation.
+Provider data handling is not treated as interchangeable. OpenAI retention limitations must match the configured account and published API controls. Google's unpaid Gemini terms permit submitted content and generated responses to be used to improve Google products and to be processed by human reviewers. Mistral's current free-service documentation permits input and output to be used for training unless the account opts out, describes retention of API request data for up to 30 days for safety and abuse monitoring, and does not offer zero data retention on the free tier. Therefore, unpaid Gemini and Mistral are restricted to the exact bundled synthetic fixture and are prohibited for real, private, confidential, client, or survivor material. Browser-local Groq use additionally requires the exact admitted configuration and verified zero data retention. OpenAI `store: false`, the stateless Gemini request path, and a stateless Mistral request are not described as zero retention. The provider-specific disclosure and system card must state the actual configured service tier, training-use setting when known, retention limitation, and processing-region limitation.
 
 ### 8.5 Deterministic post-validation
 
@@ -301,13 +301,14 @@ The PDF and JSON are generated from the same manifest. P0 does not claim that th
 
 ### 9.1 Evaluated live configurations
 
-P0 defines exactly three live-provider release configurations:
+P0 defines exactly four live-provider release configurations:
 
-1. Provider ID `openai`, release `openai-quality-v1`, and model `gpt-5.6-sol` with reasoning effort `medium` as the quality baseline.
-2. Provider ID `google_gemini`, release `gemini-quality-v1`, and model `gemini-3.5-flash` on the unpaid synthetic-only tier.
-3. Provider ID `mistral`, release `mistral-small-free-v1`, and model `mistral-small-2603` on the unpaid synthetic-only tier with reasoning effort `medium`.
+1. Provider ID `mistral`, release `mistral-small-free-v1`, and model `mistral-small-2603` on the unpaid exact-fixture-only tier with reasoning effort `medium`.
+2. Provider ID `google_gemini`, release `gemini-quality-v1`, and model `gemini-3.5-flash` on the unpaid exact-fixture-only tier.
+3. Provider ID `groq`, release `groq-oss-free-v1`, and model `openai/gpt-oss-120b` on the unpaid tier with reasoning effort `medium`, pending evaluation, reviewed admission, and verified zero data retention.
+4. Provider ID `openai`, release `openai-quality-v1`, and model `gpt-5.6-sol` with reasoning effort `medium` as the paid quality fallback.
 
-A static server-only registry binds each entry to its allowed model or replay artifact, adapter, inference configuration, disclosure version, service tier, prompt version, and schema version. Each of the three live entries also binds one version-controlled admission record. The local replay entry has no live-provider admission record and is governed by its exact deterministic replay and fixture versions. A private server-only evaluation entry may call the exact frozen adapter before runtime admission only after the approved local runner records the exact call count, cost estimate, and explicit spend approval. It accepts only the bundled synthetic fixture and frozen release configuration, is unreachable from HTTP and browser code, and produces versioned evidence without changing runtime state. A later narrow static handoff verifies that evidence and records live runtime admission state. No environment value, runtime report-file read, provider response, or evaluation execution can promote a release.
+A static server-only registry binds each entry to its allowed model or replay artifact, adapter, inference configuration, disclosure version, service tier, prompt version, and schema version. Each of the four live entries also binds one version-controlled admission record. The local replay entry has no live-provider admission record and is governed by its exact deterministic replay and fixture versions. A private server-only evaluation entry may call the exact frozen adapter before runtime admission only after the approved local runner records the exact call count, cost estimate, and explicit spend approval. It accepts only the bundled synthetic fixture and frozen release configuration, is unreachable from HTTP and browser code, and produces versioned evidence without changing runtime state. A later narrow static handoff verifies that evidence and records live runtime admission state. No environment value, runtime report-file read, provider response, or evaluation execution can promote a release.
 
 A live release is selectable only when it is configured, explicitly enabled, and its exact static admission record reflects a passed provider-contract and safety evaluation. `mistral-small-free-v1` also requires a coordinator-recorded available deployed-account release status and otherwise remains unselectable. Local replay is governed separately by its fixed trusted-bundle and version checks and reports evaluation as not applicable. The server never accepts a browser-supplied endpoint, API key, admission record, or arbitrary model name.
 
@@ -315,9 +316,9 @@ The exact provider, requested model, returned model identifier when available, r
 
 An environment change cannot silently admit or promote a model. Changing any evaluated release requires a recorded decision, development-set evidence, renewed held-out assurance, and a reviewed static admission handoff. The system card must disclose moving aliases unless immutable snapshots are selected later.
 
-### 9.2 Manual selection and recovery
+### 9.2 Managed selection and recovery
 
-The practitioner manually selects one available evaluated live configuration before analysis and acknowledges that provider's current data flow, or explicitly chooses the separately labelled bundled deterministic replay and acknowledges that it is frozen local output rather than live AI. Display and recovery order is OpenAI, Gemini, Mistral, then replay. This is presentation order, not an automatic attempt chain. OpenAI remains the quality baseline until a recorded evaluation establishes that another exact release satisfies the same gates and performs better for this task.
+The practitioner sees one Start analysis action and explicitly acknowledges the current data flow. The server considers admitted, configured, data-eligible releases in its validated server-managed order, defaulting to Mistral, Gemini, Groq, then OpenAI. It skips ineligible releases without calling them, accepts at most one result, and never merges outputs. The separately labelled bundled deterministic replay remains local and outside the live chain.
 
 A failed live attempt remains visible through safe provenance. Future cross-provider recovery is server-managed, bounded to DEC-045's classified operational failures, and uses one canonical approved redacted input. A configuration or release rejection before a run starts returns `run: null` and records a safe audit event instead of inventing a run. Timeout or transport failure with unknown remote execution never advances to another provider. The router never merges outputs, never evades quota with multiple keys, and stops after one accepted result.
 
@@ -327,7 +328,7 @@ The project does not publish an overall accuracy percentage from its small synth
 
 ### 9.3 Provider-neutral proposal contract
 
-All three live adapters receive the same server-constructed canonical input and target one common, conservative structured proposal schema. Provider-specific request and response details remain inside `lib/ai/server`. The shared schema uses only the JSON Schema features supported by all three selected provider APIs.
+All four live adapters receive the same server-constructed canonical input and target one common, conservative structured proposal schema. Provider-specific request and response details remain inside `lib/ai/server`. The shared schema uses only the JSON Schema features supported by all four selected provider APIs.
 
 Every adapter result is parsed into the same provider-neutral `ModelAnalysisProposal` before deterministic semantic validation. Neither adapter may create a final citation, support status, review decision, legal conclusion, audit event, dependency result, or export record. Provider output is untrusted even when it matches the schema.
 
@@ -376,7 +377,7 @@ The interface must disclose that local browser resume is enabled for the synthet
 | Candidate to reviewed item | AI suggestion | Individual human action, source access, no bulk approval |
 | Reviewed state to export | Sensitive derived content | Export gate, minimum necessity, redaction scan, explicit local download |
 
-Browser rendering uses escaped React text only. Case, document, and model content must never use `dangerouslySetInnerHTML`. The application applies a restrictive content-security policy with same-origin browser connections, same-origin PDF worker assets, and the minimum `blob:` use required for local workers, previews, and downloads. The browser never connects directly to OpenAI, Google Gemini, or Mistral. Camera, microphone, geolocation, framing, and unnecessary cross-origin connections are disabled.
+Browser rendering uses escaped React text only. Case, document, and model content must never use `dangerouslySetInnerHTML`. The application applies a restrictive content-security policy with same-origin browser connections, same-origin PDF worker assets, and the minimum `blob:` use required for local workers, previews, and downloads. The browser never connects directly to OpenAI, Google Gemini, Mistral, or Groq. Camera, microphone, geolocation, framing, and unnecessary cross-origin connections are disabled.
 
 ## 13. Failure and replay behavior
 
@@ -387,7 +388,7 @@ Each required pipeline stage has `pending`, `active`, `completed`, `warning`, or
 - Retry targets only the failed stage when possible.
 - A provider timeout or invalid structure returns a safe error and no candidates.
 - A retry of the same provider is explicit and does not duplicate accepted candidates, review decisions, or audit events.
-- Server-managed cross-provider routing is allowed only for the approved operational failure classes defined in `docs/MODEL_ROUTING.md`, after TASK-040 reconciles and versions the request and attempt contracts.
+- Server-managed cross-provider routing is allowed only for the approved operational failure classes defined in `docs/MODEL_ROUTING.md`.
 - One managed request records bounded safe attempt metadata and one final accepted run; provider outputs are never merged and unknown remote execution stops the chain.
 - A provider refusal, unsafe output, invalid citation, injection propagation, or semantic validation failure cannot trigger another live provider automatically.
 - A deterministic replay command supplies only trusted bundle ID `REPLAY-CFN-DEMO-001-V1`. A compile-time registry instantiates exactly one local successful run with zero quarantined output and only that run's candidates and citations after digest, version, count, ownership, and dependency checks pass.
@@ -464,7 +465,7 @@ P0 is not an incomplete production architecture. It is a deliberately bounded sy
 - One Next.js application implements the full judged flow.
 - The bundled synthetic packet is the only enabled P0 input.
 - Raw PDF bytes never enter the model request.
-- All three live-provider candidates expose the same one bounded, tool-free, structured analysis capability after their exact release passes evaluation.
+- All four live-provider candidates expose the same one bounded, tool-free, structured analysis capability after their exact release passes evaluation.
 - All model output is treated as untrusted until deterministic validation.
 - Citation, dependency, review, redaction, and export gates are deterministic code.
 - Manual citation resolution is persisted only through the central reducer command and active-run decision history. TASK-010 clears current run-scoped resolution history when a new run replaces the active run, while preserving safe audit and historical export records.
@@ -476,7 +477,7 @@ P0 is not an incomplete production architecture. It is a deliberately bounded sy
 - Managed provider changes occur only inside the bounded admitted server policy; replay is never silently substituted.
 - Unpaid Gemini is restricted to the bundled synthetic fixture.
 - Unpaid Mistral is restricted to the exact bundled synthetic fixture and carries conservative training, 30-day retention, and no-ZDR disclosure.
-- Future admitted live routing is ordered OpenAI, Gemini, Mistral, then the separately evaluated fourth provider; replay remains separate.
+- Admitted live routing considers Mistral, Gemini, Groq, then OpenAI; replay remains separate.
 - Runtime provider admission changes only through the reviewed static admission handoff.
 - Model, provider, service tier, data-use and retention limitations, prompt, release configuration, and contract metadata are disclosed.
 - Planned dependencies do not duplicate responsibilities.

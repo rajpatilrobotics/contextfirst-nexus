@@ -124,22 +124,30 @@ export type StageStatus = z.infer<typeof StageStatusSchema>;
 
 export const DataOriginSchema = z.enum(["bundled_synthetic", "browser_local"]);
 export const AnalysisModeSchema = z.enum(["live", "deterministic_replay"]);
-export const LiveProviderIdSchema = z.enum(["openai", "google_gemini", "mistral"]);
+export const LiveProviderIdSchema = z.enum([
+  "openai",
+  "google_gemini",
+  "mistral",
+  "groq",
+]);
 export const ProviderIdSchema = z.enum([
   "openai",
   "google_gemini",
   "mistral",
+  "groq",
   "local_replay",
 ]);
 export const LiveProviderReleaseConfigurationIdSchema = z.enum([
   "openai-quality-v1",
   "gemini-quality-v1",
   "mistral-small-free-v1",
+  "groq-oss-free-v1",
 ]);
 export const ProviderReleaseConfigurationIdSchema = z.enum([
   "openai-quality-v1",
   "gemini-quality-v1",
   "mistral-small-free-v1",
+  "groq-oss-free-v1",
   "prepared-replay-v1",
 ]);
 export const ProviderServiceTierSchema = z.enum(["paid", "unpaid", "local"]);
@@ -151,10 +159,11 @@ export type LiveProviderReleaseConfigurationId = z.infer<
 >;
 
 export const ProviderDisplayOrderById = {
-  openai: 1,
+  mistral: 1,
   google_gemini: 2,
-  mistral: 3,
-  local_replay: 4,
+  groq: 3,
+  openai: 4,
+  local_replay: 5,
 } as const;
 
 export const ProviderReleaseConfigurationSchema = z.discriminatedUnion(
@@ -179,6 +188,12 @@ export const ProviderReleaseConfigurationSchema = z.discriminatedUnion(
       serviceTier: z.literal("unpaid"),
     }),
     strict({
+      providerId: z.literal("groq"),
+      releaseConfigurationId: z.literal("groq-oss-free-v1"),
+      requestedModel: z.literal("openai/gpt-oss-120b"),
+      serviceTier: z.literal("unpaid"),
+    }),
+    strict({
       providerId: z.literal("local_replay"),
       releaseConfigurationId: z.literal("prepared-replay-v1"),
       requestedModel: z.literal("frozen_replay_output"),
@@ -198,7 +213,8 @@ export const LiveProviderReleaseConfigurationSchema =
 export type LiveProviderReleaseConfiguration =
   | Extract<ProviderReleaseConfiguration, { providerId: "openai" }>
   | Extract<ProviderReleaseConfiguration, { providerId: "google_gemini" }>
-  | Extract<ProviderReleaseConfiguration, { providerId: "mistral" }>;
+  | Extract<ProviderReleaseConfiguration, { providerId: "mistral" }>
+  | Extract<ProviderReleaseConfiguration, { providerId: "groq" }>;
 export type ReplayReleaseConfiguration = Extract<
   ProviderReleaseConfiguration,
   { providerId: "local_replay" }
@@ -218,6 +234,11 @@ export const ProviderReleaseSelectionSchema = z.discriminatedUnion("providerId",
   strict({
     providerId: z.literal("mistral"),
     releaseConfigurationId: z.literal("mistral-small-free-v1"),
+    serviceTier: z.literal("unpaid"),
+  }),
+  strict({
+    providerId: z.literal("groq"),
+    releaseConfigurationId: z.literal("groq-oss-free-v1"),
     serviceTier: z.literal("unpaid"),
   }),
   strict({
@@ -244,12 +265,14 @@ export const ProviderStorageModeSchema = z.enum([
   "openai_store_false",
   "gemini_stateless_unpaid",
   "mistral_stateless_free",
+  "groq_stateless_free",
   "local_no_transmission",
 ]);
 export const ProviderRetentionSettingSchema = z.enum([
   "openai_store_false",
   "gemini_unpaid_default",
   "mistral_free_30_day_default",
+  "groq_zero_data_retention",
   "local_no_provider_retention",
 ]);
 
@@ -350,6 +373,9 @@ export const EvaluatedReleaseConfigurationSchema =
     if (value.providerId === "mistral" && value.inferenceSetting.kind !== "reasoning_effort") {
       context.addIssue({ code: "custom", message: "Mistral uses reasoning_effort." });
     }
+    if (value.providerId === "groq" && value.inferenceSetting.kind !== "reasoning_effort") {
+      context.addIssue({ code: "custom", message: "Groq uses reasoning_effort." });
+    }
   });
 
 export const ProviderReleaseAdmissionRecordSchema = strict({
@@ -362,12 +388,26 @@ export const ProviderReleaseAdmissionRecordSchema = strict({
   evaluationReportDigest: sha256.nullable(),
   recordedAt: isoUtcTimestamp.nullable(),
 }).superRefine((record, context) => {
-  const isMistral = record.releaseConfigurationId === "mistral-small-free-v1";
-  if (isMistral && record.deployedAccountReleaseAvailability.status === "not_required") {
-    context.addIssue({ code: "custom", message: "Mistral cannot use not_required availability." });
+  const requiresDeploymentEvidence =
+    record.releaseConfigurationId === "mistral-small-free-v1" ||
+    record.releaseConfigurationId === "groq-oss-free-v1";
+  if (
+    requiresDeploymentEvidence &&
+    record.deployedAccountReleaseAvailability.status === "not_required"
+  ) {
+    context.addIssue({
+      code: "custom",
+      message: "Mistral and Groq require verified deployment evidence.",
+    });
   }
-  if (!isMistral && record.deployedAccountReleaseAvailability.status !== "not_required") {
-    context.addIssue({ code: "custom", message: "OpenAI and Gemini require not_required availability." });
+  if (
+    !requiresDeploymentEvidence &&
+    record.deployedAccountReleaseAvailability.status !== "not_required"
+  ) {
+    context.addIssue({
+      code: "custom",
+      message: "OpenAI and Gemini require not_required availability.",
+    });
   }
   if (record.evaluationStatus === "not_evaluated") {
     for (const key of ["evaluationReportId", "evaluationReportDigest", "recordedAt"] as const) {
@@ -394,7 +434,7 @@ export const ProviderDisclosureProjectionSchema = strict({
   trainingUseDisclosure: nonEmptyString,
   providerContentCategories: z.array(nonEmptyString),
   processingRegion: z.string().nullable(),
-  allowedDataOrigins: z.tuple([z.literal("bundled_synthetic")]),
+  allowedDataOrigins: z.array(DataOriginSchema).min(1),
   providerTransmission: z.boolean(),
   rawPdfSentToProvider: z.literal(false),
   toolsEnabled: z.literal(false),
@@ -408,7 +448,13 @@ export type ProviderDisclosureProjection = z.infer<
 export const ProviderOptionProjectionSchema = ProviderReleaseConfigurationSchema.and(
   strict({
     schemaVersion: literalVersion,
-    displayOrder: z.union([z.literal(1), z.literal(2), z.literal(3), z.literal(4)]),
+    displayOrder: z.union([
+      z.literal(1),
+      z.literal(2),
+      z.literal(3),
+      z.literal(4),
+      z.literal(5),
+    ]),
     displayName: nonEmptyString,
     modelDisplayName: nonEmptyString,
     modelAliasDisclosure: nonEmptyString,
@@ -655,22 +701,25 @@ export const SourceSegmentSchema = strict({
 });
 export type SourceSegment = z.infer<typeof SourceSegmentSchema>;
 
+export const DocumentSourceTypeSchema = z.enum([
+  "recruitment_record",
+  "communication",
+  "travel_record",
+  "practitioner_note",
+  "operational_financial_record",
+  "proceeding_record",
+  "support_provider_note",
+  "other",
+]);
+export type DocumentSourceType = z.infer<typeof DocumentSourceTypeSchema>;
+
 export const DocumentRecordSchema = strict({
   id: IdSchemas.documentId,
   caseId: IdSchemas.caseId,
   fixtureVersion: literalVersion,
   fileName: nonEmptyString,
   displayName: nonEmptyString,
-  sourceType: z.enum([
-    "recruitment_record",
-    "communication",
-    "travel_record",
-    "practitioner_note",
-    "operational_financial_record",
-    "proceeding_record",
-    "support_provider_note",
-    "other",
-  ]),
+  sourceType: DocumentSourceTypeSchema,
   dataOrigin: DataOriginSchema,
   expectedPageCount: positiveInteger,
   pages: z.array(PageRecordSchema),
@@ -776,7 +825,7 @@ export const CitationValidationStatusSchema = z.enum([
 
 const CitationBaseSchema = strict({
   id: nonEmptyString,
-  caseId: z.literal("CFN-DEMO-001"),
+  caseId: IdSchemas.caseId,
   analysisRunId: IdSchemas.analysisRunId,
   documentId: IdSchemas.documentId,
   pageNumber: positiveInteger.optional(),
@@ -1365,6 +1414,75 @@ export const AnalyzeRequestSchema = strict({
 });
 export type AnalyzeRequest = z.infer<typeof AnalyzeRequestSchema>;
 
+export const BrowserAnalysisSegmentSchema = strict({
+  segmentId: IdSchemas.segmentId,
+  documentId: IdSchemas.documentId,
+  pageNumber: positiveInteger,
+  ordinal: positiveInteger,
+  redactedText: z
+    .string()
+    .min(1)
+    .max(8_000)
+    .refine((value) => value.trim().length > 0, {
+      message: "Approved redacted text cannot be blank.",
+    }),
+  boundingBoxes: z.array(BoundingBoxSchema).max(250),
+  sourceType: DocumentSourceTypeSchema,
+  supportEligibility: z.enum(["candidate_eligible", "evidence_only"]),
+  instructionAdvisory: z.enum([
+    "not_scanned",
+    "no_signal",
+    "advisory_signal",
+    "human_reviewed",
+  ]),
+  translationStatus: TranslationStatusSchema,
+});
+export type BrowserAnalysisSegment = z.infer<
+  typeof BrowserAnalysisSegmentSchema
+>;
+
+export const BrowserAnalysisIntentSchema = strict({
+  schemaVersion: literalVersion,
+  caseId: z.string().regex(/^CFN-CASE-[A-Z0-9-]+$/),
+  dataOrigin: z.literal("browser_local"),
+  syntheticOrAuthorizedPublicDataAttested: z.literal(true),
+  providerDataFlowAcknowledged: z.literal(true),
+  purpose: strict({
+    purposeBriefId: IdSchemas.purposeBriefId,
+    purposeBriefRevision: nonNegativeInteger,
+    practitionerRole: PractitionerRoleSchema,
+    jurisdictionCode: JurisdictionCodeSchema,
+    requestedExport: RequestedExportSchema,
+  }),
+  documentSetDigest: sha256,
+  maskingRevision: nonNegativeInteger,
+  leakScanStatus: z.literal("passed"),
+  approvedRedactedInputDigest: sha256,
+  segments: z.array(BrowserAnalysisSegmentSchema).min(1).max(500),
+}).superRefine((intent, context) => {
+  const ids = new Set<string>();
+  intent.segments.forEach((segment, index) => {
+    if (ids.has(segment.segmentId)) {
+      context.addIssue({
+        code: "custom",
+        message: "Browser analysis segment identifiers must be unique.",
+        path: ["segments", index, "segmentId"],
+      });
+    }
+    if (!segment.segmentId.startsWith(`${segment.documentId}-`)) {
+      context.addIssue({
+        code: "custom",
+        message: "Browser analysis segment and document identifiers must match.",
+        path: ["segments", index, "documentId"],
+      });
+    }
+    ids.add(segment.segmentId);
+  });
+});
+export type BrowserAnalysisIntent = z.infer<
+  typeof BrowserAnalysisIntentSchema
+>;
+
 export const LiveEvaluationSpendApprovalSchema = strict({
   schemaVersion: literalVersion,
   id: nonEmptyString,
@@ -1659,7 +1777,12 @@ export const AnalysisRecoveryOptionSchema = z.discriminatedUnion("action", [
     automatic: z.literal(false),
     action: z.literal("select_evaluated_release"),
     targetReleaseConfigurationId: LiveProviderReleaseConfigurationIdSchema,
-    displayOrder: z.union([z.literal(1), z.literal(2), z.literal(3)]),
+    displayOrder: z.union([
+      z.literal(1),
+      z.literal(2),
+      z.literal(3),
+      z.literal(4),
+    ]),
     requiresDisclosureAcknowledgement: z.literal(true),
     startsNewRun: z.literal(true),
   }),
@@ -1668,7 +1791,7 @@ export const AnalysisRecoveryOptionSchema = z.discriminatedUnion("action", [
     automatic: z.literal(false),
     action: z.literal("use_deterministic_replay"),
     targetReleaseConfigurationId: z.literal("prepared-replay-v1"),
-    displayOrder: z.literal(4),
+    displayOrder: z.literal(5),
     requiresDisclosureAcknowledgement: z.literal(true),
     startsNewRun: z.literal(true),
   }),
@@ -1677,7 +1800,7 @@ export const AnalysisRecoveryOptionSchema = z.discriminatedUnion("action", [
     automatic: z.literal(false),
     action: z.literal("return_to_purpose"),
     targetReleaseConfigurationId: z.null(),
-    displayOrder: z.literal(5),
+    displayOrder: z.literal(6),
     requiresDisclosureAcknowledgement: z.literal(false),
     startsNewRun: z.literal(false),
   }),
@@ -1777,6 +1900,77 @@ export const AnalyzeResponseSchema: z.ZodTypeAny = z.discriminatedUnion("outcome
 ]);
 export type AnalyzeResponse = z.infer<typeof AnalyzeResponseSchema>;
 
+export const ManagedProviderAttemptSchema = strict({
+  providerId: LiveProviderIdSchema,
+  outcome: z.enum([
+    "not_admitted",
+    "data_policy_blocked",
+    "not_configured",
+    "operational_failure",
+    "terminal_failure",
+    "accepted",
+  ]),
+  failureClassification: StartedLiveFailureClassificationSchema.nullable(),
+});
+export type ManagedProviderAttempt = z.infer<
+  typeof ManagedProviderAttemptSchema
+>;
+
+const BrowserAnalyzeErrorSchema = strict({
+  code: SafeErrorCodeSchema,
+  userMessage: nonEmptyString,
+});
+
+export const BrowserAnalyzeResponseSchema = z.discriminatedUnion("outcome", [
+  strict({
+    schemaVersion: literalVersion,
+    outcome: z.literal("succeeded"),
+    run: LiveAnalysisExecutionResultSchema.refine(
+      (run) => run.status === "succeeded",
+    ),
+    candidates: z.array(CaseCandidateSchema),
+    citations: z.array(CitationSchema),
+    quarantined: z.array(QuarantinedProposalSchema),
+    attempts: z.array(ManagedProviderAttemptSchema).min(1).max(4),
+    error: z.null(),
+  }),
+  strict({
+    schemaVersion: literalVersion,
+    outcome: z.literal("failed"),
+    run: LiveAnalysisExecutionResultSchema.refine(
+      (run) => run.status === "failed",
+    ),
+    candidates: z.tuple([]),
+    citations: z.tuple([]),
+    quarantined: z.tuple([]),
+    attempts: z.array(ManagedProviderAttemptSchema).min(1).max(4),
+    error: BrowserAnalyzeErrorSchema,
+  }),
+  strict({
+    schemaVersion: literalVersion,
+    outcome: z.literal("rejected_before_run"),
+    run: z.null(),
+    candidates: z.tuple([]),
+    citations: z.tuple([]),
+    quarantined: z.tuple([]),
+    attempts: z.array(ManagedProviderAttemptSchema).max(4),
+    error: BrowserAnalyzeErrorSchema,
+  }),
+  strict({
+    schemaVersion: literalVersion,
+    outcome: z.literal("service_unavailable"),
+    run: z.null(),
+    candidates: z.tuple([]),
+    citations: z.tuple([]),
+    quarantined: z.tuple([]),
+    attempts: z.array(ManagedProviderAttemptSchema).min(1).max(4),
+    error: BrowserAnalyzeErrorSchema,
+  }),
+]);
+export type BrowserAnalyzeResponse = z.infer<
+  typeof BrowserAnalyzeResponseSchema
+>;
+
 export const AnalyzeAvailabilityResponseSchema = z.discriminatedUnion(
   "liveAnalysisEnabled",
   [
@@ -1785,6 +1979,7 @@ export const AnalyzeAvailabilityResponseSchema = z.discriminatedUnion(
       liveAnalysisEnabled: z.literal(true),
       replayEnabled: z.literal(true),
       options: z.tuple([
+        ProviderOptionProjectionSchema,
         ProviderOptionProjectionSchema,
         ProviderOptionProjectionSchema,
         ProviderOptionProjectionSchema,
@@ -1800,16 +1995,20 @@ export const AnalyzeAvailabilityResponseSchema = z.discriminatedUnion(
         ProviderOptionProjectionSchema,
         ProviderOptionProjectionSchema,
         ProviderOptionProjectionSchema,
+        ProviderOptionProjectionSchema,
       ]),
     }),
   ],
 ).superRefine((response, context) => {
   const ids = response.options.map((option) => option.providerId);
-  if (ids.join(",") !== "openai,google_gemini,mistral,local_replay") {
+  if (
+    ids.join(",") !==
+    "mistral,google_gemini,groq,openai,local_replay"
+  ) {
     context.addIssue({ code: "custom", message: "Provider options must be in frozen order." });
   }
   if (!response.liveAnalysisEnabled) {
-    for (const option of response.options.slice(0, 3)) {
+    for (const option of response.options.slice(0, 4)) {
       if (option.availabilityStatus !== "disabled" || option.selectable !== false) {
         context.addIssue({ code: "custom", message: "Globally disabled live analysis disables live options." });
       }
@@ -2449,9 +2648,10 @@ export const SystemCardSchema = strict({
   enabledDataOrigin: z.literal("bundled_synthetic"),
   enabledFixtureBinding: ProviderFixtureBindingSchema,
   providerDisplayOrder: z.tuple([
-    z.literal("openai"),
-    z.literal("google_gemini"),
     z.literal("mistral"),
+    z.literal("google_gemini"),
+    z.literal("groq"),
+    z.literal("openai"),
     z.literal("local_replay"),
   ]),
   providers: z.array(ProviderOptionProjectionSchema),
@@ -2676,10 +2876,57 @@ const ExecutedEvaluationEvidenceBaseSchema = EvaluationEvidenceBaseSchema.extend
   runAt: isoUtcTimestamp,
 });
 
+export const EvaluationOperationalInterruptionSchema = z.enum([
+  "provider_quota_exhausted",
+  "provider_rate_limited",
+  "provider_timeout",
+  "provider_unavailable",
+]);
+export type EvaluationOperationalInterruption = z.infer<
+  typeof EvaluationOperationalInterruptionSchema
+>;
+
+export const EvaluationProviderAttemptSchema = strict({
+  attemptOrdinal: positiveInteger,
+  analysisRunId: IdSchemas.analysisRunId,
+  runAt: isoUtcTimestamp,
+  actualProviderTransmission: z.literal(true),
+  terminalStatus: z.enum(["succeeded", "failed"]),
+  outcome: z.enum(["completed", "interrupted"]),
+  interruptionClassification:
+    EvaluationOperationalInterruptionSchema.nullable(),
+  provider: AnalysisProviderProvenanceSchema,
+}).superRefine((attempt, context) => {
+  if (
+    attempt.outcome === "interrupted" &&
+    attempt.interruptionClassification === null
+  ) {
+    context.addIssue({
+      code: "custom",
+      message: "Interrupted provider attempts require a classification.",
+    });
+  }
+  if (
+    attempt.outcome === "completed" &&
+    attempt.interruptionClassification !== null
+  ) {
+    context.addIssue({
+      code: "custom",
+      message: "Completed provider attempts cannot carry an interruption.",
+    });
+  }
+});
+export type EvaluationProviderAttempt = z.infer<
+  typeof EvaluationProviderAttemptSchema
+>;
+
 export const EvaluationResultSchema: z.ZodTypeAny = z.discriminatedUnion(
   "executionSource",
   [
-    ExecutedEvaluationEvidenceBaseSchema.extend({
+    EvaluationEvidenceBaseSchema.extend({
+      status: z.enum(["passed", "failed", "interrupted"]),
+      checks: z.array(EvaluationCheckSchema),
+      runAt: isoUtcTimestamp,
       executionRequirement: z.literal("live_model_run"),
       scenarioId: z.null(),
       analysisRunId: IdSchemas.analysisRunId,
@@ -2688,6 +2935,7 @@ export const EvaluationResultSchema: z.ZodTypeAny = z.discriminatedUnion(
       terminalStatus: z.enum(["succeeded", "failed"]),
       runMode: z.literal("live"),
       provider: AnalysisProviderProvenanceSchema,
+      providerAttempts: z.array(EvaluationProviderAttemptSchema).min(1).optional(),
     }),
     ExecutedEvaluationEvidenceBaseSchema.extend({
       executionRequirement: z.literal("deterministic_control"),
@@ -2761,7 +3009,51 @@ export const EvaluationResultSchema: z.ZodTypeAny = z.discriminatedUnion(
       provider: z.null(),
     }),
   ],
-);
+).superRefine((result, context) => {
+  if (result.executionSource !== "live_provider") return;
+  const attempts = result.providerAttempts;
+  if (result.status === "interrupted" && !attempts) {
+    context.addIssue({
+      code: "custom",
+      message: "Interrupted evidence must preserve provider attempts.",
+      path: ["providerAttempts"],
+    });
+    return;
+  }
+  if (!attempts) return;
+  attempts.forEach((attempt, index) => {
+    if (attempt.attemptOrdinal !== index + 1) {
+      context.addIssue({
+        code: "custom",
+        message: "Provider attempt ordinals must be contiguous.",
+        path: ["providerAttempts", index, "attemptOrdinal"],
+      });
+    }
+  });
+  const latest = attempts.at(-1);
+  if (!latest) return;
+  if (
+    latest.analysisRunId !== result.analysisRunId ||
+    latest.runAt !== result.runAt ||
+    latest.terminalStatus !== result.terminalStatus
+  ) {
+    context.addIssue({
+      code: "custom",
+      message: "Latest provider attempt must match the evidence projection.",
+      path: ["providerAttempts"],
+    });
+  }
+  if (
+    (result.status === "interrupted") !==
+    (latest.outcome === "interrupted")
+  ) {
+    context.addIssue({
+      code: "custom",
+      message: "Evidence interruption status must match the latest attempt.",
+      path: ["status"],
+    });
+  }
+});
 export type EvaluationResult = z.infer<typeof EvaluationResultSchema>;
 
 export const ProviderEvaluationAdmissionReportSchema =
@@ -2982,7 +3274,7 @@ export type CaseCommand = z.infer<typeof CaseCommandSchema>;
 
 export const CaseStateSchema = strict({
   schemaVersion: literalVersion,
-  caseId: z.literal("CFN-DEMO-001"),
+  caseId: IdSchemas.caseId,
   caseRevision: nonNegativeInteger,
   caseStatus: CaseStatusSchema,
   fixtureVersion: literalVersion,

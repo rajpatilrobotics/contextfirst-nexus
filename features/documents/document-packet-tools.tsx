@@ -10,11 +10,13 @@ import { AnalysisInputPreview } from "./analysis-input-preview";
 import { IngestionIntegrityPanel } from "./ingestion-integrity-panel";
 
 export function DocumentPacketTools({
+  analysisHref,
   corpusResult,
   manifest,
   onDownloadReport,
   runtimeAvailable,
 }: {
+  analysisHref?: string;
   corpusResult: AnalysisCorpusResult | null;
   manifest: DocumentIngestionManifest | null;
   onDownloadReport: () => void;
@@ -103,6 +105,7 @@ export function DocumentPacketTools({
           </summary>
           <div className="border-t border-border">
             <AnalysisInputPreview
+              analysisHref={analysisHref}
               corpusResult={corpusResult}
               embedded
               runtimeAvailable={runtimeAvailable}

@@ -127,7 +127,7 @@ export function SystemCardPanel({ card }: { card: SystemCard }) {
         <div>
           <h3 className="cfn-type-heading-2">Provider and replay registry</h3>
           <p className="text-[var(--color-ink-muted)]">
-            Fixed display order only: OpenAI, Gemini, Mistral, then replay. No automatic attempt chain or output merging exists.
+            Managed consideration order: Mistral, Gemini, Groq, then OpenAI; replay remains separate. Ineligible releases are skipped, and provider outputs are never merged.
           </p>
         </div>
         <ol className="grid gap-4">

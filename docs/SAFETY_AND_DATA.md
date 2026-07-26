@@ -16,7 +16,7 @@ If this policy conflicts with another project document, this policy controls. A 
 
 The practitioner MUST NOT choose a provider, model, release, credential, or fallback target. The public deployment remains replay-only and may auto-bind only one selectable local replay release. Zero or multiple selectable services MUST fail closed. Detailed provider provenance remains available in Trust, safe audit, and exports.
 
-Future live routing is server-managed and remains disabled until TASK-040 reconciles the contracts and every evaluation, reviewed static admission, credential, spend, and production gate is separately approved. Managed fallback is limited to classified operational failures with confirmed safe retry semantics. Replay is never part of the live fallback chain. DEC-045 supersedes the manual-selection and manual-switching requirements previously stated in this document.
+Live routing is server-managed and remains disabled until every evaluation, reviewed static admission, credential, spend, and production gate is separately approved. Managed fallback is limited to classified operational failures with confirmed safe retry semantics. Replay is never part of the live fallback chain. DEC-045 supersedes the manual-selection and manual-switching requirements previously stated in this document; DEC-046 freezes the managed consideration order.
 
 ## 2. Product boundary
 
@@ -165,13 +165,14 @@ The product MUST describe automated detection as suggested masking, redaction, o
 
 ## 8. Data flow, providers, and retention
 
-The P0 architecture uses browser-side PDF.js processing and permits exactly three live analysis providers for approved redacted text:
+The P0 architecture uses browser-side PDF.js processing and defines exactly four live analysis providers for approved redacted text:
 
-1. OpenAI using the configured approved model.
-2. Google using the stable `gemini-3.5-flash` model.
-3. Mistral AI using the exact `mistral-small-2603` release configuration only after its reviewed static admission record marks the exact release as passed, the coordinator records the deployed account release as available, and the configuration is explicitly enabled.
+1. Mistral AI using exact `mistral-small-2603` on the bundled-fixture-only unpaid tier.
+2. Google using exact `gemini-3.5-flash` on the bundled-fixture-only unpaid tier.
+3. Groq using exact `openai/gpt-oss-120b`, subject to reviewed admission and verified zero data retention.
+4. OpenAI using the configured approved paid model.
 
-No practitioner-facing provider choice is permitted. Future server-managed live routing may consider only releases with reviewed, version-controlled static admission, in the order OpenAI, Google, Mistral, then a separately evaluated and admitted fourth provider. The public deployment remains replay-only.
+No practitioner-facing provider choice is permitted. Server-managed live routing may consider only releases with reviewed, version-controlled static admission. Its default order is Mistral, Google Gemini, Groq, then OpenAI. A strict server-only permutation may change preference but cannot bypass admission, enablement, configuration, or data eligibility; malformed order configuration stops before transmission. A data-ineligible release is skipped without a call. The public deployment remains replay-only.
 
 The evaluation harness may produce a versioned evidence report and canonical digest, but it MUST NOT change provider selectability. A separate reviewed handoff updates the fail-closed static admission records in `lib/ai/server/admission.ts`. Environment variables, runtime evaluation files, provider responses, configured credentials, and account health MUST NOT promote an unevaluated release.
 
@@ -211,7 +212,7 @@ The system card MUST name, when applicable:
 
 The team MAY use a no-store setting where supported, but MUST NOT describe it as zero retention unless the actual provider configuration and terms establish that claim.
 
-The Case Purpose Brief MUST show one consolidated plain-language data-flow disclosure without developer controls. Detailed provider-specific terms and actual attempt provenance remain available in Trust, audit, and exports. TASK-040 must reconcile the exact acknowledgement contract before live routing is implemented.
+The Case Purpose Brief MUST show one consolidated plain-language data-flow disclosure without developer controls. Detailed provider-specific terms and actual attempt provenance remain available in Trust, audit, and exports. Browser-uploaded analysis requires explicit synthetic-or-authorized-public attestation and provider-flow acknowledgement before any admitted provider call.
 
 ### 8.3 Gemini unpaid-service boundary
 
@@ -240,11 +241,11 @@ If the browser receives no parseable response, it MUST dispatch `record_live_ana
 The System Card MUST keep real runs separate from typed non-run attempt projections. A preflight rejection records not transmitted and not started. A browser transport failure records unknown transmission and unknown remote outcome. Both record `outputAccepted: false`, safe registry and start-command linkage, and no fabricated run.
 
 - Replay MUST never be silently or automatically substituted for live analysis. In the replay-only public deployment it is the declared local service and records `providerTransmission: false`.
-- Future live provider changes occur only inside the bounded server-managed policy after TASK-040 contract reconciliation; the practitioner cannot direct them.
+- Live provider changes occur only inside the bounded server-managed policy; the practitioner cannot direct them.
 - Every attempted provider and the final accepted provider/release MUST retain safe provenance. Outputs from separate attempts MUST NOT be merged.
 - A configuration or release rejection before transmission MUST return `run: null`, create no run, and MUST retain only a safe preflight audit event.
 - Only provider not configured, authentication failure before processing, quota exhausted, rate limited, confirmed temporary provider unavailability, or confirmed request not executed MAY advance to the next admitted live release.
-- The live routing order MUST be OpenAI, Gemini, Mistral, then a separately evaluated and admitted fourth provider, with a hard maximum attempt count. Replay is not in this order.
+- The live routing consideration order MUST be Mistral, Gemini, Groq, then OpenAI, with a hard maximum attempt count. Replay is not in this order.
 - Same-provider retry MUST NOT be offered for not-configured, disabled, or authentication failures until the deployment configuration changes.
 - Privacy or leak-scan failure, prohibited input, provider refusal, unsafe output, invalid citation, semantic failure, malformed structured output, injection propagation, timeout or transport failure with unknown remote execution, partial or accepted output, and any safety-bypass attempt MUST stop routing.
 - Every provider response MUST pass the same canonical schema validation, citation validation, coverage gates, prompt-injection boundary, prohibited-inference checks, privacy checks, and human-review workflow.
@@ -617,7 +618,7 @@ Before the prototype can be called demo-ready:
 14. Application logs contain no raw packet text, prompts, quotes, identifiers, or secrets.
 15. The system card accurately describes attempted providers, the final accepted provider/model/release when applicable, service tier, data flow, data-use terms, retention limitation, run mode, fixture count, and known limitations.
 16. The practitioner interface exposes no provider or model selector. The public deployment binds only the sole selectable local replay and reports zero provider transmission.
-17. Future managed routing follows the admitted OpenAI, Gemini, Mistral, then separately evaluated fourth-provider order and records safe attempt provenance without merging outputs.
+17. Managed routing follows the admitted Mistral, Gemini, Groq, then OpenAI consideration order, skips ineligible releases without calling them, and records safe attempt provenance without merging outputs.
 18. Refusal, safety, privacy, citation, schema, and semantic-validation failures stop managed routing and cannot be bypassed by another provider.
 19. Unpaid Gemini is blocked for every data origin except the verified bundled synthetic fixture.
 20. Free Mistral is blocked until exact release `mistral-small-2603` has a matching passed static admission and coordinator-recorded deployed-account availability, is blocked for every data origin except the exact verified bundled synthetic fixture, and discloses its training-use or opt-out state, up-to-30-day retention limitation, and lack of free zero data retention.

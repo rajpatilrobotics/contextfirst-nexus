@@ -31,7 +31,12 @@ describe("browser-local Case Dashboard", () => {
     expect(screen.getByText("Open cases").nextElementSibling).toHaveTextContent("0");
     expect(screen.getByText("Documents").nextElementSibling).toHaveTextContent("0");
     expect(
-      screen.getByText(/Purpose Brief and browser-local Documents are connected/i),
+      screen.getByText("Analysis complete").nextElementSibling,
+    ).toHaveTextContent("0");
+    expect(
+      screen.getByText(
+        /Purpose Brief, browser-local Documents, and Structured Analysis are connected/i,
+      ),
     ).toBeInTheDocument();
     expect(screen.queryByText(/M\. Chen|A\. Okafor|R\. Salazar/)).not.toBeInTheDocument();
     expect(

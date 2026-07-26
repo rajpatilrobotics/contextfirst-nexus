@@ -48,8 +48,14 @@ Optional live-provider configuration is server-side only. Environment names are 
 - `MISTRAL_MODEL`
 - `MISTRAL_SERVICE_TIER`
 - `MISTRAL_REASONING_EFFORT`
+- `ENABLE_GROQ_ANALYSIS`
+- `GROQ_API_KEY`
+- `GROQ_MODEL`
+- `GROQ_SERVICE_TIER`
+- `GROQ_REASONING_EFFORT`
+- `ANALYSIS_PROVIDER_ORDER`
 
-Do not put provider keys in source code, Git, URLs, logs, exports, or any `NEXT_PUBLIC_` variable. Mistral remains unavailable unless its exact release, static admission, and deployed-account availability gates pass.
+Do not put provider keys in source code, Git, URLs, logs, exports, or any `NEXT_PUBLIC_` variable. The default managed consideration order is Mistral, Gemini, Groq, then OpenAI, but every routine test and build is zero-network. A server operator may reorder all four exact provider IDs with `ANALYSIS_PROVIDER_ORDER`; duplicates, omissions, unknown IDs, or an empty value fail closed before any provider call. Reordering never admits, enables, configures, or makes a provider data-eligible. Mistral and Gemini unpaid releases remain exact-bundled-fixture-only. Browser-uploaded synthetic or authorized-public packets send only explicitly approved redacted text and may consider Groq before paid OpenAI only after exact evaluation, reviewed static admission, and deployment data-policy gates pass.
 
 ## Useful Commands
 

@@ -202,7 +202,7 @@ describe("provider and disclosure contracts", () => {
       requestedModel: "frozen_replay_output",
       serviceTier: "local",
       schemaVersion: "1.0.0",
-      displayOrder: 4,
+      displayOrder: 5,
       displayName: "Bundled deterministic replay",
       modelDisplayName: "Frozen replay output",
       modelAliasDisclosure: "Versioned local replay, not live AI",
@@ -220,7 +220,7 @@ describe("provider and disclosure contracts", () => {
       },
     };
 
-    expect(ProviderOptionProjectionSchema.parse(option).displayOrder).toBe(4);
+    expect(ProviderOptionProjectionSchema.parse(option).displayOrder).toBe(5);
     expect(() =>
       ProviderOptionProjectionSchema.parse({ ...option, displayOrder: 1 }),
     ).toThrow();
@@ -276,21 +276,28 @@ describe("provider and disclosure contracts", () => {
     ).toThrow();
   });
 
-  it("safe availability response preserves OpenAI, Gemini, Mistral, replay order", () => {
-    const option = (providerId: "openai" | "google_gemini" | "mistral", displayOrder: 1 | 2 | 3) => ({
+  it("safe availability response preserves Mistral, Gemini, Groq, OpenAI, replay order", () => {
+    const option = (
+      providerId: "openai" | "google_gemini" | "mistral" | "groq",
+      displayOrder: 1 | 2 | 3 | 4,
+    ) => ({
       providerId,
       releaseConfigurationId:
         providerId === "openai"
           ? "openai-quality-v1"
           : providerId === "google_gemini"
             ? "gemini-quality-v1"
-            : "mistral-small-free-v1",
+            : providerId === "mistral"
+              ? "mistral-small-free-v1"
+              : "groq-oss-free-v1",
       requestedModel:
         providerId === "openai"
           ? "gpt-5.6-sol"
           : providerId === "google_gemini"
             ? "gemini-3.5-flash"
-            : "mistral-small-2603",
+            : providerId === "mistral"
+              ? "mistral-small-2603"
+              : "openai/gpt-oss-120b",
       serviceTier: providerId === "openai" ? "paid" : "unpaid",
       schemaVersion: "1.0.0",
       displayOrder,
@@ -302,7 +309,9 @@ describe("provider and disclosure contracts", () => {
       providerTransmission: true,
       evaluationStatus: "not_evaluated",
       deployedAccountReleaseAvailabilityStatus:
-        providerId === "mistral" ? "not_verified" : "not_required",
+        providerId === "mistral" || providerId === "groq"
+          ? "not_verified"
+          : "not_required",
       availabilityStatus: "disabled",
       selectable: false,
       disclosure: providerDisclosure(true),
@@ -314,7 +323,7 @@ describe("provider and disclosure contracts", () => {
       requestedModel: "frozen_replay_output",
       serviceTier: "local",
       schemaVersion: "1.0.0",
-      displayOrder: 4,
+      displayOrder: 5,
       displayName: "Replay",
       modelDisplayName: "Frozen replay output",
       modelAliasDisclosure: "Versioned local replay, not live AI",
@@ -336,12 +345,19 @@ describe("provider and disclosure contracts", () => {
       schemaVersion: "1.0.0",
       liveAnalysisEnabled: false,
       replayEnabled: true,
-      options: [option("openai", 1), option("google_gemini", 2), option("mistral", 3), replay],
+      options: [
+        option("mistral", 1),
+        option("google_gemini", 2),
+        option("groq", 3),
+        option("openai", 4),
+        replay,
+      ],
     });
     expect(response.options.map((item) => item.providerId)).toEqual([
-      "openai",
-      "google_gemini",
       "mistral",
+      "google_gemini",
+      "groq",
+      "openai",
       "local_replay",
     ]);
   });
@@ -448,11 +464,11 @@ describe("stateless API and run lifecycle contracts", () => {
         automatic: false,
         action: "use_deterministic_replay",
         targetReleaseConfigurationId: "prepared-replay-v1",
-        displayOrder: 4,
+        displayOrder: 5,
         requiresDisclosureAcknowledgement: true,
         startsNewRun: true,
       }).displayOrder,
-    ).toBe(4);
+    ).toBe(5);
   });
 });
 

@@ -1214,6 +1214,7 @@ export function BrowserCaseDocumentsWorkspace({
             pageProgress={pageProgress}
             qualityContent={
               <DocumentPacketTools
+                analysisHref={`/case/${record.id}/analysis`}
                 corpusResult={analysisCorpusResult}
                 manifest={ingestionManifest}
                 onDownloadReport={downloadIntegrityReport}

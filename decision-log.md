@@ -288,7 +288,7 @@ Changing a frozen decision requires:
 ### DEC-045: Managed analysis entry and server-side routing
 
 - Date: 2026-07-17
-- Status: Approved product direction; TASK-039 Ready and TASK-040 blocked on TASK-039
+- Status: Approved product direction; provider order superseded by DEC-046 on 2026-07-26
 - Decision: Remove provider and model controls from the practitioner-facing flow. Present one plain-language Start analysis action. In the replay-only public deployment, bind exactly one selectable bundled deterministic replay; zero or multiple selectable services fail closed. Keep replay separate from live routing and preserve its `providerTransmission: false` provenance.
 - Future live routing: After contract and architecture reconciliation, the server may attempt statically admitted releases in the frozen order OpenAI, Gemini, Mistral, then a separately evaluated and admitted fourth provider. Groq `openai/gpt-oss-120b` is only the current fourth-provider evaluation candidate and receives no runtime, credential, spend, provider-call, admission, or deployment approval from this decision.
 - Eligible fallback: Only a classified operational failure—provider not configured, authentication failure before processing, quota exhausted, rate limited, confirmed temporary unavailability, or confirmed request not executed—may advance to another admitted live release.
@@ -297,6 +297,117 @@ Changing a frozen decision requires:
 - Public release boundary: `ENABLE_LIVE_ANALYSIS` remains authoritative and the public deployment remains replay-only until evaluation, reviewed static admission, credentials, spend approval, and separate production approval are all recorded.
 - Supersession: This decision explicitly replaces DEC-025's practitioner-controlled provider selection and switching. DEC-024 replay separation, DEC-026 safety-failure prohibition, DEC-027 single-credential boundary, DEC-028 public-live default, and DEC-029 static admission remain in force.
 - Authority: `PROJECT_BRIEF.md`, `docs/PRODUCT_SPEC.md`, `docs/ARCHITECTURE.md`, `docs/CONTRACTS.md`, `docs/SAFETY_AND_DATA.md`, `docs/MODEL_ROUTING.md`, `docs/TESTING_AND_EVALUATION.md`
+
+### DEC-046: Cost-conscious managed routing for repeated development
+
+- Date: 2026-07-26
+- Status: Approved implementation direction; live releases remain unadmitted and disabled
+- Decision: Freeze the managed live-provider consideration order as Mistral, Gemini, Groq, then OpenAI. Routine tests, typecheck, and builds use injected transports or deterministic fixtures and make zero provider calls. A release that is unconfigured, unadmitted, or ineligible for the current data origin is skipped without a call.
+- Browser-upload boundary: Free Mistral and unpaid Gemini remain restricted to the exact bundled synthetic fixture and are therefore skipped for browser-uploaded packets. After explicit synthetic-or-authorized-public attestation and provider-flow acknowledgement, browser-uploaded approved redacted text may consider Groq before paid OpenAI only after the exact Groq release has passed evaluation, reviewed static admission, deployed configuration, and zero-data-retention verification. Raw PDFs and unmasked text are never sent.
+- Fallback boundary: DEC-045's eligible and forbidden failure classifications remain unchanged. Unknown remote execution, timeout, refusal, malformed output, citation failure, privacy failure, or safety failure stops the chain. At most one result is accepted and outputs are never merged.
+- Public boundary: This decision implements provider-neutral routing and the browser-created-case analysis boundary but does not admit a model, add credentials, enable public live analysis, authorize spend, or change the replay-only production default.
+- Reason: Repeated development should prefer eligible free capacity and preserve paid OpenAI credits without weakening source, privacy, admission, or safety controls.
+- Authority: `docs/SAFETY_AND_DATA.md`, `docs/CONTRACTS.md`, `docs/ARCHITECTURE.md`, `docs/MODEL_ROUTING.md`
+
+### DEC-047: Groq Responses API evaluated but not admitted
+
+- Date: 2026-07-26
+- Status: Implemented evaluation boundary; release remains unadmitted
+- Decision: Use Groq's stateless Responses API structured-output path for the
+  frozen `openai/gpt-oss-120b` release, with medium reasoning effort, no tools,
+  files, browsing, storage, retries, or output merging. Keep
+  `groq-oss-free-v1` statically `not_evaluated` and non-selectable.
+- Evidence: The user confirmed project-level Groq ZDR. Thirteen bounded calls
+  used only bundled fictional redacted fixture segments. Some calls returned
+  valid exact-citation proposals, while others returned empty proposals or
+  `json_validate_failed`/invalid-structured-response outcomes. The required
+  exact 27-run evaluation did not pass and was stopped. No Mistral, Gemini, or
+  OpenAI call occurred.
+- Artifact boundary: The checked-in Groq report is incomplete and preserves
+  one successful canary plus deterministic controls; missing live evidence
+  remains `not_run`. It is visible evidence only and cannot promote runtime
+  admission. The evaluation harness now checkpoints each call and hashes the
+  schema-normalized report.
+- Reason: A provider that is intermittently valid is not sufficiently reliable
+  for this source-sensitive workflow. Failing closed is preferable to
+  cherry-picking successful calls, weakening citation gates, or silently
+  consuming fallback credits.
+- Official basis:
+  `https://console.groq.com/docs/responses-api`,
+  `https://console.groq.com/docs/structured-outputs`, and
+  `https://console.groq.com/docs/rate-limits`.
+- Authority: `plan.md`, `docs/MODEL_ROUTING.md`,
+  `docs/TESTING_AND_EVALUATION.md`, `docs/SAFETY_AND_DATA.md`
+
+### DEC-048: Groq strict Chat Completions adapter replaces beta Responses path
+
+- Date: 2026-07-26
+- Status: Implemented and canary verified; release remains unadmitted
+- Decision: Replace only the Groq adapter's beta Responses API request with
+  stateless Chat Completions using `response_format.json_schema`,
+  `strict: true`, GPT-OSS 120B, medium reasoning effort, no tools, no
+  streaming, and no automatic retry. Give this adapter its own version so
+  evidence from DEC-047 cannot admit the changed request configuration.
+- Input boundary: Dynamic browser-case requests transmit only
+  candidate-eligible approved redacted segments. Evidence-only and
+  instruction-advisory segments remain included in the canonical digest and
+  local source map but are explicitly `not_sent` and excluded from the model
+  citation allowlist.
+- Evidence: Focused adapter, orchestration, admission, evaluation, and input
+  tests passed. Four bounded free-tier repetitions using only the bundled
+  fictional redacted fixture returned substantive exact-citation proposals. A
+  later attempt stopped safely on `provider_rate_limited`; no retry or paid fallback
+  occurred. The report records that attempt as `interrupted`, not a quality
+  failure, and remains incomplete with 22 live runs `not_run`.
+- Admission boundary: A passing canary is not production admission. Groq stays
+  `not_evaluated`, non-selectable, and behind the disabled global live gate
+  until the complete exact-version evaluation and deployment review pass.
+- Official basis:
+  `https://console.groq.com/docs/structured-outputs` and
+  `https://console.groq.com/docs/api-reference`.
+- Authority: `plan.md`, `docs/MODEL_ROUTING.md`,
+  `docs/TESTING_AND_EVALUATION.md`, `docs/SAFETY_AND_DATA.md`
+
+### DEC-049: Operational evaluation interruptions are resumable evidence
+
+- Date: 2026-07-26
+- Status: Implemented
+- Decision: Represent quota exhaustion, rate limiting, timeout, and confirmed
+  temporary provider unavailability as `interrupted` evaluation evidence.
+  Interrupted evidence keeps the gate and report incomplete and is eligible
+  for an explicit later resume. It is never treated as passed.
+- Provenance: Every started provider attempt is retained in ordered
+  `providerAttempts`, including its real run ID, completion time, terminal
+  status, provider provenance, transmission fact, and safe interruption
+  classification. A resumed attempt appends to that history instead of
+  deleting or disguising the interrupted call.
+- Failure boundary: Refusal, malformed structured output, citation failure,
+  prohibited output, injection propagation, and other quality or safety
+  failures remain `failed` and are not resumable through this mechanism.
+- Reason: Temporary capacity conditions should not falsify model-quality
+  evidence, but they must remain visible, counted, fail-closed, and unable to
+  promote admission.
+- Authority: `docs/CONTRACTS.md`, `docs/TESTING_AND_EVALUATION.md`,
+  `plan.md`
+
+### DEC-050: Strict server-only live-provider preference
+
+- Date: 2026-07-26
+- Status: Implemented configuration boundary; live releases remain unadmitted
+  and disabled
+- Decision: Keep Mistral, Gemini, Groq, then OpenAI as the default managed
+  execution order. Permit a deployment operator to reorder the complete set
+  through `ANALYSIS_PROVIDER_ORDER`. The value must contain every registered
+  live provider ID exactly once. Empty, incomplete, duplicate, or unknown
+  values fail closed before any provider call.
+- Safety boundary: The setting changes only consideration order. It cannot
+  admit or enable a release, supply credentials, change its exact
+  configuration, make data eligible, alter public availability, expose a
+  browser provider control, or place replay in the live chain.
+- Reason: Development can conserve paid credits now and later prefer a
+  stronger admitted release without rewriting adapters or routing logic.
+- Authority: `docs/MODEL_ROUTING.md`, `docs/ARCHITECTURE.md`,
+  `docs/CONTRACTS.md`, `docs/SAFETY_AND_DATA.md`
 
 ## 6. Rejected or deferred decisions
 

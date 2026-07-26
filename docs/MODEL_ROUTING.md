@@ -13,22 +13,23 @@ The controlling order is:
 3. `docs/ARCHITECTURE.md`
 4. This document
 
-DEC-045 supersedes practitioner-controlled provider selection and switching. TASK-039 removes those controls from the replay-only public flow. TASK-040 must reconcile shared contracts and architecture before implementing future server-managed live routing.
+DEC-045 supersedes practitioner-controlled provider selection and switching. DEC-046 freezes the cost-conscious managed order implemented by the provider-neutral server boundary. Every live release remains disabled and unadmitted until its exact evaluation and deployment gates pass.
 
 ## 2. P0 decision
 
-P0 defines three live provider adapters and one local replay path:
+P0 defines four live provider adapters and one local replay path:
 
 | Release configuration | Provider | Model | Role | P0 status |
 |---|---|---|---|---|
-| `openai-quality-v1` | OpenAI | `gpt-5.6-sol` | Accuracy-first baseline | Evaluation and reviewed static admission required |
-| `gemini-quality-v1` | Google Gemini | `gemini-3.5-flash` | Free-tier quality alternative and provider-outage recovery | Evaluation and reviewed static admission required |
-| `mistral-small-free-v1` | Mistral | `mistral-small-2603` | Free-tier live recovery candidate after Gemini | Static admission and deployed-account availability required; initially unselectable |
+| `mistral-small-free-v1` | Mistral | `mistral-small-2603` | First cost-conscious candidate for the exact bundled fixture | Static admission and deployed-account availability required; initially unselectable |
+| `gemini-quality-v1` | Google Gemini | `gemini-3.5-flash` | Second cost-conscious candidate for the exact bundled fixture | Evaluation and reviewed static admission required |
+| `groq-oss-free-v1` | Groq | `openai/gpt-oss-120b` | First browser-upload candidate when eligible | Evaluation, reviewed static admission, deployed configuration, and verified zero data retention required |
+| `openai-quality-v1` | OpenAI | `gpt-5.6-sol` | Paid quality fallback | Evaluation and reviewed static admission required |
 | `prepared-replay-v1` | Local fixture | Frozen replay output | Demo continuity when no live provider is used | Deterministic and visibly labelled |
 
 The interface does not let the practitioner choose a provider or model. The public deployment automatically binds only its sole selectable local replay release. Future live release selection is server-managed; keys remain server-side.
 
-OpenAI is the initial baseline, not a permanent winner. Gemini or Mistral may become recommended only if the exact release configuration passes the same development and fresh held-out assurance gates, completes the reviewed static admission handoff, and performs better for the project task. The decision must be recorded before the recommendation changes. Mistral remains unselectable until `mistral-small-free-v1` has a matching passed static admission record and a coordinator-recorded `available` deployed-account release status.
+The server defaults to considering releases in the order Mistral, Gemini, Groq, then OpenAI, but never calls an ineligible or unadmitted release. A deployment may provide one strict server-only `ANALYSIS_PROVIDER_ORDER` permutation containing every registered live provider exactly once. An empty value, duplicate, omission, or unknown provider fails closed before any call. This preference changes only consideration order; it cannot change admission, enablement, credentials, data eligibility, release configuration, or the practitioner-facing UI. Mistral and Gemini remain exact-bundled-fixture-only on their unpaid tiers, so browser-uploaded packets skip them without a call. OpenAI remains the paid quality fallback by default, not an automatic winner. Every exact release must pass the same development and fresh held-out assurance gates and reviewed static admission before use.
 
 ## 3. Why Gemini 3.5 Flash is the P0 alternative
 
@@ -75,7 +76,7 @@ The following providers were screened using current official documentation. This
 | OpenRouter free routing | Access to multiple free models | Downstream provider and model availability can change; random routing is unacceptable for evidence processing |
 | DeepSeek V4 | Extremely low price and long context | JSON mode is not strict schema enforcement, empty output is documented, and current data terms are a poor fit for this domain |
 
-DEC-045 identifies Groq `openai/gpt-oss-120b` as the current fourth-provider evaluation candidate. This is a product research direction only: its exact API behavior, structured-output compatibility, data use, retention, deterministic and live evaluation, and static admission remain unverified. It is not implemented, configured, shown, called, or admitted. Earlier reserve rankings are superseded.
+DEC-046 freezes Groq `openai/gpt-oss-120b` as the third managed candidate. A native server adapter now uses Groq Chat Completions with `strict: true` JSON Schema output. Four bounded fictional-fixture repetitions returned substantive exact-citation results; the latest resume stopped safely on the free-tier rate limit. The release remains disabled and unadmitted because the evaluation, reviewed static admission, and deployed-account checks are incomplete.
 
 ### 4.1 Official screening sources
 
@@ -112,20 +113,21 @@ P0 implementations are:
 - `OpenAIAnalysisAdapter`;
 - `GeminiAnalysisAdapter`;
 - `MistralAnalysisAdapter`.
+- `GroqAnalysisAdapter`.
 
 Deterministic replay is separate from live provider adapters because replay is not a model request. Its local command supplies only frozen trusted bundle ID `REPLAY-CFN-DEMO-001-V1`; the prepared checkpoint supplies only `DEMO-CHECKPOINT-REVIEW`. The compile-time bundled registry, not browser data, session storage, environment selection, a URL, or provider output, resolves either artifact and enforces the versioned single-run contracts before activation.
 
-All three adapters receive the same server-reconstructed, minimum-necessary, redacted fixture input. All three return the same provider-neutral `ModelAnalysisProposal`. Provider output cannot directly create reviewed candidates, final citations, support status, review status, an export gate, or an export.
+All four adapters receive the same server-reconstructed, minimum-necessary, approved redacted input permitted for that release. All four return the same provider-neutral `ModelAnalysisProposal`. Provider output cannot directly create reviewed candidates, final citations, support status, review status, an export gate, or an export.
 
 Only repeated exact-codepoint occurrences inside one eligible canonical segment may create a reviewable ambiguous citation. Multiple normalized-only matches and all unsafe ambiguity are quarantined. A reviewable ambiguous citation can change validity only through the typed browser `resolve_citation` command. The central reducer recomputes the selected exact range, updates canonical case state, and appends the resolution decision and audit event. A provider response or UI component cannot mark a citation valid.
 
-The shared provider schema uses only the conservative JSON Schema subset supported by all three providers. The application then performs the complete Zod parse and deterministic semantic validation. Schema-valid JSON is never treated as evidence of factual, citation, or legal correctness.
+The shared provider schema uses only the conservative JSON Schema subset supported by all four providers. The application then performs the complete Zod parse and deterministic semantic validation. Schema-valid JSON is never treated as evidence of factual, citation, or legal correctness.
 
 ## 6. Release configuration registry
 
 The server owns a static allowlist of release configurations and a version-controlled admission record for each live release in `lib/ai/server/admission.ts`. It never accepts an arbitrary provider, model, endpoint, reasoning setting, or admission record from the browser.
 
-The canonical `ProviderReleaseRegistryEntry` union is defined once in Section 4.7 of `docs/CONTRACTS.md` and is consumed unchanged here. Every entry binds fixed display order, exact fixture and digest, inference setting, storage mode, retention setting, structured output, `streamingEnabled: false`, `toolsEnabled: false`, and disclosure version. The three live branches also bind static admission. The replay branch has no live-provider admission and instead binds local deterministic provenance. This document does not define a weaker routing-specific registry shape.
+The canonical `ProviderReleaseRegistryEntry` union is defined once in Section 4.7 of `docs/CONTRACTS.md` and is consumed unchanged here. Every entry binds fixed display order, allowed data origins, inference setting, storage mode, retention setting, structured output, `streamingEnabled: false`, `toolsEnabled: false`, and disclosure version. The four live branches also bind static admission. The replay branch has no live-provider admission and instead binds local deterministic provenance. This document does not define a weaker routing-specific registry shape.
 
 The evaluation harness produces a versioned report and canonical digest but cannot edit runtime admission. A separate reviewed handoff verifies the report identity, digest, release, adapter, settings, fixture, prompt, schemas, ruleset, required runs, and blocking gates before updating the static admission record. A complete valid report with any failed blocking gate maps to `failed`. Missing, incomplete, stale, duplicate, or mismatched evidence maps to fail-closed `not_evaluated`. Environment variables, runtime files, provider responses, credential presence, and account health never promote a release.
 
@@ -155,12 +157,14 @@ It never reports keys, raw environment values, internal endpoints, or provider e
 
 ### 7.2 Future managed live routing
 
-TASK-040 begins by reconciling and versioning the request, attempt, response, audit, disclosure, and run-provenance contracts. Only then may one browser analysis intent enter a bounded server route. Candidate order is:
+One browser analysis intent may enter the bounded server route only after canonical redaction and digest checks. The default candidate order is:
 
-1. OpenAI.
+1. Mistral.
 2. Gemini.
-3. Mistral.
-4. Groq `openai/gpt-oss-120b` only after its own frozen configuration, evaluation, reviewed static admission, credentials, spend approval, provider-call approval, and deployment approval.
+3. Groq `openai/gpt-oss-120b`.
+4. OpenAI.
+
+The complete order may be changed through the validated server-only setting described above. It is a consideration order, not a promise that all four providers are called. The two unpaid fixture-only releases are skipped for browser-uploaded packets. Each remaining release still needs its own frozen configuration, evaluation, reviewed static admission, credential, data-policy eligibility, and deployment approval.
 
 Each considered release must have current matching static admission. Missing, stale, mismatched, disabled, or unapproved admission fails closed. The global `ENABLE_LIVE_ANALYSIS` server gate remains authoritative. The public deployment remains replay-only.
 
@@ -303,13 +307,13 @@ Logs retain only operational metadata. They never contain document text, quotes,
 
 The dependency-bootstrap task is the only task allowed to add `@google/genai` or `@mistralai/mistralai`, update `package.json`, or update the lockfile. It must pin the installed versions later and record them in the decision log before adapter implementation begins.
 
-After shared contracts and the release registry are implemented, OpenAI, Gemini, and Mistral adapter tasks may run in parallel. No adapter task may edit shared contracts, the route orchestration, the static admission registry, or another adapter.
+The OpenAI, Gemini, Mistral, and Groq adapters remain isolated behind the shared provider-neutral boundary. Adapter-specific work must not create competing contracts, route orchestration, or admission state.
 
 The evaluation task produces evidence only. A later reviewed static-admission handoff owns the version-controlled admission update. The managed router, system card, audit, and exports consume that reviewed state after the handoff is integrated.
 
 ## 13. Acceptance criteria
 
-- OpenAI, Gemini, and Mistral are separate server-only adapters behind one application contract.
+- OpenAI, Gemini, Mistral, and Groq are separate server-only adapters behind one application contract.
 - The practitioner never selects a provider, release configuration, or key.
 - A missing or exhausted provider may advance only through the classified admitted managed-routing policy.
 - The public replay path remains separate from live-provider outage handling.

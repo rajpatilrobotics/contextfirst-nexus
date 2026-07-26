@@ -24,12 +24,13 @@ const REPORT_FILES = {
   "openai-quality-v1": "openai-quality-v1.report.json",
   "gemini-quality-v1": "gemini-quality-v1.report.json",
   "mistral-small-free-v1": "mistral-small-free-v1.report.json",
-} as const satisfies Record<
+  "groq-oss-free-v1": "groq-oss-free-v1.report.json",
+} as const satisfies Partial<Record<
   LiveProviderReleaseConfiguration["releaseConfigurationId"],
   string
->;
+>>;
 
-type EvidenceStatus = "passed" | "failed" | "not_run";
+type EvidenceStatus = "passed" | "failed" | "interrupted" | "not_run";
 type EvidenceRecord = {
   executionRequirement?: "live_model_run" | "deterministic_control";
   status: EvidenceStatus;
@@ -37,6 +38,7 @@ type EvidenceRecord = {
   actualProviderTransmission: boolean;
   analysisRunId: string | null;
   provider: unknown;
+  providerAttempts?: unknown[];
 };
 
 function loadReport(releaseConfigurationId: keyof typeof REPORT_FILES) {
@@ -129,7 +131,7 @@ describe("TASK-026 static provider admission handoff", () => {
     }
   });
 
-  it("preserves incomplete live evidence and not-run blocking gates", () => {
+  it("preserves exact incomplete live evidence and blocking gates", () => {
     for (const releaseConfigurationId of Object.keys(REPORT_FILES) as Array<
       keyof typeof REPORT_FILES
     >) {
@@ -149,29 +151,67 @@ describe("TASK-026 static provider admission handoff", () => {
 
       expect(report.status).toBe("incomplete");
       expect(liveEvidence).toHaveLength(reviewed.evidence.liveModel.total);
-      expect(liveEvidence.every((evidence) => evidence.status === "not_run")).toBe(true);
       expect(
-        liveEvidence.every(
-          (evidence) =>
-            evidence.executionSource === "not_run" &&
-            evidence.actualProviderTransmission === false &&
-            evidence.analysisRunId === null &&
-            evidence.provider === null,
+        liveEvidence.filter((evidence) => evidence.status === "passed"),
+      ).toHaveLength(reviewed.evidence.liveModel.passed);
+      expect(
+        liveEvidence.filter((evidence) => evidence.status === "failed"),
+      ).toHaveLength(reviewed.evidence.liveModel.failed);
+      expect(
+        liveEvidence.filter(
+          (evidence) => evidence.status === "interrupted",
         ),
-      ).toBe(true);
+      ).toHaveLength(reviewed.evidence.liveModel.interrupted);
+      expect(
+        liveEvidence.filter((evidence) => evidence.status === "not_run"),
+      ).toHaveLength(reviewed.evidence.liveModel.notRun);
+      expect(
+        liveEvidence.filter((evidence) => evidence.actualProviderTransmission),
+      ).toHaveLength(
+        reviewed.evidence.liveModel.passed +
+          reviewed.evidence.liveModel.failed +
+          reviewed.evidence.liveModel.interrupted,
+      );
+      expect(
+        liveEvidence.reduce(
+          (total, evidence) =>
+            total +
+            (evidence.providerAttempts?.length ??
+              (evidence.actualProviderTransmission ? 1 : 0)),
+          0,
+        ),
+      ).toBe(reviewed.evidence.liveModel.actualProviderTransmissions);
       expect(controlEvidence).toHaveLength(reviewed.evidence.deterministicControl.total);
       expect(controlEvidence.every((evidence) => evidence.status === "passed")).toBe(true);
       expect(
-        evidence.every((evidence) => evidence.actualProviderTransmission === false),
-      ).toBe(true);
+        evidence.filter((evidence) => evidence.actualProviderTransmission),
+      ).toHaveLength(
+        reviewed.evidence.liveModel.passed +
+          reviewed.evidence.liveModel.failed +
+          reviewed.evidence.liveModel.interrupted,
+      );
       expect(report.gates).toHaveLength(reviewed.evidence.blockingGates.total);
-      expect(report.gates.every((gate) => gate.status === "not_run")).toBe(true);
+      expect(
+        report.gates.filter((gate) => gate.status === "passed"),
+      ).toHaveLength(reviewed.evidence.blockingGates.passed);
+      expect(
+        report.gates.filter((gate) => gate.status === "failed"),
+      ).toHaveLength(reviewed.evidence.blockingGates.failed);
+      expect(
+        report.gates.filter((gate) => gate.status === "not_run"),
+      ).toHaveLength(reviewed.evidence.blockingGates.notRun);
       expect(report.gates.map((gate) => gate.name)).toEqual(
         reviewed.evidence.blockingGates.names,
       );
-      expect(reviewed.evidence.liveModel.status).toBe("not_run");
+      expect(reviewed.evidence.liveModel.status).toBe(
+        reviewed.evidence.liveModel.passed === 0 &&
+          reviewed.evidence.liveModel.failed === 0 &&
+          reviewed.evidence.liveModel.interrupted === 0
+          ? "not_run"
+          : "incomplete",
+      );
       expect(reviewed.evidence.deterministicControl.status).toBe("passed");
-      expect(reviewed.evidence.blockingGates.status).toBe("not_run");
+      expect(reviewed.evidence.blockingGates.status).toBe("incomplete");
     }
   });
 
@@ -188,35 +228,84 @@ describe("TASK-026 static provider admission handoff", () => {
       expect(record?.evaluationReportId).toBeNull();
       expect(record?.evaluationReportDigest).toBeNull();
       expect(record?.recordedAt).toBeNull();
-      expect(record?.evaluatedConfiguration.evaluatedConfigurationDigest).toBe(
-        reviewed.binding.expectedEvaluatedConfigurationDigest,
+      const currentExpectedDigest = expectedEvaluatedConfigurationDigest(
+        reviewed.binding.release,
+        reviewed.binding.inferenceSetting,
       );
-      expect(
-        expectedEvaluatedConfigurationDigest(
-          reviewed.binding.release,
-          reviewed.binding.inferenceSetting,
-        ),
-      ).toBe(reviewed.binding.expectedEvaluatedConfigurationDigest);
+      expect(record?.evaluatedConfiguration.evaluatedConfigurationDigest).toBe(
+        currentExpectedDigest,
+      );
       expect(report.evaluatedConfigurationDigest).toBe(
         reviewed.binding.observedEvaluatedConfigurationDigest,
       );
-      expect(report.evaluatedConfigurationDigest).not.toBe(
+      expect(report.evaluatedConfigurationDigest).toBe(
         reviewed.binding.expectedEvaluatedConfigurationDigest,
       );
+      if (
+        record?.evaluatedConfiguration.adapterVersion ===
+        reviewed.binding.adapterVersion
+      ) {
+        expect(currentExpectedDigest).toBe(
+          reviewed.binding.expectedEvaluatedConfigurationDigest,
+        );
+      } else {
+        expect(releaseConfigurationId).toBe("groq-oss-free-v1");
+        expect(currentExpectedDigest).not.toBe(
+          reviewed.binding.expectedEvaluatedConfigurationDigest,
+        );
+      }
     }
+  });
+
+  it("preserves the Groq interruption and rejects missing attempt history", () => {
+    const report = loadReport("groq-oss-free-v1");
+    const evidence = report.evidence as Array<Record<string, unknown>>;
+    const interrupted = evidence.find(
+      (evidence) =>
+        evidence.status === "interrupted",
+    );
+
+    expect(interrupted).toMatchObject({
+      executionSource: "live_provider",
+      actualProviderTransmission: true,
+      terminalStatus: "failed",
+      providerAttempts: [
+        {
+          attemptOrdinal: 1,
+          outcome: "interrupted",
+          interruptionClassification: "provider_rate_limited",
+          actualProviderTransmission: true,
+        },
+      ],
+    });
+
+    const tampered = structuredClone(report) as {
+      evidence: Array<Record<string, unknown>>;
+    };
+    const tamperedInterrupted = tampered.evidence.find(
+      (evidence) => evidence.status === "interrupted",
+    );
+    if (!tamperedInterrupted) throw new Error("Missing interrupted evidence.");
+    delete tamperedInterrupted.providerAttempts;
+
+    expect(
+      ProviderEvaluationAdmissionReportSchema.safeParse(tampered).success,
+    ).toBe(false);
   });
 
   it("keeps every live option non-selectable while replay remains available", () => {
     const response = buildAnalyzeAvailabilityResponse({ liveAnalysisEnabled: true });
-    const liveOptions = response.options.slice(0, 3);
+    const liveOptions = response.options.slice(0, 4);
 
     expect(liveOptions.map((option) => option.evaluationStatus)).toEqual([
       "not_evaluated",
       "not_evaluated",
       "not_evaluated",
+      "not_evaluated",
     ]);
     expect(liveOptions.every((option) => option.selectable === false)).toBe(true);
-    expect(response.options[3]?.selectable).toBe(true);
+    expect(response.options[4]?.selectable).toBe(true);
+    expect(response.options[0]?.deployedAccountReleaseAvailabilityStatus).toBe("not_verified");
     expect(response.options[2]?.deployedAccountReleaseAvailabilityStatus).toBe("not_verified");
   });
 

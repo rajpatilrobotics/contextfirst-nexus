@@ -43,6 +43,83 @@ describe("citation resolution", () => {
     expect(CitationSchema.safeParse(result.citation).success).toBe(true);
   });
 
+  it("resolves exact citations against a browser-created case source map", () => {
+    const result = resolveCitation(
+      {
+        id: "CITATION-DYNAMIC-001",
+        analysisRunId: "RUN-DYNAMIC-001",
+        candidateId: "CAND-DYNAMIC-001",
+        segmentId: "D01-P1-S01",
+        quotedText: "Approved browser-local text.",
+        now: "2026-07-26T00:00:00Z",
+      },
+      {
+        caseId: "CFN-CASE-DYNAMIC001",
+        selectedSegmentIds: new Set(["D01-P1-S01"]),
+        documents: [
+          {
+            id: "D01",
+            caseId: "CFN-CASE-DYNAMIC001",
+            fixtureVersion: "1.0.0",
+            fileName: "public.pdf",
+            displayName: "Public PDF",
+            sourceType: "other",
+            dataOrigin: "browser_local",
+            expectedPageCount: 1,
+            pages: [
+              {
+                id: "D01-P1",
+                documentId: "D01",
+                pageNumber: 1,
+                expected: true,
+                availability: "available",
+                extractionStatus: "completed",
+                extractedCharacterCount: 28,
+              },
+            ],
+            provenanceStatus: "unverified",
+            processingStatus: "completed",
+            syntheticLabelPresent: false,
+          },
+        ],
+        segments: [
+          {
+            id: "D01-P1-S01",
+            documentId: "D01",
+            pageId: "D01-P1",
+            pageNumber: 1,
+            ordinal: 1,
+            rawText: "Approved browser-local text.",
+            redactedText: "Approved browser-local text.",
+            boundingBoxes: [
+              {
+                x: 0,
+                y: 0,
+                width: 1,
+                height: 1,
+                coordinateSpace: "normalized_0_1",
+              },
+            ],
+            sourceLanguage: "en",
+            translationStatus: "original_language",
+            extractionQuality: "machine_extracted",
+            instructionAdvisory: "no_signal",
+            modelVisibility: "visible_as_untrusted_content",
+            supportEligibility: "candidate_eligible",
+          },
+        ],
+      },
+    );
+
+    expect(result.ok).toBe(true);
+    expect(result.citation).toMatchObject({
+      caseId: "CFN-CASE-DYNAMIC001",
+      documentId: "D01",
+      segmentId: "D01-P1-S01",
+      validationStatus: "exact_match",
+    });
+  });
+
   it("accepts a unique conservative normalized quote without changing the canonical quote", () => {
     const result = resolve({
       segmentId: "D05-P1-S05",

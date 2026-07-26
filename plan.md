@@ -1,3 +1,270 @@
+# Browser-created case Structured Analysis, 2026-07-26
+
+**Status:** Dynamic Structured Analysis implementation and focused verification
+are complete. The Groq boundary now uses the provider's strict structured-output
+path. Four bounded repetitions passed using only the bundled fictional redacted
+fixture; the latest resume stopped safely on a free-tier rate limit. The exact release
+remains unadmitted and runtime start remains fail-closed because the full
+evaluation is incomplete. No production setting or deployment was changed.
+
+### Development evaluation outcome, 2026-07-26
+
+- The provider-neutral dynamic-case route, canonical analysis snapshot,
+  current-run citation validation, canonical review actions, managed routing,
+  and Lovable Structured Analysis presentation are implemented.
+- Groq ZDR was confirmed by the user for the configured project. Thirteen
+  earlier beta-adapter calls and eight bounded strict-adapter calls were
+  attempted; only bundled fictional redacted segments were sent. No Mistral,
+  Gemini, or OpenAI call occurred and no paid OpenAI credit was used.
+- The earlier beta Responses API adapter produced intermittent empty or invalid
+  structured outputs. It is retained only as historical evidence and is
+  superseded by a separately versioned Chat Completions adapter using Groq's
+  officially supported `strict: true` JSON Schema mode for GPT-OSS 120B.
+- The replacement strict boundary returned substantive source-grounded
+  candidates with exact citations in four repetitions. The latest resume
+  reached the Groq free-tier rate limit and stopped without retry or paid
+  fallback. Twenty-two live runs remain `not_run`; provider selectability
+  stays fail-closed.
+- Dynamic browser packets now send only candidate-eligible approved redacted
+  segments. Evidence-only or instruction-advisory segments remain bound into
+  the packet digest for freshness but are marked `not_sent` at the provider
+  boundary and cannot be cited as if the provider saw them.
+- The checked-in Groq report is intentionally incomplete: it binds four passed
+  strict-boundary repetitions, one resumable rate-limit interruption with its
+  real provider-attempt provenance, and leaves all unexecuted evidence as
+  `not_run`. Static admission remains `not_evaluated`; the provider is not
+  selectable.
+- Evaluation evidence now distinguishes operational `interrupted` attempts
+  from quality or safety `failed` evidence. Rate limits, quota exhaustion,
+  timeouts, and temporary unavailability keep gates incomplete, preserve every
+  attempted transmission in order, and may be resumed explicitly. Malformed
+  output, unsafe conclusions, bad citations, and refusals remain failures and
+  cannot be resumed as if they were transient.
+- The live evaluation harness now checkpoints every call and computes the
+  report digest after schema normalization so an interruption cannot silently
+  discard later evidence or write a self-inconsistent artifact.
+
+## 1. Goal
+
+Connect the current browser-created-case Documents pipeline to a real,
+source-grounded Structured Analysis workflow while preserving the exact
+approved Lovable presentation and the existing canonical review, dependency,
+audit, freshness, and safety behavior.
+
+Routine automated testing uses mocked transports and frozen responses, so it
+makes no provider calls and consumes no API credits. When live development
+evaluation is separately approved, the cost-conscious default candidate order
+is Mistral, Gemini, Groq, then OpenAI. A strict server-only setting may reorder
+all four exact providers. Ordering does not admit an unevaluated
+release, bypass a provider's data policy, merge outputs, or continue after a
+privacy, citation, schema, refusal, or safety failure. The final production
+recommendation remains evidence-based: only an exact release that passes the
+same task-specific blocking gates may be selected.
+
+## 2. Problem
+
+Browser-created cases now have real local PDF extraction, English OCR with
+human verification, source classification, masking, leak scanning, packet
+integrity, and an inspectable approved-redacted analysis corpus. They still
+cannot open Structured Analysis or produce real source-grounded candidates.
+
+The existing live route and citation resolver are deliberately bound to the
+bundled `CFN-DEMO-001` fixture. Reusing them unchanged for arbitrary PDFs would
+either reject every dynamic case or falsely treat browser-supplied segment IDs
+as trusted fixture data. The dynamic browser registry also does not yet own a
+canonical analysis run, candidates, citations, review decisions, or audit
+history.
+
+## 3. Proposed solution
+
+Build one narrow dynamic-case analysis boundary beside the unchanged demo
+boundary.
+
+### Canonical browser case state
+
+- Add a case-scoped canonical analysis snapshot for each browser-created case,
+  validated with shared `CaseState`, run, candidate, citation, review, and audit
+  contracts rather than a second mock model.
+- Hydrate Purpose and the current verified document packet into canonical
+  state. Rebuild source content from the case's IndexedDB PDF files after
+  reload and accept a stored analysis snapshot only when case ID, Purpose
+  revision, document-set digest, masking revision, selected segment IDs, and
+  approved-redacted-input digest still match.
+- Keep raw PDF bytes, extracted text, OCR text, prompts, and provider payloads
+  out of localStorage. Store only the minimum safe case index there. Use the
+  existing browser file store and a separately validated IndexedDB record for
+  any case-scoped analysis snapshot that must survive reload.
+- Reuse canonical commands for start, terminal success/failure, candidate
+  review, withdrawal, citation resolution, dependency invalidation, audit, and
+  export staleness. Do not create component-local review state.
+
+### Dynamic provider boundary
+
+- Add a strict versioned dynamic-analysis request that contains only Purpose
+  enums, packet and redacted-input digests, and the current approved redacted
+  segments with stable document/page/segment IDs and source classification.
+- Require the existing synthetic-or-authorized-public-data acknowledgement,
+  approved masking, a passed deterministic leak scan, complete source mapping,
+  current file digests, and a bounded request size.
+- Re-scan the serialized redacted payload on the server and reject malformed,
+  duplicate, stale, oversized, unapproved, or identifier-bearing input before
+  provider transmission.
+- The browser does not choose a provider, model, effort, endpoint, or key. The
+  server considers only statically enabled, data-eligible, admitted releases
+  in a strict server-managed order that defaults to Mistral, Gemini, Groq,
+  then OpenAI.
+- Each attempt is one stateless native provider request with strict structured
+  output, no tools, files, browsing, retrieval, agents, conversation memory,
+  background work, or provider-SDK retry.
+- Progression is bounded and allowed only for confirmed pre-processing
+  operational failures such as missing configuration, exhausted quota, rate
+  limiting, or confirmed temporary unavailability. Unknown transmission,
+  timeout, refusal, privacy, citation, schema, semantic-safety, prohibited
+  output, or prompt-injection failure stops the run. No outputs are merged.
+- The existing unpaid Mistral and Gemini configurations remain restricted to
+  the exact bundled synthetic fixture until a separately reviewed data-policy
+  configuration permits a broader synthetic or authorized-public origin.
+- Keep the bundled `/case/demo` request, replay, checkpoint, and compatibility
+  routes unchanged.
+
+### Deterministic grounding and review
+
+- Extract the citation resolver's source lookup so it validates against the
+  exact canonical sanitized segments supplied to the selected run, while the
+  existing fixture path continues using the frozen manifest.
+- Store and display only exact canonical source slices. Quarantine fabricated,
+  wrong-page, unknown, evidence-only, prohibited, injection-propagating, or
+  otherwise unsafe proposals.
+- Model output remains a proposal. Deterministic code derives support and
+  dependencies; the practitioner performs every consequential review action.
+- Render successful output through the existing Lovable Structured Analysis
+  lanes, filters, master-detail panel, citations, source drawer, and review
+  controls at `/case/{caseId}/analysis`.
+- Preserve explicit blocked, running, failed, stale, zero-result, quarantined,
+  coverage-warning, and service-unavailable states.
+
+### Quality selection
+
+- First verify the provider-neutral router and exact Mistral, Gemini, Groq, and
+  OpenAI adapters end to end with mocked transports and deterministic tests.
+- With the required provider keys and approved live-call ceilings, evaluate
+  Mistral first, Gemini second, Groq third, and OpenAI fourth against the same
+  frozen task.
+- Freeze the strongest configuration before inspecting held-out assurance
+  results. A changed prompt or inference setting creates a new release
+  configuration and fresh report.
+- Admit only a configuration that passes every blocking gate. Keep deterministic
+  replay for the bundled demonstration and do not invent replay output for
+  arbitrary PDFs.
+- Admit every provider separately. Never merge providers or use another
+  provider to bypass a safety failure. The cheapest passing release may become
+  the default only if it satisfies the same quality and safety gates.
+
+## 4. Files to change
+
+- `plan.md` and, after approval, the relevant entry in `decision-log.md`
+- shared analysis request/run contracts under `lib/contracts/`
+- browser-case registry and IndexedDB storage under `lib/cases/`
+- a small browser-case canonical-state hydration/persistence helper
+- a dynamic canonical-input builder and route under `lib/ai/server/` and
+  `app/api/`
+- the existing provider-neutral orchestrator, OpenAI adapter, and deterministic
+  citation post-validator only where source lookup must become input-scoped
+- `app/case/[caseId]/analysis/page.tsx`
+- `components/shell/browser-case-shell.tsx`
+- one browser-created Structured Analysis workspace that reuses the existing
+  Lovable analysis components
+- focused contracts, state, provider-boundary, citation, persistence,
+  Structured Analysis, and routing tests
+
+No new dependency, vector database, RAG framework, agent framework, provider
+aggregator, authentication system, server database, or production setting is
+part of this slice.
+
+## 5. Step by step tasks
+
+1. Freeze the dynamic request, provenance, freshness, and persistence contracts.
+2. Add fail-closed per-case canonical analysis hydration and safe IndexedDB
+   snapshot handling.
+3. Generalize deterministic citation lookup to the current run's canonical
+   sanitized source map without weakening the bundled-fixture path.
+4. Implement the dynamic server preflight, bounded managed routing, and native
+   Mistral, Gemini, Groq, and OpenAI execution paths with mocked adapter
+   verification.
+5. Add `/case/[caseId]/analysis`, enable the shell stage only when canonical
+   prerequisites pass, and reuse the Lovable Structured Analysis UI.
+6. Connect canonical review, citation reveal, withdrawal, dependency
+   invalidation, audit, freshness, and reload behavior.
+7. Run focused zero-network verification, typecheck, build, and a synthetic PDF
+   browser smoke.
+8. Stop before any live call. Estimate the exact evaluation call count and
+   current cost, then obtain explicit API-key and spend approval.
+9. Run development evaluation, freeze the candidate, run held-out assurance,
+   and update static admission only after a separate reviewed handoff.
+10. Keep production live analysis disabled until public cost-abuse controls,
+    credentials, and production enablement are explicitly approved.
+
+## 6. Acceptance criteria
+
+- A browser-created case with complete Purpose, current verified PDFs, approved
+  masks, passed leak scan, and a ready corpus can open its own Structured
+  Analysis route and start one real admitted analysis.
+- No raw PDF bytes or unmasked extracted/OCR text are sent to the provider.
+- The provider receives only the current approved redacted corpus and cannot
+  choose commands, tools, routes, exports, or review outcomes.
+- Every displayed consequential proposal has an exact current-run citation or
+  remains visibly unresolved/insufficient; invalid proposals are quarantined.
+- Review, edit, rejection, uncertainty, withdrawal, citation resolution,
+  dependency changes, freshness, audit, and Dashboard consequences use
+  canonical state and survive navigation and supported reload.
+- Changing Purpose, documents, OCR verification, source classification,
+  selected segments, or masking makes the prior run stale and blocks it from
+  being presented as current.
+- Unknown/deleted case IDs, missing browser files, storage failure, provider
+  refusal, malformed output, timeout, and transport uncertainty fail visibly
+  without partial candidates.
+- `/case/demo` retains its deterministic judge workflow unchanged.
+- The existing Lovable layout, density, typography, lanes, filters, and
+  master-detail behavior remain visually unchanged.
+- No provider is called or described as best until its exact configuration
+  passes the frozen task-specific evaluation and static admission.
+
+## 7. Testing plan
+
+- Contract tests for strict dynamic requests, origin acknowledgement, size,
+  digests, duplicate IDs, unsupported content, and forbidden fields.
+- Unit tests for canonical source-map citation resolution, exact quotes,
+  ambiguity, wrong pages, evidence-only segments, injection propagation,
+  prohibited conclusions, and quarantine.
+- State tests for case isolation, current-run activation, stale inputs,
+  canonical review, withdrawal/dependencies, audit, safe reload, corrupted
+  snapshots, and missing IndexedDB files.
+- Component tests for routing, prerequisites, loading, failed, stale,
+  zero-result, quarantine, filters, selection, citations, and canonical review.
+- Mocked OpenAI adapter and route tests with zero network transmission.
+- `npm run typecheck`, focused tests, one `npm run build`, and
+  `git diff --check`.
+- One Chrome smoke using synthetic PDFs only:
+  Documents → privacy approval → Start analysis → Structured Analysis →
+  citation reveal → review decision → reload.
+- Live development and held-out evaluation only after separate key and spend
+  approval; production remains disabled during this implementation slice.
+
+## 8. Open questions
+
+- Provider keys and explicit per-provider live-call ceilings are required
+  before real evaluation. They are not required for the zero-network
+  implementation and tests. OpenAI remains last in the live evaluation order
+  to preserve its paid credits.
+- Public enablement requires a separate decision about Vercel rate/firewall
+  controls and provider budget limits because the application has no
+  production authentication.
+- “Arbitrary PDF” means technically varied synthetic or authorized public
+  material. The hackathon application must continue rejecting or warning
+  against confidential client, survivor, or private case data.
+- The final reasoning effort and use of pro mode will be selected by measured
+  development and held-out performance, not by assumption.
+
 # Lovable Documents density correction, 2026-07-25
 
 **Implementation status:** Complete locally and uncommitted. The two packet

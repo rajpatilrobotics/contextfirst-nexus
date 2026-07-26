@@ -52,7 +52,7 @@ function provenance() {
   return {
     ...openAiSelection,
     requestedModel: "gpt-5.6-sol",
-    adapterVersion: "task-011-shared-boundary-v1",
+    adapterVersion: "task-047-shared-boundary-v2",
     returnedModel: "gpt-5.6-sol",
     inferenceSetting: { kind: "reasoning_effort", value: "medium" },
     disclosureVersion: "1.0.0",
@@ -128,6 +128,70 @@ describe("TASK-015 live analysis orchestration", () => {
     });
   });
 
+  it("allows a trafficking-indicator category label without allowing a trafficking determination", async () => {
+    const openai = vi.fn().mockResolvedValue({
+      ok: true,
+      proposal: {
+        candidates: [
+          {
+            proposedId: "MODEL-1",
+            kind: "review_lane_item",
+            lane: "trafficking_indicators",
+            title: "Trafficking indicator for practitioner review",
+            proposedText:
+              "This source detail may be relevant to trafficking-indicator review; it is not a trafficking determination.",
+            assertionMode: "positive_proposition",
+            reviewQuestion:
+              "How should the practitioner assess this trafficking-indicator source detail?",
+            citations: [
+              {
+                segmentId: "D05-P1-S02",
+                quotedText: quote("D05-P1-S02"),
+                relationship: "supports",
+                evidenceNature: "reported_or_alleged_in_source",
+              },
+            ],
+            unknowns: [],
+          },
+          {
+            proposedId: "MODEL-2",
+            kind: "review_lane_item",
+            lane: "trafficking_indicators",
+            title: "Prohibited status conclusion",
+            proposedText: "The person is a victim.",
+            assertionMode: "positive_proposition",
+            reviewQuestion: "Is that status confirmed?",
+            citations: [
+              {
+                segmentId: "D05-P1-S02",
+                quotedText: quote("D05-P1-S02"),
+                relationship: "supports",
+                evidenceNature: "reported_or_alleged_in_source",
+              },
+            ],
+            unknowns: [],
+          },
+        ],
+      },
+      provenance: provenance(),
+    });
+
+    const response = await analyze(validAnalyzeRequest(), { openai });
+
+    expect(response.outcome).toBe("succeeded");
+    expect(response.candidates).toHaveLength(1);
+    expect(response.candidates[0]?.title).toBe(
+      "Trafficking indicator for practitioner review",
+    );
+    expect(response.quarantined).toEqual([
+      {
+        id: "QUARANTINE-0002",
+        proposalOrdinal: 2,
+        reasonCode: "PROHIBITED_CONCLUSION",
+      },
+    ]);
+  });
+
   it("keeps evidence-only injection visible but quarantined from candidates", async () => {
     const openai = vi.fn().mockResolvedValue({
       ok: true,
@@ -179,7 +243,9 @@ describe("TASK-015 live analysis orchestration", () => {
     expect(response.run.status).toBe("failed");
     expect(response.run.candidateCount).toBe(0);
     expect(response.error.failureClassification).toBe("provider_timeout");
-    expect(response.error.recoveryOptions.map((option) => option.displayOrder)).toEqual([0, 2, 3, 4, 5]);
+    expect(
+      response.error.recoveryOptions.map((option) => option.displayOrder),
+    ).toEqual([0, 2, 3, 4, 5, 6]);
     expect(response.error.recoveryOptions.every((option) => option.automatic === false)).toBe(true);
   });
 

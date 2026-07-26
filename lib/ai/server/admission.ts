@@ -9,6 +9,8 @@ import {
 } from "../../contracts";
 import {
   ADAPTER_VERSION,
+  GROQ_ADAPTER_VERSION,
+  adapterVersionForProvider,
   CFN_DEMO_FIXTURE_BINDING,
   EVALUATION_DEFINITION_SET_DIGEST,
   SHARED_PROMPT_VERSION,
@@ -33,12 +35,19 @@ const LIVE_RELEASES = [
     requestedModel: "mistral-small-2603",
     serviceTier: "unpaid",
   },
+  {
+    providerId: "groq",
+    releaseConfigurationId: "groq-oss-free-v1",
+    requestedModel: "openai/gpt-oss-120b",
+    serviceTier: "unpaid",
+  },
 ] as const satisfies readonly LiveProviderReleaseConfiguration[];
 
 const INFERENCE_BY_RELEASE = {
   "openai-quality-v1": { kind: "reasoning_effort", value: "medium" },
   "gemini-quality-v1": { kind: "thinking_level", value: "medium" },
   "mistral-small-free-v1": { kind: "reasoning_effort", value: "medium" },
+  "groq-oss-free-v1": { kind: "reasoning_effort", value: "medium" },
 } as const satisfies Record<
   LiveProviderReleaseConfiguration["releaseConfigurationId"],
   ProviderReleaseInferenceSetting
@@ -54,7 +63,7 @@ type ReviewedIncompleteReport = {
   };
   binding: {
     release: LiveProviderReleaseConfiguration;
-    adapterVersion: typeof ADAPTER_VERSION;
+    adapterVersion: string;
     inferenceSetting: ProviderReleaseInferenceSetting;
     disclosureVersion: typeof ContractVersions.providerDisclosure;
     fixtureBinding: typeof CFN_DEMO_FIXTURE_BINDING;
@@ -69,10 +78,13 @@ type ReviewedIncompleteReport = {
   };
   evidence: {
     liveModel: {
-      status: "not_run";
+      status: "not_run" | "incomplete";
       total: 27;
-      notRun: 27;
-      actualProviderTransmissions: 0;
+      passed: number;
+      failed: number;
+      interrupted: number;
+      notRun: number;
+      actualProviderTransmissions: number;
     };
     deterministicControl: {
       status: "passed";
@@ -81,21 +93,21 @@ type ReviewedIncompleteReport = {
       actualProviderTransmissions: 0;
     };
     blockingGates: {
-      status: "not_run";
+      status: "incomplete";
       total: 8;
-      notRun: 8;
+      passed: number;
+      failed: number;
+      notRun: number;
       names: readonly string[];
     };
   };
   admissionDisposition: "not_evaluated";
   reasons: readonly [
     "report_incomplete",
-    "live_evidence_not_run",
-    "evaluated_configuration_digest_mismatch",
+    "live_evidence_incomplete",
   ];
 };
 
-const REVIEWED_REPORT_TIME = "2026-07-16T00:00:00.000Z" as const;
 const BLOCKING_GATE_NAMES = [
   "consequential_review_blocking",
   "invalid_citation_rejection",
@@ -112,20 +124,36 @@ function reviewedIncompleteReport(
   inferenceSetting: ProviderReleaseInferenceSetting,
   reportId: string,
   reportDigest: string,
+  reportGeneratedAt: string,
   observedEvaluatedConfigurationDigest: string,
   expectedEvaluatedConfigurationDigest: string,
+  liveEvidence: {
+    passed: number;
+    failed: number;
+    interrupted: number;
+    notRun: number;
+    actualProviderTransmissions: number;
+  },
+  blockingGateEvidence: {
+    passed: number;
+    failed: number;
+    notRun: number;
+  } = { passed: 1, failed: 0, notRun: 7 },
 ): ReviewedIncompleteReport {
   return {
     report: {
       schemaVersion: ContractVersions.providerEvaluationAdmissionReport,
       id: reportId,
       digest: reportDigest,
-      generatedAt: REVIEWED_REPORT_TIME,
+      generatedAt: reportGeneratedAt,
       status: "incomplete",
     },
     binding: {
       release,
-      adapterVersion: ADAPTER_VERSION,
+      adapterVersion:
+        release.providerId === "groq"
+          ? GROQ_ADAPTER_VERSION
+          : ADAPTER_VERSION,
       inferenceSetting,
       disclosureVersion: ContractVersions.providerDisclosure,
       fixtureBinding: CFN_DEMO_FIXTURE_BINDING,
@@ -140,10 +168,14 @@ function reviewedIncompleteReport(
     },
     evidence: {
       liveModel: {
-        status: "not_run",
+        status:
+          liveEvidence.passed === 0 &&
+          liveEvidence.failed === 0 &&
+          liveEvidence.interrupted === 0
+            ? "not_run"
+            : "incomplete",
         total: 27,
-        notRun: 27,
-        actualProviderTransmissions: 0,
+        ...liveEvidence,
       },
       deterministicControl: {
         status: "passed",
@@ -152,17 +184,16 @@ function reviewedIncompleteReport(
         actualProviderTransmissions: 0,
       },
       blockingGates: {
-        status: "not_run",
+        status: "incomplete",
         total: 8,
-        notRun: 8,
+        ...blockingGateEvidence,
         names: BLOCKING_GATE_NAMES,
       },
     },
     admissionDisposition: "not_evaluated",
     reasons: [
       "report_incomplete",
-      "live_evidence_not_run",
-      "evaluated_configuration_digest_mismatch",
+      "live_evidence_incomplete",
     ],
   };
 }
@@ -177,37 +208,78 @@ export const REVIEWED_INCOMPLETE_REPORTS = {
     LIVE_RELEASES[0],
     INFERENCE_BY_RELEASE["openai-quality-v1"],
     "REPORT-OPENAI-QUALITY-V1-V1",
-    "4151cc9ff1ee73b5e2fd28157eacd0dc30fb9d3fac56ad2323cbb3da0494a0a2",
-    "4e527ee661762a6883516e59820f974bf97823cdc4d7c2131a69dee751e69fae",
-    "d89b36b93a94e9cd50423f9ab4c53264fbdedb6a37b38aee53f1f6c024504271",
+    "af1f3508e6901cd64cc939a085549c773d428e535d424fe08886e3871869dad2",
+    "2026-07-16T00:00:00.000Z",
+    "c23118e6683c1b1d099db3385d1cbc47eb05fdaf6608b9bcbd3741ba910a877a",
+    "c23118e6683c1b1d099db3385d1cbc47eb05fdaf6608b9bcbd3741ba910a877a",
+    {
+      passed: 0,
+      failed: 0,
+      interrupted: 0,
+      notRun: 27,
+      actualProviderTransmissions: 0,
+    },
   ),
   "gemini-quality-v1": reviewedIncompleteReport(
     LIVE_RELEASES[1],
     INFERENCE_BY_RELEASE["gemini-quality-v1"],
     "REPORT-GEMINI-QUALITY-V1-V1",
-    "a334c3abb2d04349345294ee4631cbc907933cc4ac4e97a9ed9fea12efa04213",
-    "59d286ff2e6b68c7afb13b875bac255bf3bc94f1d79c6dc43fc8b3962ad7e467",
-    "ec1d82db7de230bd9b7101c7d427d3ca99be7c5bef3cbb82c9fc342453386dab",
+    "dc28aff7b9c228e5729b857da3bc1d72bafb713152ee295b4ece0084a2a258c2",
+    "2026-07-16T00:00:00.000Z",
+    "cb0ca178f90adf56b77a706565cea3d706d7c2134c3b50dbe49981e59d101295",
+    "cb0ca178f90adf56b77a706565cea3d706d7c2134c3b50dbe49981e59d101295",
+    {
+      passed: 0,
+      failed: 0,
+      interrupted: 0,
+      notRun: 27,
+      actualProviderTransmissions: 0,
+    },
   ),
   "mistral-small-free-v1": reviewedIncompleteReport(
     LIVE_RELEASES[2],
     INFERENCE_BY_RELEASE["mistral-small-free-v1"],
     "REPORT-MISTRAL-SMALL-FREE-V1-V1",
-    "fdfe95ffba0d3c85a24bddfd48dae6289288bd2595fd6ff874ef2864155c9be8",
-    "892989ab11faaf20e56965fb2e3f456dfa07d189afa2bbf5817c38d1ceeb2b97",
-    "40449626bede007f68a2f111b7b12e51c99c591fe7eccadf85f31745a1d0aaaf",
+    "26fae46551dcbd9d6f3bd27aa202855053d8856c34bb5607c71788e566832774",
+    "2026-07-16T00:00:00.000Z",
+    "f8e92d9921a04c55431f528e7148f64fb5c9c86fe59569b98bdacc45561ac7dd",
+    "f8e92d9921a04c55431f528e7148f64fb5c9c86fe59569b98bdacc45561ac7dd",
+    {
+      passed: 0,
+      failed: 0,
+      interrupted: 0,
+      notRun: 27,
+      actualProviderTransmissions: 0,
+    },
   ),
-} as const satisfies Record<
+  "groq-oss-free-v1": reviewedIncompleteReport(
+    LIVE_RELEASES[3],
+    INFERENCE_BY_RELEASE["groq-oss-free-v1"],
+    "REPORT-GROQ-OSS-FREE-V1-V1",
+    "5f914af49beb0a915c96ad35e6c0cc7721a94cd5cd11d977445c1f4a3b2e1d57",
+    "2026-07-26T06:58:09.660Z",
+    "27fef2648570ce1a0b6c50ffc98295cc8816ffeaaadbc5a1dc0a41f9e586cd83",
+    "27fef2648570ce1a0b6c50ffc98295cc8816ffeaaadbc5a1dc0a41f9e586cd83",
+    {
+      passed: 4,
+      failed: 0,
+      interrupted: 1,
+      notRun: 22,
+      actualProviderTransmissions: 6,
+    },
+    { passed: 3, failed: 0, notRun: 5 },
+  ),
+} as const satisfies Partial<Record<
   LiveProviderReleaseConfiguration["releaseConfigurationId"],
   ReviewedIncompleteReport
->;
+>>;
 
 export const STATIC_ADMISSION_RECORDS = LIVE_RELEASES.map((release) =>
   ProviderReleaseAdmissionRecordSchema.parse({
     schemaVersion: "1.0.0",
     releaseConfigurationId: release.releaseConfigurationId,
     deployedAccountReleaseAvailability:
-      release.providerId === "mistral"
+      release.providerId === "mistral" || release.providerId === "groq"
         ? { status: "not_verified", evidenceId: null, verifiedAt: null }
         : { status: "not_required", evidenceId: null, verifiedAt: null },
     evaluatedConfiguration: buildEvaluatedConfiguration(
@@ -241,7 +313,7 @@ export function expectedEvaluatedConfigurationDigest(
     releaseConfigurationId: release.releaseConfigurationId,
     requestedModel: release.requestedModel,
     serviceTier: release.serviceTier,
-    adapterVersion: ADAPTER_VERSION,
+    adapterVersion: adapterVersionForProvider(release.providerId),
     inferenceSetting,
     disclosureVersion: ContractVersions.providerDisclosure,
     fixtureBinding: CFN_DEMO_FIXTURE_BINDING,
@@ -260,7 +332,7 @@ function buildEvaluatedConfiguration(
   return {
     schemaVersion: ContractVersions.providerRegistry,
     ...release,
-    adapterVersion: ADAPTER_VERSION,
+    adapterVersion: adapterVersionForProvider(release.providerId),
     inferenceSetting,
     disclosureVersion: ContractVersions.providerDisclosure,
     fixtureBinding: CFN_DEMO_FIXTURE_BINDING,

@@ -7,10 +7,13 @@ vi.mock("server-only", () => ({}));
 
 import {
   LIVE_RELEASES,
+  appendEvaluationProviderAttempt,
   canonicalDigest,
   deriveEvidenceStatus,
   deriveGateStatus,
   deriveReportStatus,
+  isOperationalEvaluationInterruption,
+  isResumableEvaluationEvidence,
   loadEvaluationDefinitions,
   runApprovedPrivateLiveEvaluation,
   runDeterministicEvaluation,
@@ -47,13 +50,14 @@ describe("TASK-016 deterministic evaluation", () => {
 
   it("preserves not-run live evidence and incomplete exact-release reports", () => {
     const run = runDeterministicEvaluation();
-    expect(run.reports).toHaveLength(3);
+    expect(run.reports).toHaveLength(LIVE_RELEASES.length);
     expect(run.reports.map((report) => report.releaseConfigurationId)).toEqual(
       LIVE_RELEASES.map((release) => release.releaseConfigurationId),
     );
     for (const report of run.reports) {
       expect(report.status).toBe("incomplete");
-      expect(report.gates.every((gate: { status: string }) => gate.status === "not_run")).toBe(true);
+      expect(report.gates.some((gate: { status: string }) => gate.status === "not_run")).toBe(true);
+      expect(report.gates.some((gate: { status: string }) => gate.status === "failed")).toBe(false);
       expect(report.evidence.filter((item: { status: string }) => item.status === "not_run")).toHaveLength(27);
       expect(report.evidence.filter((item: { executionSource: string }) => item.executionSource === "deterministic_control")).toHaveLength(5);
       expect("aggregateAccuracy" in report).toBe(false);
@@ -83,6 +87,63 @@ describe("TASK-016 deterministic evaluation", () => {
     const failedProjection = { status: "failed", evidence: visibleEvidence };
     expect(canonicalDigest(passingProjection)).not.toBe(canonicalDigest(failedProjection));
     expect(failedProjection.evidence).toHaveLength(1);
+  });
+
+  it("keeps operational interruptions incomplete, resumable, and provenance-preserving", () => {
+    expect(
+      isOperationalEvaluationInterruption("provider_rate_limited"),
+    ).toBe(true);
+    expect(
+      isOperationalEvaluationInterruption("invalid_structured_response"),
+    ).toBe(false);
+    expect(isResumableEvaluationEvidence({ status: "interrupted" })).toBe(
+      true,
+    );
+    expect(isResumableEvaluationEvidence({ status: "failed" })).toBe(false);
+    expect(deriveGateStatus([{ status: "interrupted" }])).toBe("not_run");
+    expect(deriveReportStatus([{ status: "not_run" }])).toBe("incomplete");
+
+    const provider = {
+      providerId: "groq",
+      releaseConfigurationId: "groq-oss-free-v1",
+      requestedModel: "openai/gpt-oss-120b",
+      serviceTier: "unpaid",
+      adapterVersion: "test-strict-adapter",
+      returnedModel: "openai/gpt-oss-120b",
+      inferenceSetting: { kind: "reasoning_effort", value: "medium" },
+      disclosureVersion: "1.0.0",
+      providerTransmission: true,
+    } as const;
+    const interrupted = appendEvaluationProviderAttempt(undefined, {
+      analysisRunId: "RUN-EVAL-INTERRUPTED-001",
+      runAt: "2026-07-26T00:00:00.000Z",
+      actualProviderTransmission: true,
+      terminalStatus: "failed",
+      outcome: "interrupted",
+      interruptionClassification: "provider_rate_limited",
+      provider,
+    });
+    const resumed = appendEvaluationProviderAttempt(interrupted, {
+      analysisRunId: "RUN-EVAL-RESUMED-002",
+      runAt: "2026-07-26T01:00:00.000Z",
+      actualProviderTransmission: true,
+      terminalStatus: "succeeded",
+      outcome: "completed",
+      interruptionClassification: null,
+      provider,
+    });
+
+    expect(resumed.map((attempt) => attempt.attemptOrdinal)).toEqual([1, 2]);
+    expect(resumed[0]).toMatchObject({
+      analysisRunId: "RUN-EVAL-INTERRUPTED-001",
+      outcome: "interrupted",
+      interruptionClassification: "provider_rate_limited",
+    });
+    expect(resumed[1]).toMatchObject({
+      analysisRunId: "RUN-EVAL-RESUMED-002",
+      outcome: "completed",
+      interruptionClassification: null,
+    });
   });
 
   it("cannot enter live evaluation from deterministic mode", async () => {

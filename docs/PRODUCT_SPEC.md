@@ -19,7 +19,7 @@ DEC-045 replaces the earlier practitioner-controlled provider-selection and prov
 
 For the current replay-only public deployment, the Purpose flow automatically binds the one selectable bundled deterministic replay release. It fails closed with a plain service-unavailable message when replay is unavailable or when more than one service is unexpectedly selectable. The prepared checkpoint remains a separate action. Detailed provenance remains available in Trust, audit, and exports, and replay remains labelled local with `providerTransmission: false`.
 
-TASK-040 will reconcile the live request contracts before implementing future server-managed routing. Until it integrates and receives every separate runtime approval, no live provider is enabled or silently selected.
+DEC-046 reconciles the provider-neutral browser intent and managed attempt contract. No live provider is enabled until every exact evaluation, reviewed admission, credential, data-policy, spend, and deployment approval passes.
 
 ## 2. Product statement
 
@@ -74,7 +74,7 @@ A short pre-processing record of the user's role, purpose, authority, jurisdicti
 
 ### Analysis provider
 
-The practitioner-selected external service used for one live analysis run. P0 defines exactly three registered live configurations in this order: OpenAI using the configured approved model, Google using `gemini-3.5-flash`, and Mistral AI using the exact `mistral-small-2603` release. Only configurations with matching passed reviewed static admission, current configuration, and explicit enablement are selectable. Mistral also requires coordinator-recorded deployed-account availability. Every provider execution that is verified to have started is recorded as its own run and is never silently or automatically replaced. A rejected preflight or unknown browser-transport outcome remains a typed non-run attempt and never becomes a fabricated run.
+The server-managed external service used for one live analysis run. P0 defines exactly four registered live configurations in this consideration order: Mistral using exact `mistral-small-2603`, Google using exact `gemini-3.5-flash`, Groq using exact `openai/gpt-oss-120b`, and OpenAI using the configured approved paid model. Only configurations with matching passed reviewed static admission, current configuration, explicit enablement, and current data-origin eligibility may be called. Every provider execution that is verified to have started is recorded as its own attempt and is never silently replaced or merged. A rejected preflight or unknown browser-transport outcome remains a typed non-run attempt and never becomes a fabricated run.
 
 ### Candidate item
 
@@ -204,7 +204,7 @@ A first-time user can describe what the product does and does not do without ope
 
 #### Acceptance
 
-The judged flow can start without external files or end-user accounts. Live analysis depends only on one of the three disclosed, configured, statically admitted providers selected by the practitioner. The bundled deterministic replay remains a separate final option after the three live choices. The prepared video checkpoint is a visibly loaded, trusted, versioned replay-based bundle with complete synthetic prerequisite state and fixture-reviewer decisions.
+The judged flow can start without external files or end-user accounts. Live analysis depends only on one of the four disclosed, configured, statically admitted, data-eligible providers considered by server policy. The bundled deterministic replay remains a separate local option outside the live chain. The prepared video checkpoint is a visibly loaded, trusted, versioned replay-based bundle with complete synthetic prerequisite state and fixture-reviewer decisions.
 
 ### 7.3 Case Purpose Brief
 
@@ -290,8 +290,8 @@ The user can identify exactly what the system did not process. A missing or unre
 #### Managed analysis availability and future recovery
 
 - The replay-only public deployment shows no provider recovery controls and never enables a live provider. Replay is automatically bound only when it is the sole selectable service.
-- Future live recovery is server-managed, bounded, and limited to DEC-045's classified operational failures after TASK-040 reconciles contracts and architecture.
-- The future order is OpenAI, Gemini, Mistral, then an evaluated and admitted fourth provider; replay is separate and never a live fallback result.
+- Live recovery is server-managed, bounded, and limited to DEC-045's classified operational failures.
+- The managed consideration order defaults to Mistral, Gemini, Groq, then OpenAI. A strict server-only permutation may reorder all four registered live providers, while invalid configuration fails closed before a call. Ineligible releases are skipped without a call, and replay is separate and never a live fallback result.
 - Provider attempts retain safe provenance, use one canonical approved redacted input, never merge outputs, and stop immediately after one accepted result.
 - If a valid run began, the earlier failed run remains in audit history and run status. It is not converted into the new run.
 - If provider configuration or release validation rejects the request before a run begins, the interface records a safe preflight audit event and does not invent a failed run.
@@ -600,7 +600,7 @@ The P0 prototype is accepted only when:
 18. The product makes none of the prohibited claims or inferences in docs/SAFETY_AND_DATA.md.
 19. The practitioner interface offers no provider or model selector; the public deployment auto-binds only the sole selectable local replay.
 20. A consolidated disclosure explains the applicable data flow while Trust, audit, and exports preserve detailed provenance.
-21. Future managed routing uses the admitted OpenAI, Gemini, Mistral, then separately evaluated fourth-provider order, preserves attempts, never merges outputs, and never substitutes replay.
+21. Managed routing uses the admitted Mistral, Gemini, Groq, then OpenAI consideration order, skips ineligible releases without a call, preserves attempts, never merges outputs, and never substitutes replay.
 22. Refusal, safety, privacy, citation, schema, and semantic-validation failures stop managed routing and cannot be bypassed by another provider.
 23. Unpaid Gemini is unavailable unless the server verifies the bundled synthetic fixture.
 24. Free Mistral is unavailable unless the exact `mistral-small-2603` release passes evaluation, the reviewed static admission record confirms that evidence, coordinator-recorded deployed-account release availability is `available`, and the server verifies the exact bundled synthetic fixture; its disclosure reports training-use or opt-out state, up-to-30-day retention, and no free zero data retention.
@@ -639,8 +639,8 @@ The engineering-document phase resolves the earlier open decisions as follows:
 | Source locations | Stable document, page, segment, exact quote, and character location; PDF positions when reliable | `docs/CONTRACTS.md` |
 | Scanned or image-only material | No P0 OCR; mark unavailable and block affected conclusions | `docs/ARCHITECTURE.md` |
 | Export | One canonical reviewed manifest rendered as local PDF and structured JSON | `docs/CONTRACTS.md` |
-| Live providers | Exactly three registered configurations shown in order: OpenAI using the configured approved model, Google Gemini 3.5 Flash, and Mistral Small 4 using exact release `mistral-small-2603`; only statically admitted, configured, and enabled entries are selectable | `docs/ARCHITECTURE.md` and `docs/SAFETY_AND_DATA.md` |
-| Provider failure recovery | Explicit same-provider retry or an acknowledged new run with a remaining eligible provider for operational failures only; choices remain in OpenAI, Gemini, Mistral, replay order, no choice is automatic, failed runs remain visible, and linkage is verified in browser state | `docs/ARCHITECTURE.md`, `docs/CONTRACTS.md`, and `docs/SAFETY_AND_DATA.md` |
+| Live providers | Exactly four registered configurations considered in order: Mistral, Google Gemini, Groq, then OpenAI; only statically admitted, configured, enabled, and data-eligible entries may be called | `docs/ARCHITECTURE.md` and `docs/SAFETY_AND_DATA.md` |
+| Provider failure recovery | Server-managed progression for classified operational failures only; ineligible releases are skipped without calls, failures remain visible, output is never merged, and replay remains outside the chain | `docs/ARCHITECTURE.md`, `docs/CONTRACTS.md`, and `docs/SAFETY_AND_DATA.md` |
 | Provider outage replay | A version-matched deterministic replay, separately selected, always visibly labelled, and never silently substituted for live analysis | `docs/ARCHITECTURE.md` |
 | Guidance | A small versioned local pack of reviewed source-register excerpts, not general legal RAG | `docs/ARCHITECTURE.md` |
 | Accessibility | WCAG 2.2 Level AA target with automated and manual testing, without a conformance claim until evaluated | `docs/DESIGN_SYSTEM.md` and `docs/TESTING_AND_EVALUATION.md` |

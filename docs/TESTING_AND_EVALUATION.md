@@ -22,6 +22,10 @@ TASK-040 must begin with contract and architecture reconciliation. Its focused t
 6. Test abstention, missingness, conflict, and failure as normal product outcomes.
 7. Never average a critical safety failure into an overall accuracy score.
 8. The public demo cannot claim production, real-case, or legal validation.
+9. Preserve temporary provider interruptions separately from quality failures.
+   Rate limits, quota exhaustion, timeout, and temporary unavailability keep
+   admission incomplete and resumable while retaining every attempted
+   transmission. Malformed, unsafe, or citation-invalid output remains failed.
 
 ## 3. Planned tools and scripts
 

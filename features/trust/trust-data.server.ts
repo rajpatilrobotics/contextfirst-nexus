@@ -2,6 +2,7 @@ import "server-only";
 
 import evaluationDefinitionsJson from "../../fixtures/evals/definitions/evaluation-definitions.json";
 import geminiReportJson from "../../fixtures/evals/results/admission/gemini-quality-v1.report.json";
+import groqReportJson from "../../fixtures/evals/results/admission/groq-oss-free-v1.report.json";
 import mistralReportJson from "../../fixtures/evals/results/admission/mistral-small-free-v1.report.json";
 import openAiReportJson from "../../fixtures/evals/results/admission/openai-quality-v1.report.json";
 import deterministicHarnessJson from "../../fixtures/evals/results/deterministic-harness-v1.json";
@@ -73,6 +74,7 @@ export function getTrustPageData(): TrustPageData {
     ProviderEvaluationAdmissionReportSchema.parse(openAiReportJson),
     ProviderEvaluationAdmissionReportSchema.parse(geminiReportJson),
     ProviderEvaluationAdmissionReportSchema.parse(mistralReportJson),
+    ProviderEvaluationAdmissionReportSchema.parse(groqReportJson),
   ];
   const replayContinuity = EvaluationResultSchema.parse(replayContinuityJson);
   const measuredResults = [
@@ -115,7 +117,13 @@ export function getTrustPageData(): TrustPageData {
     prohibitedUse: PROHIBITED_USE,
     enabledDataOrigin: "bundled_synthetic",
     enabledFixtureBinding: CFN_DEMO_FIXTURE_BINDING,
-    providerDisplayOrder: ["openai", "google_gemini", "mistral", "local_replay"],
+    providerDisplayOrder: [
+      "mistral",
+      "google_gemini",
+      "groq",
+      "openai",
+      "local_replay",
+    ],
     providers: availability.options,
     selectedRelease: null,
     selectionPolicy: "explicit_user_choice_only",

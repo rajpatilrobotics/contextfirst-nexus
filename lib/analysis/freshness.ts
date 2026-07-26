@@ -1,4 +1,5 @@
 import type { AnalysisRun, CaseState } from "../contracts";
+import type { BrowserCaseRecord } from "../cases";
 import { cfnDemoFixture } from "../fixtures";
 import { bundledGuidancePack } from "../guidance";
 
@@ -15,6 +16,24 @@ function sameOrderedStrings(left: string[], right: string[]) {
 
 export function analysisRunInputMatchesState(state: CaseState, run: AnalysisRun) {
   if (!state.purposeBrief) return false;
+  if (state.caseId !== cfnDemoFixture.caseId) {
+    return (
+      state.caseId.startsWith("CFN-CASE-") &&
+      run.inputState.purposeBriefId === state.purposeBrief.id &&
+      run.inputState.purposeBriefRevision === state.purposeBrief.revision &&
+      run.inputState.maskingRevision === state.masking.revision &&
+      sameOrderedStrings(
+        run.inputState.selectedSegmentIds,
+        state.selectedSegmentIds,
+      ) &&
+      run.inputState.approvedRedactedInputDigest.length === 64 &&
+      run.inputState.canonicalFixtureDigest === state.documentSetDigest &&
+      run.fixtureVersion === state.fixtureVersion &&
+      run.rulesetVersion === state.guidancePack.version &&
+      state.guidancePack.version === bundledGuidancePack.identity.version &&
+      state.guidancePack.digest === bundledGuidancePack.identity.digest
+    );
+  }
   return (
     run.inputState.purposeBriefId === state.purposeBrief.id &&
     run.inputState.purposeBriefRevision === state.purposeBrief.revision &&
@@ -28,5 +47,24 @@ export function analysisRunInputMatchesState(state: CaseState, run: AnalysisRun)
     run.rulesetVersion === state.guidancePack.version &&
     state.guidancePack.version === bundledGuidancePack.identity.version &&
     state.guidancePack.digest === bundledGuidancePack.identity.digest
+  );
+}
+
+export function browserAnalysisSnapshotMatchesRecordMetadata(
+  state: CaseState,
+  record: BrowserCaseRecord,
+): boolean {
+  const run = selectSuccessfulActiveAnalysisRun(state);
+  return Boolean(
+    run &&
+      record.purposeBrief &&
+      record.documentPacket &&
+      state.caseId === record.id &&
+      analysisRunInputMatchesState(state, run) &&
+      run.inputState.purposeBriefId === record.purposeBrief.id &&
+      run.inputState.purposeBriefRevision === record.purposeBrief.revision &&
+      run.inputState.maskingRevision === record.documentPacket.masking.revision &&
+      run.inputState.canonicalFixtureDigest ===
+        record.documentPacket.documentSetDigest,
   );
 }
