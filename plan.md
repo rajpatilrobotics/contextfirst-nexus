@@ -2,10 +2,11 @@
 
 **Status:** Dynamic Structured Analysis implementation and focused verification
 are complete. The Groq boundary now uses the provider's strict structured-output
-path. Four bounded repetitions passed using only the bundled fictional redacted
-fixture; the latest resume stopped safely on a free-tier rate limit. The exact release
-remains unadmitted and runtime start remains fail-closed because the full
-evaluation is incomplete. No production setting or deployment was changed.
+path. Ten bounded repetitions passed using only the bundled fictional redacted
+fixture, but one required repetition returned a non-resumable
+`invalid_structured_response`. The exact v7 adapter therefore cannot be
+admitted. Runtime start remains fail-closed. No production setting or
+deployment was changed.
 
 ### Development evaluation outcome, 2026-07-26
 
@@ -13,7 +14,7 @@ evaluation is incomplete. No production setting or deployment was changed.
   current-run citation validation, canonical review actions, managed routing,
   and Lovable Structured Analysis presentation are implemented.
 - Groq ZDR was confirmed by the user for the configured project. Thirteen
-  earlier beta-adapter calls and eight bounded strict-adapter calls were
+  earlier beta-adapter calls and sixteen bounded strict-adapter calls were
   attempted; only bundled fictional redacted segments were sent. No Mistral,
   Gemini, or OpenAI call occurred and no paid OpenAI credit was used.
 - The earlier beta Responses API adapter produced intermittent empty or invalid
@@ -21,18 +22,18 @@ evaluation is incomplete. No production setting or deployment was changed.
   superseded by a separately versioned Chat Completions adapter using Groq's
   officially supported `strict: true` JSON Schema mode for GPT-OSS 120B.
 - The replacement strict boundary returned substantive source-grounded
-  candidates with exact citations in four repetitions. The latest resume
-  reached the Groq free-tier rate limit and stopped without retry or paid
-  fallback. Twenty-two live runs remain `not_run`; provider selectability
-  stays fail-closed.
+  candidates with exact citations in ten repetitions. One required repetition
+  failed locally as `invalid_structured_response`; the runner stopped before
+  spending the remaining quota. Sixteen live runs remain `not_run`; provider
+  selectability stays fail-closed.
 - Dynamic browser packets now send only candidate-eligible approved redacted
   segments. Evidence-only or instruction-advisory segments remain bound into
   the packet digest for freshness but are marked `not_sent` at the provider
   boundary and cannot be cited as if the provider saw them.
-- The checked-in Groq report is intentionally incomplete: it binds four passed
-  strict-boundary repetitions, one resumable rate-limit interruption with its
-  real provider-attempt provenance, and leaves all unexecuted evidence as
-  `not_run`. Static admission remains `not_evaluated`; the provider is not
+- The checked-in Groq report is intentionally non-admitting: it binds ten
+  passed strict-boundary repetitions, one non-resumable structured-response
+  failure with its real provider-attempt provenance, and leaves all unexecuted
+  evidence as `not_run`. Static admission remains `not_evaluated`; the provider is not
   selectable.
 - Evaluation evidence now distinguishes operational `interrupted` attempts
   from quality or safety `failed` evidence. Rate limits, quota exhaustion,

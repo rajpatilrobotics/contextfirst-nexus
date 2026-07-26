@@ -354,11 +354,12 @@ Changing a frozen decision requires:
   local source map but are explicitly `not_sent` and excluded from the model
   citation allowlist.
 - Evidence: Focused adapter, orchestration, admission, evaluation, and input
-  tests passed. Four bounded free-tier repetitions using only the bundled
+  tests passed. Ten bounded free-tier repetitions using only the bundled
   fictional redacted fixture returned substantive exact-citation proposals. A
-  later attempt stopped safely on `provider_rate_limited`; no retry or paid fallback
-  occurred. The report records that attempt as `interrupted`, not a quality
-  failure, and remains incomplete with 22 live runs `not_run`.
+  required repetition returned `invalid_structured_response`, which is a
+  non-resumable quality failure. No paid fallback occurred. The report
+  preserves that failure and remains non-admitting with 16 live runs
+  `not_run`.
 - Admission boundary: A passing canary is not production admission. Groq stays
   `not_evaluated`, non-selectable, and behind the disabled global live gate
   until the complete exact-version evaluation and deployment review pass.

@@ -76,7 +76,7 @@ The following providers were screened using current official documentation. This
 | OpenRouter free routing | Access to multiple free models | Downstream provider and model availability can change; random routing is unacceptable for evidence processing |
 | DeepSeek V4 | Extremely low price and long context | JSON mode is not strict schema enforcement, empty output is documented, and current data terms are a poor fit for this domain |
 
-DEC-046 freezes Groq `openai/gpt-oss-120b` as the third managed candidate. A native server adapter now uses Groq Chat Completions with `strict: true` JSON Schema output. Four bounded fictional-fixture repetitions returned substantive exact-citation results; the latest resume stopped safely on the free-tier rate limit. The release remains disabled and unadmitted because the evaluation, reviewed static admission, and deployed-account checks are incomplete.
+DEC-046 freezes Groq `openai/gpt-oss-120b` as the third managed candidate. A native server adapter now uses Groq Chat Completions with `strict: true` JSON Schema output. Ten bounded fictional-fixture repetitions returned substantive exact-citation results, but one required repetition returned a non-resumable `invalid_structured_response`. The v7 adapter is therefore not admissible. The release remains disabled and unadmitted.
 
 ### 4.1 Official screening sources
 
