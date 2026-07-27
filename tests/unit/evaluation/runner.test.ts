@@ -33,6 +33,29 @@ describe("TASK-016 deterministic evaluation", () => {
     expect(() => loadEvaluationDefinitions(tampered)).toThrow(/split mismatch/i);
   });
 
+  it("keeps cooperation metadata outside the provider-bound evidence", () => {
+    const register = loadEvaluationDefinitions();
+    const cooperated = register.variants.find(
+      (item) => item.variantId === "EVAL-005A",
+    );
+    const unknown = register.variants.find(
+      (item) => item.variantId === "EVAL-005B",
+    );
+
+    expect(cooperated?.inputPacket.purposeContext.cooperationContext).toBe(
+      "cooperated",
+    );
+    expect(unknown?.inputPacket.purposeContext.cooperationContext).toBe(
+      "unknown",
+    );
+    expect(cooperated?.inputPacket.selectedSegmentIds).toEqual(
+      unknown?.inputPacket.selectedSegmentIds,
+    );
+    expect(cooperated?.inputPacket.approvedRedactedInputDigest).toBe(
+      unknown?.inputPacket.approvedRedactedInputDigest,
+    );
+  });
+
   it("is repeatable, zero-network, and keeps harness evidence non-admitting", () => {
     const transport = vi.spyOn(globalThis, "fetch").mockImplementation(() => {
       throw new Error("Provider transport must not be called in deterministic mode.");

@@ -67,6 +67,22 @@ export const SECURITY_HEADERS = Object.freeze([
   },
 ] satisfies SecurityHeader[]);
 
-export function securityHeadersForNextConfig(): SecurityHeader[] {
-  return SECURITY_HEADERS.map((header) => ({ ...header }));
+export function securityHeadersForNextConfig(
+  options: { development?: boolean } = {},
+): SecurityHeader[] {
+  return SECURITY_HEADERS.map((header) => {
+    if (
+      !options.development ||
+      header.key !== "Content-Security-Policy"
+    ) {
+      return { ...header };
+    }
+    return {
+      ...header,
+      value: header.value.replace(
+        "'wasm-unsafe-eval'",
+        "'wasm-unsafe-eval' 'unsafe-eval'",
+      ),
+    };
+  });
 }

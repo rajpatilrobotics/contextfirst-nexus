@@ -5,7 +5,10 @@ import { join } from "node:path";
 
 import { describe, expect, it } from "vitest";
 
-import { SECURITY_HEADERS } from "../../lib/security/http-headers";
+import {
+  SECURITY_HEADERS,
+  securityHeadersForNextConfig,
+} from "../../lib/security/http-headers";
 import { createExportManifest, evaluateExportGate } from "../../lib/export/core";
 import { createInitialCaseState } from "../../lib/state";
 import { buildAnalyzeAvailabilityResponse } from "../../lib/ai/server/registry";
@@ -51,6 +54,28 @@ describe("security headers", () => {
     expect(allTokens).not.toContain("'unsafe-eval'");
     expect(allTokens.join(" ")).not.toMatch(PROVIDER_ORIGIN_PATTERN);
     expect(allTokens).not.toContain("*");
+  });
+
+  it("allows framework evaluation only in the local development projection", () => {
+    const developmentHeaders = new Map(
+      securityHeadersForNextConfig({ development: true }).map((header) => [
+        header.key,
+        header.value,
+      ]),
+    );
+    const productionHeaders = new Map(
+      securityHeadersForNextConfig().map((header) => [
+        header.key,
+        header.value,
+      ]),
+    );
+
+    expect(
+      developmentHeaders.get("Content-Security-Policy"),
+    ).toContain("'unsafe-eval'");
+    expect(
+      productionHeaders.get("Content-Security-Policy"),
+    ).not.toContain("'unsafe-eval'");
   });
 });
 

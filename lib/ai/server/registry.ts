@@ -14,6 +14,7 @@ import {
   type ProviderReleaseRegistryEntry,
   type ReplayReleaseRegistryEntry,
 } from "./types";
+import { OPENAI_MODEL_CONFIGURATION } from "./openai-model";
 
 const LAST_VERIFIED = "2026-07-16T00:00:00.000Z" as const;
 
@@ -21,7 +22,7 @@ export const LIVE_PROVIDER_RELEASES = [
   {
     providerId: "openai",
     releaseConfigurationId: "openai-quality-v1",
-    requestedModel: "gpt-5.6-sol",
+    requestedModel: OPENAI_MODEL_CONFIGURATION.model,
     serviceTier: "paid",
   },
   {
@@ -54,9 +55,9 @@ export const REPLAY_RELEASE = {
 export const PROVIDER_REGISTRY = [
   liveEntry(LIVE_PROVIDER_RELEASES[0], {
     displayName: "OpenAI",
-    modelDisplayName: "GPT-5.6 Sol",
+    modelDisplayName: OPENAI_MODEL_CONFIGURATION.displayName,
     modelAliasDisclosure:
-      "Frozen paid OpenAI quality release for approved redacted input.",
+      `Configured paid OpenAI quality release using ${OPENAI_MODEL_CONFIGURATION.displayName} for approved redacted input.`,
     inferenceSetting: { kind: "reasoning_effort", value: "medium" },
     disclosure: {
       schemaVersion: "1.0.0",
@@ -77,24 +78,30 @@ export const PROVIDER_REGISTRY = [
       acknowledgementRequired: true,
       lastVerified: LAST_VERIFIED,
     },
-  }),
+  }, OPENAI_MODEL_CONFIGURATION.valid),
   liveEntry(LIVE_PROVIDER_RELEASES[1], {
     displayName: "Google Gemini",
     modelDisplayName: "Gemini 3.5 Flash",
-    modelAliasDisclosure: "Frozen Gemini unpaid synthetic-only release.",
+    modelAliasDisclosure:
+      "Frozen Gemini unpaid release for approved redacted input.",
     inferenceSetting: { kind: "thinking_level", value: "medium" },
     disclosure: {
       schemaVersion: "1.0.0",
       disclosureVersion: "1.0.0",
-      serviceTierLabel: "Unpaid synthetic-only live provider",
-      dataFlowSummary: "Approved redacted synthetic fixture evidence is sent to Gemini for one analysis run.",
+      serviceTierLabel: "Unpaid live provider",
+      dataFlowSummary:
+        "Approved redacted synthetic or authorized-public evidence may be sent to Gemini for one analysis run.",
       storageMode: "gemini_stateless_unpaid",
       retentionSetting: "gemini_unpaid_default",
       retentionLimitation: "Unpaid-provider retention follows the provider's default unpaid terms.",
-      trainingUseDisclosure: "Only bundled synthetic data is allowed for this unpaid release.",
-      providerContentCategories: ["approved redacted synthetic evidence", "purpose metadata"],
+      trainingUseDisclosure:
+        "Provider terms apply; this release permits only synthetic or authorized-public material.",
+      providerContentCategories: [
+        "approved redacted synthetic or authorized-public evidence",
+        "purpose metadata",
+      ],
       processingRegion: null,
-      allowedDataOrigins: ["bundled_synthetic"],
+      allowedDataOrigins: ["bundled_synthetic", "browser_local"],
       providerTransmission: true,
       rawPdfSentToProvider: false,
       toolsEnabled: false,
@@ -263,6 +270,7 @@ function liveEntry(
     LiveProviderReleaseRegistryEntry,
     "kind" | "release" | "adapterVersion" | "displayOrder" | "enabled" | "staticServiceTierAvailability" | "admission"
   >,
+  enabled = true,
 ): LiveProviderReleaseRegistryEntry {
   const admission = getAdmissionRecord(release.releaseConfigurationId);
   if (!admission) {
@@ -274,7 +282,7 @@ function liveEntry(
     release,
     adapterVersion: adapterVersionForProvider(release.providerId),
     displayOrder: ProviderDisplayOrderById[release.providerId] as 1 | 2 | 3 | 4,
-    enabled: true,
+    enabled,
     staticServiceTierAvailability: "available",
     admission,
     ...config,

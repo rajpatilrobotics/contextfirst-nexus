@@ -31,12 +31,23 @@ describe("TASK-039 replay-only analysis availability", () => {
 
   it.each([
     ["zero selectable services", zeroSelectableProviderOptions, "zero_selectable"],
-    ["multiple selectable services", multipleSelectableProviderOptions, "multiple_selectable"],
     ["one selectable live service", liveOnlyProviderOptions, "live_service_selectable"],
   ] as const)("fails closed for %s", (_label, buildOptions, reason) => {
     expect(resolveReplayAnalysisAvailability(buildOptions())).toEqual({
       status: "unavailable",
       reason,
+    });
+  });
+
+  it("keeps the trusted replay available when an admitted live service is also selectable", () => {
+    expect(resolveReplayAnalysisAvailability(multipleSelectableProviderOptions())).toEqual({
+      status: "ready",
+      option: expect.objectContaining({
+        providerId: "local_replay",
+        releaseConfigurationId: "prepared-replay-v1",
+        mode: "deterministic_replay",
+        selectable: true,
+      }),
     });
   });
 

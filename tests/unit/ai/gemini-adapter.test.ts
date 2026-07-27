@@ -5,6 +5,7 @@ vi.mock("server-only", () => ({}));
 import { buildCanonicalProviderInput } from "../../../lib/ai/server";
 import {
   analyzeWithGemini,
+  runGeminiAnalysis,
   type GeminiTransport,
 } from "../../../lib/ai/server/adapters/gemini";
 
@@ -87,6 +88,36 @@ function transport(response: unknown) {
 }
 
 describe("Gemini analysis adapter", () => {
+  it("constrains lane and evidence nature to canonical values", async () => {
+    const client = transport({ text: JSON.stringify({ candidates: [] }) });
+    await analyzeWithGemini(canonicalInput(), { client });
+
+    const request = vi.mocked(client.generateContent).mock.calls[0]?.[0];
+    const candidate =
+      request?.config.responseJsonSchema.properties.candidates.items;
+    expect(candidate.properties.lane.enum).toEqual([
+      "trafficking_indicators",
+      "non_punishment_relevance",
+      "protection_remedy_urgency",
+    ]);
+    expect(
+      candidate.properties.citations.items.properties.evidenceNature.enum,
+    ).toEqual([
+      "documented_in_source",
+      "reported_or_alleged_in_source",
+      "reviewer_supplied_context",
+      "unknown",
+    ]);
+    expect(candidate.properties.dateStart).toMatchObject({
+      type: "string",
+      format: "date",
+    });
+    expect(candidate.properties.dateEnd).toMatchObject({
+      type: "string",
+      format: "date",
+    });
+  });
+
   it("makes one native stateless strict structured request with the approved fixture only", async () => {
     const client = transport({
       text: JSON.stringify(proposal()),
@@ -115,6 +146,78 @@ describe("Gemini analysis adapter", () => {
       providerTransmission: true,
     });
     expect(result.ok && result.tokenUsage).toEqual({ input: 12, output: 21, total: 33 });
+  });
+
+  it("normalizes an empty optional location to canonical unknown", async () => {
+    const responseProposal = {
+      candidates: proposal().candidates.map((candidate) => ({
+        ...candidate,
+        locationLabel: "",
+      })),
+    };
+    const client = transport({
+      text: JSON.stringify(responseProposal),
+      modelVersion: "gemini-3.5-flash-001",
+    });
+
+    const result = await analyzeWithGemini(canonicalInput(), { client });
+
+    expect(result).toMatchObject({
+      ok: true,
+      proposal: {
+        candidates: [{ locationLabel: null }],
+      },
+    });
+  });
+
+  it("runs the same structured boundary for approved redacted browser input", async () => {
+    const client = transport({
+      text: JSON.stringify(proposal()),
+      modelVersion: "gemini-3.5-flash-001",
+      usageMetadata: {
+        promptTokenCount: 8,
+        candidatesTokenCount: 13,
+        totalTokenCount: 21,
+      },
+    });
+
+    const result = await runGeminiAnalysis(
+      {
+        release: {
+          providerId: "google_gemini",
+          releaseConfigurationId: "gemini-quality-v1",
+          requestedModel: "gemini-3.5-flash",
+          serviceTier: "unpaid",
+        },
+        serializedEvidence: JSON.stringify({
+          dataOrigin: "browser_local",
+          segments: [
+            {
+              segmentId: "D07-P2-S03",
+              redactedText: "[REDACTED]",
+            },
+          ],
+        }),
+        inputByteLength: 96,
+      },
+      { client },
+    );
+
+    expect(result).toMatchObject({
+      ok: true,
+      provenance: {
+        providerId: "google_gemini",
+        providerTransmission: true,
+      },
+      tokenUsage: { input: 8, output: 13, total: 21 },
+    });
+    expect(client.generateContent).toHaveBeenCalledTimes(1);
+    const request = client.generateContent.mock.calls[0]?.[0];
+    expect(request?.contents[0]?.parts[0]?.text).toContain(
+      '"dataOrigin":"browser_local"',
+    );
+    expect(request?.contents[0]?.parts[0]?.text).toContain("[REDACTED]");
+    expect(request?.contents[0]?.parts[0]?.text).not.toContain("rawPdf");
   });
 
   it("blocks a forged fixture binding before transport", async () => {

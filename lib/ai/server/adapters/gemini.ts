@@ -13,7 +13,12 @@ import {
   CFN_DEMO_FIXTURE_BINDING,
   SHARED_PROMPT_VERSION,
   type CanonicalProviderInput,
+  type ProviderPromptInput,
 } from "../types";
+import {
+  normalizeAdapterResult,
+  type NormalizedProviderResult,
+} from "../normalize";
 
 type ModelAnalysisProposal = ReturnType<typeof ModelAnalysisProposalSchema.parse>;
 
@@ -66,7 +71,14 @@ const GEMINI_RESPONSE_JSON_SCHEMA = {
               "provenance_limitation",
             ],
           },
-          lane: { type: "string" },
+          lane: {
+            type: "string",
+            enum: [
+              "trafficking_indicators",
+              "non_punishment_relevance",
+              "protection_remedy_urgency",
+            ],
+          },
           title: { type: "string" },
           proposedText: { type: "string" },
           assertionMode: {
@@ -93,13 +105,21 @@ const GEMINI_RESPONSE_JSON_SCHEMA = {
                   type: "string",
                   enum: ["supports", "limits", "contradicts", "context_only"],
                 },
-                evidenceNature: { type: "string" },
+                evidenceNature: {
+                  type: "string",
+                  enum: [
+                    "documented_in_source",
+                    "reported_or_alleged_in_source",
+                    "reviewer_supplied_context",
+                    "unknown",
+                  ],
+                },
               },
             },
           },
           unknowns: { type: "array", items: { type: "string" } },
-          dateStart: { type: "string" },
-          dateEnd: { type: "string" },
+          dateStart: { type: "string", format: "date" },
+          dateEnd: { type: "string", format: "date" },
           datePrecision: {
             type: "string",
             enum: ["day", "date_range", "approximate", "conflicting", "unknown"],
@@ -111,8 +131,8 @@ const GEMINI_RESPONSE_JSON_SCHEMA = {
               additionalProperties: false,
               required: ["label"],
               properties: {
-                start: { type: "string" },
-                end: { type: "string" },
+                start: { type: "string", format: "date" },
+                end: { type: "string", format: "date" },
                 label: { type: "string" },
               },
             },
@@ -213,6 +233,34 @@ export async function analyzeWithGemini(
     return failure("PROVIDER_DATA_POLICY_BLOCKED", "internal_safe_failure", false);
   }
 
+  return executeGemini(input, options);
+}
+
+export async function runGeminiAnalysis(
+  input: ProviderPromptInput,
+  options: GeminiAdapterOptions = {},
+  signal?: AbortSignal,
+): Promise<NormalizedProviderResult> {
+  if (
+    input.release.providerId !== GEMINI_RELEASE.providerId ||
+    input.release.releaseConfigurationId !==
+      GEMINI_RELEASE.releaseConfigurationId ||
+    input.release.serviceTier !== GEMINI_RELEASE.serviceTier
+  ) {
+    return normalizeAdapterResult(
+      failure("INTERNAL_SAFE_FAILURE", "internal_safe_failure", false),
+    );
+  }
+
+  return normalizeAdapterResult(
+    await executeGemini(input, { ...options, signal }),
+  );
+}
+
+async function executeGemini(
+  input: ProviderPromptInput,
+  options: GeminiAdapterOptions,
+): Promise<GeminiAdapterResult> {
   if (options.signal?.aborted) {
     return failure("PROVIDER_TIMEOUT", "provider_timeout", true);
   }
@@ -256,13 +304,20 @@ export async function analyzeWithGemini(
 
     let parsed: unknown;
     try {
-      parsed = JSON.parse(response.text);
+      parsed = normalizeGeminiProposal(JSON.parse(response.text));
     } catch {
+      logGeminiStructuredRejection("json_parse", ["invalid_json"]);
       return failure("INVALID_STRUCTURED_RESPONSE", "invalid_structured_response", false);
     }
 
     const proposal = ModelAnalysisProposalSchema.safeParse(parsed);
     if (!proposal.success) {
+      logGeminiStructuredRejection(
+        "canonical_schema",
+        proposal.error.issues.slice(0, 8).map((issue) =>
+          `${issue.path.join(".") || "root"}:${issue.code}`
+        ),
+      );
       return failure("INVALID_STRUCTURED_RESPONSE", "invalid_structured_response", false);
     }
 
@@ -280,6 +335,47 @@ export async function analyzeWithGemini(
   } catch (error) {
     return mapProviderError(error);
   }
+}
+
+function normalizeGeminiProposal(value: unknown): unknown {
+  if (
+    typeof value !== "object" ||
+    value === null ||
+    !("candidates" in value) ||
+    !Array.isArray(value.candidates)
+  ) {
+    return value;
+  }
+
+  return {
+    ...value,
+    candidates: value.candidates.map((candidate) => {
+      if (typeof candidate !== "object" || candidate === null) {
+        return candidate;
+      }
+      if (
+        !("locationLabel" in candidate) ||
+        typeof candidate.locationLabel !== "string" ||
+        candidate.locationLabel.trim() !== ""
+      ) {
+        return candidate;
+      }
+      return { ...candidate, locationLabel: null };
+    }),
+  };
+}
+
+function logGeminiStructuredRejection(stage: string, issueCodes: string[]) {
+  if (process.env.CFN_GEMINI_SAFE_DIAGNOSTICS !== "1") return;
+  console.warn(JSON.stringify({
+    event: "gemini_structured_response_rejected",
+    metadata: {
+      providerId: GEMINI_RELEASE.providerId,
+      releaseConfigurationId: GEMINI_RELEASE.releaseConfigurationId,
+      stage,
+      issueCodes,
+    },
+  }));
 }
 
 function isCanonicalProviderInput(value: unknown): value is CanonicalProviderInput {

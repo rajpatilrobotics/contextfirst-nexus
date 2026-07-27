@@ -101,6 +101,15 @@ describe("Groq native analysis adapter", () => {
     expect(request.messages[0].content).toContain(
       "at most 2 short exact citations",
     );
+    const candidateSchema =
+      request.response_format.json_schema.schema.properties.candidates.items;
+    expect(candidateSchema.properties.dateAlternatives.items).toMatchObject({
+      required: ["start", "end", "label"],
+      properties: {
+        start: { type: ["string", "null"] },
+        end: { type: ["string", "null"] },
+      },
+    });
     expect(JSON.stringify(request)).not.toContain("apiKey");
   });
 
@@ -140,6 +149,53 @@ describe("Groq native analysis adapter", () => {
       tokenUsage: { input: 20, output: 10, total: 30 },
     });
     expect(transport).toHaveBeenCalledTimes(1);
+  });
+
+  it("normalizes strict-schema null date-alternative bounds before canonical parsing", async () => {
+    const providerProposal = {
+      candidates: [
+        {
+          ...proposal.candidates[0],
+          dateStart: null,
+          dateEnd: null,
+          datePrecision: null,
+          dateAlternatives: [
+            { start: null, end: null, label: "Date not stated" },
+          ],
+          locationLabel: null,
+          actorLabels: [],
+          nexusCategory: null,
+        },
+      ],
+    };
+    const result = await runGroqAnalysis(canonicalInput(), {
+      apiKey: "test-only",
+      fetch: vi.fn().mockResolvedValue(
+        new Response(
+          JSON.stringify({
+            model: "openai/gpt-oss-20b",
+            choices: [
+              {
+                finish_reason: "stop",
+                message: { content: JSON.stringify(providerProposal) },
+              },
+            ],
+          }),
+          { status: 200 },
+        ),
+      ),
+    });
+
+    expect(result).toMatchObject({
+      ok: true,
+      proposal: {
+        candidates: [
+          {
+            dateAlternatives: [{ label: "Date not stated" }],
+          },
+        ],
+      },
+    });
   });
 
   it("fails closed without a key and never calls transport", async () => {

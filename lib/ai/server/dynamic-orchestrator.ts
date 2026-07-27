@@ -9,6 +9,7 @@ import {
 } from "../../contracts";
 import { runOpenAIAnalysis } from "./adapters/openai";
 import { runGroqAnalysis } from "./adapters/groq";
+import { runGeminiAnalysis } from "./adapters/gemini";
 import { buildDynamicCanonicalAnalysisInput } from "./dynamic-canonical-input";
 import {
   MANAGED_LIVE_PROVIDER_ORDER,
@@ -23,6 +24,7 @@ import {
 import { postValidateAnalysisProposal } from "./post-validate";
 import { getRegistryEntry, projectProviderOption } from "./registry";
 import type { ProviderPromptInput } from "./types";
+import { OPENAI_MODEL_CONFIGURATION } from "./openai-model";
 
 type DynamicProviderExecutor = (
   input: ProviderPromptInput,
@@ -77,7 +79,7 @@ export async function analyzeDynamicBrowserCase(
   }
 
   const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 45_000);
+  const timeout = setTimeout(() => controller.abort(), 55_000);
   const observed = new Map<ManagedLiveProviderId, NormalizedProviderResult>();
 
   try {
@@ -276,6 +278,9 @@ function executorFor(
   if (providerId === "groq") {
     return (input, signal) => runGroqAnalysis(input, {}, signal);
   }
+  if (providerId === "google_gemini") {
+    return (input, signal) => runGeminiAnalysis(input, {}, signal);
+  }
   if (providerId === "openai") {
     return async (input, signal) =>
       normalizeAdapterResult(
@@ -309,6 +314,7 @@ function providerConfigured(providerId: ManagedLiveProviderId): boolean {
     );
   }
   return (
+    OPENAI_MODEL_CONFIGURATION.valid &&
     process.env.ENABLE_OPENAI_ANALYSIS === "true" &&
     Boolean(process.env.OPENAI_API_KEY)
   );

@@ -30,6 +30,12 @@ const REPORT_FILES = {
   string
 >>;
 
+const INCOMPLETE_RELEASES = [
+  "gemini-quality-v1",
+  "mistral-small-free-v1",
+  "groq-oss-20b-free-v1",
+] as const;
+
 type EvidenceStatus = "passed" | "failed" | "interrupted" | "not_run";
 type EvidenceRecord = {
   executionRequirement?: "live_model_run" | "deterministic_control";
@@ -81,9 +87,7 @@ function projectWithAdmission(
 
 describe("TASK-026 static provider admission handoff", () => {
   it("records the exact incomplete report identities and bindings", () => {
-    for (const releaseConfigurationId of Object.keys(REPORT_FILES) as Array<
-      keyof typeof REPORT_FILES
-    >) {
+    for (const releaseConfigurationId of INCOMPLETE_RELEASES) {
       const report = loadReport(releaseConfigurationId);
       const reviewed = REVIEWED_INCOMPLETE_REPORTS[releaseConfigurationId];
       const reportProjection = Object.fromEntries(
@@ -131,10 +135,46 @@ describe("TASK-026 static provider admission handoff", () => {
     }
   });
 
+  it("binds the reviewed passed Terra report to the static OpenAI admission", () => {
+    const report = loadReport("openai-quality-v1");
+    const record = getAdmissionRecord("openai-quality-v1");
+    const projection = Object.fromEntries(
+      Object.entries(report).filter(([key]) => key !== "reportDigest"),
+    );
+    const liveEvidence = (report.evidence as EvidenceRecord[]).filter(
+      (item) => item.executionRequirement === "live_model_run",
+    );
+
+    expect(report.status).toBe("passed");
+    expect(report.requestedModel).toBe("gpt-5.6-terra");
+    expect(report.reportDigest).toBe(canonicalDigest(projection));
+    expect(liveEvidence).toHaveLength(27);
+    expect(liveEvidence.every((item) => item.status === "passed")).toBe(true);
+    expect(report.gates).toHaveLength(8);
+    expect(report.gates.every((gate) => gate.status === "passed")).toBe(true);
+    expect(record).toMatchObject({
+      evaluationStatus: "passed",
+      evaluationReportId: report.id,
+      evaluationReportDigest: report.reportDigest,
+      recordedAt: report.generatedAt,
+    });
+    expect(record?.evaluatedConfiguration.requestedModel).toBe(
+      report.requestedModel,
+    );
+    expect(
+      record?.evaluatedConfiguration.evaluatedConfigurationDigest,
+    ).toBe(report.evaluatedConfigurationDigest);
+    expect(
+      projectWithAdmission("openai-quality-v1", record!),
+    ).toMatchObject({
+      evaluationStatus: "passed",
+      availabilityStatus: "available",
+      selectable: true,
+    });
+  });
+
   it("preserves exact incomplete live evidence and blocking gates", () => {
-    for (const releaseConfigurationId of Object.keys(REPORT_FILES) as Array<
-      keyof typeof REPORT_FILES
-    >) {
+    for (const releaseConfigurationId of INCOMPLETE_RELEASES) {
       const report = loadReport(releaseConfigurationId);
       const reviewed = REVIEWED_INCOMPLETE_REPORTS[releaseConfigurationId];
       const evidence = report.evidence as EvidenceRecord[];
@@ -216,9 +256,7 @@ describe("TASK-026 static provider admission handoff", () => {
   });
 
   it("uses the corrected canonical evaluated-configuration digest and stays fail closed", () => {
-    for (const releaseConfigurationId of Object.keys(REPORT_FILES) as Array<
-      keyof typeof REPORT_FILES
-    >) {
+    for (const releaseConfigurationId of INCOMPLETE_RELEASES) {
       const report = loadReport(releaseConfigurationId);
       const reviewed = REVIEWED_INCOMPLETE_REPORTS[releaseConfigurationId];
       const record = getAdmissionRecord(releaseConfigurationId);
@@ -289,26 +327,36 @@ describe("TASK-026 static provider admission handoff", () => {
     expect(JSON.stringify(liveEvidence)).not.toContain("gpt-oss-120b");
   });
 
-  it("keeps every live option non-selectable while replay remains available", () => {
+  it("makes only the admitted OpenAI release selectable alongside replay", () => {
     const response = buildAnalyzeAvailabilityResponse({ liveAnalysisEnabled: true });
     const liveOptions = response.options.slice(0, 4);
+    const openai = liveOptions.find((option) => option.providerId === "openai");
+    const otherLiveOptions = liveOptions.filter(
+      (option) => option.providerId !== "openai",
+    );
 
-    expect(liveOptions.map((option) => option.evaluationStatus)).toEqual([
-      "not_evaluated",
-      "not_evaluated",
-      "not_evaluated",
-      "not_evaluated",
-    ]);
-    expect(liveOptions.every((option) => option.selectable === false)).toBe(true);
+    expect(openai).toMatchObject({
+      requestedModel: "gpt-5.6-terra",
+      evaluationStatus: "passed",
+      availabilityStatus: "available",
+      selectable: true,
+    });
+    expect(
+      otherLiveOptions.every(
+        (option) =>
+          option.evaluationStatus === "not_evaluated" &&
+          option.selectable === false,
+      ),
+    ).toBe(true);
     expect(response.options[4]?.selectable).toBe(true);
     expect(response.options[0]?.deployedAccountReleaseAvailabilityStatus).toBe("not_verified");
     expect(response.options[2]?.deployedAccountReleaseAvailabilityStatus).toBe("not_verified");
   });
 
   it("rejects report identity on a not-evaluated admission record", () => {
-    const record = getAdmissionRecord("openai-quality-v1");
-    const report = REVIEWED_INCOMPLETE_REPORTS["openai-quality-v1"];
-    if (!record) throw new Error("Missing OpenAI admission record.");
+    const record = getAdmissionRecord("gemini-quality-v1");
+    const report = REVIEWED_INCOMPLETE_REPORTS["gemini-quality-v1"];
+    if (!record) throw new Error("Missing Gemini admission record.");
     expect(() =>
       ProviderReleaseAdmissionRecordSchema.parse({
         ...record,

@@ -8,14 +8,31 @@ if (mode !== "deterministic") {
   process.exit(2);
 }
 
+const suiteIndex = process.argv.indexOf("--suite");
+const suite = suiteIndex >= 0 ? process.argv[suiteIndex + 1] : "provider-admission";
+const suites = {
+  "provider-admission": {
+    test: "tests/unit/evaluation/runner.test.ts",
+    environment: { CFN_EVALUATION_WRITE_ARTIFACTS: "1" },
+  },
+  "browser-pipeline": {
+    test: "tests/unit/evaluation/browser-pipeline.test.ts",
+    environment: { CFN_PIPELINE_EVALUATION_WRITE_ARTIFACTS: "1" },
+  },
+};
+const selectedSuite = suites[suite];
+if (!selectedSuite) {
+  console.error(`Unknown deterministic evaluation suite: ${suite}`);
+  process.exit(2);
+}
+
 const result = spawnSync(
   process.execPath,
-  ["node_modules/vitest/vitest.mjs", "run", "tests/unit/evaluation/runner.test.ts", "--mode", "deterministic"],
+  ["node_modules/vitest/vitest.mjs", "run", selectedSuite.test, "--mode", "deterministic"],
   {
     cwd: process.cwd(),
-    env: { ...process.env, CFN_EVALUATION_WRITE_ARTIFACTS: "1" },
+    env: { ...process.env, ...selectedSuite.environment },
     stdio: "inherit",
   },
 );
 process.exit(result.status ?? 1);
-

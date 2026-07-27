@@ -19,6 +19,7 @@ import {
 } from "../types";
 
 const OPENAI_RELEASE = LIVE_PROVIDER_RELEASES[0];
+const OPENAI_MAX_OUTPUT_TOKENS = 8_000;
 
 type OpenAIResponsesClient = {
   responses: {
@@ -76,6 +77,7 @@ const proposalJsonSchema = {
         required: [
           "proposedId",
           "kind",
+          "lane",
           "title",
           "proposedText",
           "assertionMode",
@@ -91,7 +93,7 @@ const proposalJsonSchema = {
           "nexusCategory",
         ],
         properties: {
-          proposedId: { type: "string", minLength: 1 },
+          proposedId: { type: "string" },
           kind: {
             type: "string",
             enum: [
@@ -106,11 +108,12 @@ const proposalJsonSchema = {
             ],
           },
           lane: {
-            type: "string",
+            type: ["string", "null"],
             enum: [
               "trafficking_indicators",
               "non_punishment_relevance",
               "protection_remedy_urgency",
+              null,
             ],
           },
           title: { type: "string" },
@@ -133,10 +136,7 @@ const proposalJsonSchema = {
               additionalProperties: false,
               required: ["segmentId", "quotedText", "relationship", "evidenceNature"],
               properties: {
-                segmentId: {
-                  type: "string",
-                  pattern: "^D\\d{2}-(?:P\\d+-S\\d+|META-\\d+)$",
-                },
+                segmentId: { type: "string" },
                 quotedText: { type: "string" },
                 relationship: {
                   type: "string",
@@ -166,10 +166,10 @@ const proposalJsonSchema = {
             items: {
               type: "object",
               additionalProperties: false,
-              required: ["label"],
+              required: ["start", "end", "label"],
               properties: {
-                start: { type: "string" },
-                end: { type: "string" },
+                start: { type: ["string", "null"] },
+                end: { type: ["string", "null"] },
                 label: { type: "string" },
               },
             },
@@ -196,8 +196,12 @@ export async function runOpenAIAnalysis({
   if (
     input.release.providerId !== OPENAI_RELEASE.providerId ||
     input.release.releaseConfigurationId !== OPENAI_RELEASE.releaseConfigurationId ||
+    input.release.requestedModel !== OPENAI_RELEASE.requestedModel ||
     input.release.serviceTier !== OPENAI_RELEASE.serviceTier
   ) {
+    if (process.env.CFN_SAFE_PROVIDER_DIAGNOSTICS === "1") {
+      console.warn("[OpenAI request diagnostic]", "release_binding_mismatch");
+    }
     return { ok: false, failure: failure("internal_safe_failure"), provenance };
   }
 
@@ -211,6 +215,9 @@ export async function runOpenAIAnalysis({
     policy.crossProviderFallback ||
     policy.replaySubstitution
   ) {
+    if (process.env.CFN_SAFE_PROVIDER_DIAGNOSTICS === "1") {
+      console.warn("[OpenAI request diagnostic]", "request_policy_mismatch");
+    }
     return { ok: false, failure: failure("internal_safe_failure"), provenance };
   }
 
@@ -220,6 +227,7 @@ export async function runOpenAIAnalysis({
     const response = await client.responses.create(
       {
         model: OPENAI_RELEASE.requestedModel,
+        max_output_tokens: OPENAI_MAX_OUTPUT_TOKENS,
         instructions: prompt.systemBoundary,
         input: [
           {
@@ -275,7 +283,9 @@ export async function runOpenAIAnalysis({
       };
     }
 
-    const proposal = ModelAnalysisProposalSchema.safeParse(parsedJson.value);
+    const proposal = ModelAnalysisProposalSchema.safeParse(
+      normalizeOpenAIProposalJson(parsedJson.value),
+    );
     if (!proposal.success) {
       return {
         ok: false,
@@ -292,8 +302,64 @@ export async function runOpenAIAnalysis({
       usage: response.usage ?? null,
     };
   } catch (error) {
+    if (
+      process.env.CFN_SAFE_PROVIDER_DIAGNOSTICS === "1" &&
+      error instanceof APIError
+    ) {
+      console.warn(
+        "[OpenAI request diagnostic]",
+        JSON.stringify({
+          status: error.status ?? null,
+          code: error.code ?? null,
+          param: error.param ?? null,
+          type: error.type ?? null,
+        }),
+      );
+    }
     return { ok: false, failure: mapOpenAIError(error), provenance };
   }
+}
+
+function normalizeOpenAIProposalJson(value: unknown): unknown {
+  if (
+    typeof value !== "object" ||
+    value === null ||
+    !("candidates" in value) ||
+    !Array.isArray(value.candidates)
+  ) {
+    return value;
+  }
+
+  return {
+    ...value,
+    candidates: value.candidates.map((candidate) => {
+      if (typeof candidate !== "object" || candidate === null) {
+        return candidate;
+      }
+      const normalized = { ...candidate } as Record<string, unknown>;
+      if (normalized.lane === null) delete normalized.lane;
+      if (Array.isArray(normalized.dateAlternatives)) {
+        normalized.dateAlternatives = normalized.dateAlternatives.map(
+          (alternative) => {
+            if (typeof alternative !== "object" || alternative === null) {
+              return alternative;
+            }
+            const normalizedAlternative = {
+              ...alternative,
+            } as Record<string, unknown>;
+            if (normalizedAlternative.start === null) {
+              delete normalizedAlternative.start;
+            }
+            if (normalizedAlternative.end === null) {
+              delete normalizedAlternative.end;
+            }
+            return normalizedAlternative;
+          },
+        );
+      }
+      return normalized;
+    }),
+  };
 }
 
 function buildOpenAIProvenance(returnedModel: string | null): AnalysisProviderProvenance {

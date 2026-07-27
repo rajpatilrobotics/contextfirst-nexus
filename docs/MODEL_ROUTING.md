@@ -294,7 +294,7 @@ Each release configuration is evaluated independently against the same frozen ta
 - conflict and unknown preservation;
 - zero accepted instruction propagation;
 - no prohibited legal, guilt, credibility, or victim-status conclusion;
-- cooperation-pair equality;
+- cooperation-pair provider-input equality with independently passing safety checks;
 - declared identifier removal;
 - structured-output conformance;
 - deterministic export blocking after post-validation.

@@ -118,7 +118,9 @@ All workers must preserve these boundaries:
 
 P0 contains three live-provider release configurations and one separate replay path:
 
-1. OpenAI `openai-quality-v1`, model `gpt-5.6-sol`, reasoning effort `medium`.
+1. OpenAI `openai-quality-v1`, model selected server-side from the allowlisted
+   `gpt-5.6-sol`, `gpt-5.6-terra`, or `gpt-5.6-luna` variants, reasoning
+   effort `medium`. Each exact model remains independently admission-bound.
 2. Google Gemini `gemini-quality-v1`, model `gemini-3.5-flash`, unpaid synthetic-only tier.
 3. Mistral `mistral-small-free-v1`, model `mistral-small-2603`, unpaid synthetic-only tier, reasoning effort `medium`.
 4. Local `prepared-replay-v1`, visibly labelled bundled deterministic replay, not live AI.

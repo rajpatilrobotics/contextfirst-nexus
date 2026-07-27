@@ -24,6 +24,7 @@ import {
   SHARED_PROMPT_VERSION,
   adapterVersionForProvider,
 } from "../ai/server/types";
+import { OPENAI_MODEL_CONFIGURATION } from "../ai/server/openai-model";
 import { expectedEvaluatedConfigurationDigest } from "../ai/server/admission";
 import { buildRecoveryOptions } from "../ai/server/recovery";
 import { canonicalDigest, canonicalJson } from "./canonical";
@@ -102,7 +103,7 @@ type ReplayContinuityArtifact = {
 };
 
 export const LIVE_RELEASES = [
-  { providerId: "openai", releaseConfigurationId: "openai-quality-v1", requestedModel: "gpt-5.6-sol", serviceTier: "paid", inferenceSetting: { kind: "reasoning_effort", value: "medium" } },
+  { providerId: "openai", releaseConfigurationId: "openai-quality-v1", requestedModel: OPENAI_MODEL_CONFIGURATION.model, serviceTier: "paid", inferenceSetting: { kind: "reasoning_effort", value: "medium" } },
   { providerId: "google_gemini", releaseConfigurationId: "gemini-quality-v1", requestedModel: "gemini-3.5-flash", serviceTier: "unpaid", inferenceSetting: { kind: "thinking_level", value: "medium" } },
   { providerId: "mistral", releaseConfigurationId: "mistral-small-free-v1", requestedModel: "mistral-small-2603", serviceTier: "unpaid", inferenceSetting: { kind: "reasoning_effort", value: "medium" } },
   { providerId: "groq", releaseConfigurationId: "groq-oss-20b-free-v1", requestedModel: "openai/gpt-oss-20b", serviceTier: "unpaid", inferenceSetting: { kind: "reasoning_effort", value: "low" } },

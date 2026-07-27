@@ -44,25 +44,21 @@ export function resolveReplayAnalysisAvailability(
   options: readonly ProviderOptionProjection[],
 ): ReplayAnalysisAvailability {
   const selectable = options.filter((option) => option.selectable);
+  const replay = options.find((option) => option.providerId === "local_replay");
 
   if (selectable.length === 0) {
     return { status: "unavailable", reason: "zero_selectable" };
   }
 
-  if (selectable.length > 1) {
-    return { status: "unavailable", reason: "multiple_selectable" };
-  }
-
-  const option = selectable[0];
-  if (option.providerId !== "local_replay" || option.mode === "live") {
+  if (!replay?.selectable) {
     return { status: "unavailable", reason: "live_service_selectable" };
   }
 
-  if (!isTrustedLocalReplay(option)) {
+  if (!isTrustedLocalReplay(replay)) {
     return { status: "unavailable", reason: "invalid_replay_service" };
   }
 
-  return { status: "ready", option };
+  return { status: "ready", option: replay };
 }
 
 export function AnalysisDisclosurePanel({

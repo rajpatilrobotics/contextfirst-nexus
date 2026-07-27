@@ -15,12 +15,13 @@ import {
   EVALUATION_DEFINITION_SET_DIGEST,
   SHARED_PROMPT_VERSION,
 } from "./types";
+import { OPENAI_MODEL_CONFIGURATION } from "./openai-model";
 
 const LIVE_RELEASES = [
   {
     providerId: "openai",
     releaseConfigurationId: "openai-quality-v1",
-    requestedModel: "gpt-5.6-sol",
+    requestedModel: OPENAI_MODEL_CONFIGURATION.model,
     serviceTier: "paid",
   },
   {
@@ -204,22 +205,6 @@ function reviewedIncompleteReport(
  * report identity fields or promote a provider.
  */
 export const REVIEWED_INCOMPLETE_REPORTS = {
-  "openai-quality-v1": reviewedIncompleteReport(
-    LIVE_RELEASES[0],
-    INFERENCE_BY_RELEASE["openai-quality-v1"],
-    "REPORT-OPENAI-QUALITY-V1-V1",
-    "af1f3508e6901cd64cc939a085549c773d428e535d424fe08886e3871869dad2",
-    "2026-07-16T00:00:00.000Z",
-    "c23118e6683c1b1d099db3385d1cbc47eb05fdaf6608b9bcbd3741ba910a877a",
-    "c23118e6683c1b1d099db3385d1cbc47eb05fdaf6608b9bcbd3741ba910a877a",
-    {
-      passed: 0,
-      failed: 0,
-      interrupted: 0,
-      notRun: 27,
-      actualProviderTransmissions: 0,
-    },
-  ),
   "gemini-quality-v1": reviewedIncompleteReport(
     LIVE_RELEASES[1],
     INFERENCE_BY_RELEASE["gemini-quality-v1"],
@@ -286,10 +271,22 @@ export const STATIC_ADMISSION_RECORDS = LIVE_RELEASES.map((release) =>
       release,
       INFERENCE_BY_RELEASE[release.releaseConfigurationId],
     ),
-    evaluationStatus: "not_evaluated",
-    evaluationReportId: null,
-    evaluationReportDigest: null,
-    recordedAt: null,
+    evaluationStatus:
+      release.releaseConfigurationId === "openai-quality-v1"
+        ? "passed"
+        : "not_evaluated",
+    evaluationReportId:
+      release.releaseConfigurationId === "openai-quality-v1"
+        ? "REPORT-OPENAI-QUALITY-V1-V1"
+        : null,
+    evaluationReportDigest:
+      release.releaseConfigurationId === "openai-quality-v1"
+        ? "b88dd736d3e708231b2efc345a6a5372ca4d6d34e6245b3940ea1071ba1d3fef"
+        : null,
+    recordedAt:
+      release.releaseConfigurationId === "openai-quality-v1"
+        ? "2026-07-27T16:25:23.995Z"
+        : null,
   }),
 ) satisfies ProviderReleaseAdmissionRecord[];
 

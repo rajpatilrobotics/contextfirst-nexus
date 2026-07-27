@@ -117,6 +117,20 @@ function provenance(providerId: "groq" | "openai") {
   );
 }
 
+function geminiProvenance() {
+  return AnalysisProviderProvenanceSchema.parse({
+    providerId: "google_gemini",
+    releaseConfigurationId: "gemini-quality-v1",
+    requestedModel: "gemini-3.5-flash",
+    serviceTier: "unpaid",
+    adapterVersion: "test",
+    returnedModel: "gemini-3.5-flash-001",
+    inferenceSetting: { kind: "thinking_level", value: "medium" },
+    disclosureVersion: "1.0.0",
+    providerTransmission: true,
+  });
+}
+
 const enabledCandidates = {
   admitted: {
     mistral: true,
@@ -127,6 +141,12 @@ const enabledCandidates = {
   configured: {
     mistral: true,
     google_gemini: true,
+    groq: true,
+    openai: true,
+  },
+  dataEligible: {
+    mistral: false,
+    google_gemini: false,
     groq: true,
     openai: true,
   },
@@ -174,9 +194,13 @@ describe("dynamic browser-case managed analysis", () => {
     expect(openai).not.toHaveBeenCalled();
   });
 
-  it("skips data-ineligible free tiers and accepts Groq before OpenAI", async () => {
+  it("skips Mistral and accepts an eligible Gemini result before Groq", async () => {
     const mistral = vi.fn();
-    const gemini = vi.fn();
+    const gemini = vi.fn().mockResolvedValue({
+      ok: true,
+      proposal: proposal(),
+      provenance: geminiProvenance(),
+    });
     const groq = vi.fn().mockResolvedValue({
       ok: true,
       proposal: proposal(),
@@ -191,17 +215,20 @@ describe("dynamic browser-case managed analysis", () => {
     const result = await analyzeDynamicBrowserCase(intent(), {
       liveAnalysisEnabled: true,
       ...enabledCandidates,
+      dataEligible: {
+        ...enabledCandidates.dataEligible,
+        google_gemini: true,
+      },
       executors: { mistral, google_gemini: gemini, groq, openai },
       now: () => new Date("2026-07-26T00:00:00.000Z"),
     });
 
     expect(result).toMatchObject({
       outcome: "succeeded",
-      run: { provider: { providerId: "groq" } },
+      run: { provider: { providerId: "google_gemini" } },
       attempts: [
         { providerId: "mistral", outcome: "data_policy_blocked" },
-        { providerId: "google_gemini", outcome: "data_policy_blocked" },
-        { providerId: "groq", outcome: "accepted" },
+        { providerId: "google_gemini", outcome: "accepted" },
       ],
     });
     expect(result.citations[0]).toMatchObject({
@@ -239,8 +266,8 @@ describe("dynamic browser-case managed analysis", () => {
     );
     expect(result.run.candidateCount).toBe(result.candidates.length);
     expect(mistral).not.toHaveBeenCalled();
-    expect(gemini).not.toHaveBeenCalled();
-    expect(groq).toHaveBeenCalledTimes(1);
+    expect(gemini).toHaveBeenCalledTimes(1);
+    expect(groq).not.toHaveBeenCalled();
     expect(openai).not.toHaveBeenCalled();
   });
 

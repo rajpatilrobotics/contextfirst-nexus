@@ -9,7 +9,9 @@ const nextConfig: NextConfig = {
     return [
       {
         source: "/:path*",
-        headers: securityHeadersForNextConfig(),
+        headers: securityHeadersForNextConfig({
+          development: process.env.NODE_ENV === "development",
+        }),
       },
     ];
   },

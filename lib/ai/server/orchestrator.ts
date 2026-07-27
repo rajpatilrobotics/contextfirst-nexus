@@ -22,7 +22,7 @@ import { failure, normalizeAdapterResult, type AnalysisFailureLike } from "./nor
 import { postValidateAnalysisProposal } from "./post-validate";
 import type { CanonicalProviderInput } from "./types";
 
-const PROVIDER_TIMEOUT_MS = 45_000;
+const PROVIDER_TIMEOUT_MS = 55_000;
 const RESPONSE_SCHEMA_VERSION = "1.0.0" as const;
 const RULESET_VERSION = "1.0.0" as const;
 
@@ -100,14 +100,18 @@ export async function runSelectedProvider(
   const startedAt = nowIso();
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), PROVIDER_TIMEOUT_MS);
+  let executionStage = "adapter_call";
 
   try {
     const adapterResult = await callSelectedAdapter(input, runId, controller.signal, adapters);
+    executionStage = "adapter_normalization";
     const normalized = normalizeAdapterResult(adapterResult);
     if (!normalized.ok) {
+      executionStage = "failure_response";
       return failedResponse(input, runId, startedAt, normalized.failure, normalized.provenance, normalized.tokenUsage);
     }
 
+    executionStage = "proposal_validation";
     const validated = postValidateAnalysisProposal(
       normalized.proposal,
       { caseId: input.request.caseId },
@@ -147,7 +151,17 @@ export async function runSelectedProvider(
     };
     AnalyzeResponseSchema.parse(response);
     return response;
-  } catch {
+  } catch (error) {
+    if (process.env.CFN_SAFE_PROVIDER_DIAGNOSTICS === "1") {
+      console.warn(
+        "[Analysis orchestration diagnostic]",
+        JSON.stringify({
+          stage: executionStage,
+          errorName:
+            error instanceof Error ? error.name : "NonErrorException",
+        }),
+      );
+    }
     const entryFailure = failure(controller.signal.aborted ? "provider_timeout" : "internal_safe_failure");
     return failedResponse(input, runId, startedAt, entryFailure, fallbackProvenance(input));
   } finally {
@@ -247,14 +261,7 @@ function failedResponse(
 function fallbackProvenance(input: CanonicalProviderInput): AnalysisProviderProvenance {
   return {
     ...input.release,
-    requestedModel:
-      input.release.providerId === "openai"
-        ? "gpt-5.6-sol"
-        : input.release.providerId === "google_gemini"
-          ? "gemini-3.5-flash"
-          : input.release.providerId === "mistral"
-            ? "mistral-small-2603"
-            : "openai/gpt-oss-20b",
+    requestedModel: input.release.requestedModel,
     adapterVersion: "task-011-shared-boundary-v1",
     returnedModel: null,
     inferenceSetting:

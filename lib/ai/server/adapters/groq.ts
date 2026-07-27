@@ -23,6 +23,8 @@ const GROQ_RELEASE = {
   serviceTier: "unpaid",
 } as const;
 
+const GROQ_MODEL_ANALYSIS_JSON_SCHEMA = buildGroqJsonSchema();
+
 type GroqFetch = (
   input: string | URL | Request,
   init?: RequestInit,
@@ -166,7 +168,7 @@ export async function runGroqAnalysis(
 
     let decoded: unknown;
     try {
-      decoded = JSON.parse(content);
+      decoded = normalizeGroqProposal(JSON.parse(content));
     } catch {
       logSafeStructuredRejection("json_parse", "invalid");
       return {
@@ -245,11 +247,84 @@ export function buildGroqRequest(input: ProviderPromptInput) {
       json_schema: {
         name: "contextfirst_nexus_model_analysis_proposal",
         strict: true,
-        schema: MODEL_ANALYSIS_JSON_SCHEMA,
+        schema: GROQ_MODEL_ANALYSIS_JSON_SCHEMA,
       },
     },
     stream: false,
   } as const;
+}
+
+function buildGroqJsonSchema() {
+  const candidates = MODEL_ANALYSIS_JSON_SCHEMA.properties.candidates;
+  const candidate = candidates.items;
+  const dateAlternatives = candidate.properties.dateAlternatives;
+  const alternative = dateAlternatives.items;
+
+  return {
+    ...MODEL_ANALYSIS_JSON_SCHEMA,
+    properties: {
+      ...MODEL_ANALYSIS_JSON_SCHEMA.properties,
+      candidates: {
+        ...candidates,
+        items: {
+          ...candidate,
+          properties: {
+            ...candidate.properties,
+            dateAlternatives: {
+              ...dateAlternatives,
+              items: {
+                ...alternative,
+                required: ["start", "end", "label"] as const,
+                properties: {
+                  ...alternative.properties,
+                  start: { type: ["string", "null"] as const },
+                  end: { type: ["string", "null"] as const },
+                },
+              },
+            },
+          },
+        },
+      },
+    },
+  } as const;
+}
+
+function normalizeGroqProposal(value: unknown): unknown {
+  if (
+    typeof value !== "object" ||
+    value === null ||
+    !("candidates" in value) ||
+    !Array.isArray(value.candidates)
+  ) {
+    return value;
+  }
+
+  return {
+    ...value,
+    candidates: value.candidates.map((candidate) => {
+      if (
+        typeof candidate !== "object" ||
+        candidate === null ||
+        !("dateAlternatives" in candidate) ||
+        !Array.isArray(candidate.dateAlternatives)
+      ) {
+        return candidate;
+      }
+
+      return {
+        ...candidate,
+        dateAlternatives: candidate.dateAlternatives.map((alternative: unknown) => {
+          if (typeof alternative !== "object" || alternative === null) {
+            return alternative;
+          }
+          const normalized = { ...alternative } as Record<string, unknown>;
+          if (normalized.start === null) delete normalized.start;
+          if (normalized.end === null) delete normalized.end;
+          return normalized;
+        }),
+      };
+    }),
+  };
 }
 
 function logSafeStructuredRejection(stage: string, code: string) {

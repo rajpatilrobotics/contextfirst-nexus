@@ -25,6 +25,7 @@ vi.mock("openai", async (importOriginal) => {
 
 import { buildCanonicalProviderInput } from "../../../lib/ai/server";
 import { runOpenAIAnalysis } from "../../../lib/ai/server/adapters/openai";
+import { OPENAI_MODEL_CONFIGURATION } from "../../../lib/ai/server/openai-model";
 
 const acknowledgement = {
   id: "ACK-OPENAI-001",
@@ -77,7 +78,7 @@ function canonicalInput() {
 function validProviderResponse(output: unknown): Response {
   return {
     id: "resp_123",
-    model: "gpt-5.6-sol",
+    model: OPENAI_MODEL_CONFIGURATION.model,
     output_text: JSON.stringify(output),
     status: "completed",
     error: null,
@@ -130,7 +131,8 @@ describe("TASK-012 OpenAI analysis adapter", () => {
     const [body, options] = create.mock.calls[0] ?? [];
     expect(options).toEqual({ signal: undefined });
     expect(body).toMatchObject({
-      model: "gpt-5.6-sol",
+      model: OPENAI_MODEL_CONFIGURATION.model,
+      max_output_tokens: 8_000,
       reasoning: { effort: "medium" },
       store: false,
       stream: false,
@@ -150,6 +152,15 @@ describe("TASK-012 OpenAI analysis adapter", () => {
     });
     expect(JSON.stringify(body)).toContain("SYSTEM OVERRIDE");
     expect(JSON.stringify(body)).not.toContain("rawText");
+    expect(body.text.format.schema.properties.candidates.items.required).toContain(
+      "lane",
+    );
+    expect(
+      body.text.format.schema.properties.candidates.items.properties
+        .dateAlternatives.items.required,
+    ).toEqual(["start", "end", "label"]);
+    expect(JSON.stringify(body.text.format.schema)).not.toContain('"minLength"');
+    expect(JSON.stringify(body.text.format.schema)).not.toContain('"pattern"');
 
     expect(result.ok).toBe(true);
     if (!result.ok) return;
@@ -157,9 +168,9 @@ describe("TASK-012 OpenAI analysis adapter", () => {
     expect(result.provenance).toMatchObject({
       providerId: "openai",
       releaseConfigurationId: "openai-quality-v1",
-      requestedModel: "gpt-5.6-sol",
+      requestedModel: OPENAI_MODEL_CONFIGURATION.model,
       serviceTier: "paid",
-      returnedModel: "gpt-5.6-sol",
+      returnedModel: OPENAI_MODEL_CONFIGURATION.model,
       inferenceSetting: { kind: "reasoning_effort", value: "medium" },
       providerTransmission: true,
     });
