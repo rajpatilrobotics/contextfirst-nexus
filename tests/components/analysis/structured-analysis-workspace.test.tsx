@@ -100,6 +100,39 @@ describe("Phase 3 Structured Analysis", () => {
     expect(screen.queryByRole("heading", { name: "Source-linked timeline" })).not.toBeInTheDocument();
   });
 
+  it("shows transparent review-order guidance without presenting a confidence score", () => {
+    const checkpoint = checkpointState();
+    const prioritized = checkpoint.candidates.find(isStructuredCandidate);
+    if (!prioritized) throw new Error("structured candidate missing");
+    const state: CaseState = {
+      ...checkpoint,
+      candidates: checkpoint.candidates.map((candidate) =>
+        candidate.id === prioritized.id
+          ? {
+              ...candidate,
+              deterministicMatch: {
+                ruleCode: "A-CONTROL",
+                exactPhrase: "withheld the passport",
+                rationale:
+                  "It matched an explicit browser-local review rule.",
+                reviewPriority: "review_first" as const,
+                priorityReason:
+                  "An explicit phrase appears in two exact source locations. This determines review order only; it does not measure truth, credibility, risk, or legal strength.",
+              },
+            }
+          : candidate,
+      ),
+    };
+
+    renderWorkspace(state);
+    expect(screen.getByText("Review first")).toBeInTheDocument();
+    expect(screen.getByText("Review order:")).toBeInTheDocument();
+    expect(
+      screen.getByText(/does not measure truth, credibility, risk, or legal strength/i),
+    ).toBeInTheDocument();
+    expect(screen.queryByText(/confidence score/i)).not.toBeInTheDocument();
+  });
+
   it("uses filters as read-only projections and never shows a hidden candidate detail", async () => {
     const user = userEvent.setup();
     renderWorkspace();

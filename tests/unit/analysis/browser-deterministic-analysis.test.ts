@@ -88,7 +88,7 @@ describe("buildBrowserDeterministicAnalysis", () => {
       mode: "deterministic_replay",
       provider: {
         providerId: "local_replay",
-        adapterVersion: "browser-deterministic-analysis-v4",
+        adapterVersion: "browser-deterministic-analysis-v5",
         providerTransmission: false,
       },
       status: "succeeded",
@@ -202,6 +202,82 @@ describe("buildBrowserDeterministicAnalysis", () => {
         ),
       ).toBe(citation.quotedText);
     }
+  });
+
+  it("consolidates repeated exact language while retaining every distinct source location", () => {
+    const repeatedText =
+      "The worker said the employer withheld the passport and would not allow them to leave.";
+    const secondDocument = document({
+      id: "D02",
+      fileName: "follow-up-message.pdf",
+      displayName: "Follow-up message",
+      pages: [
+        {
+          id: "D02-P1",
+          documentId: "D02",
+          pageNumber: 1,
+          expected: true,
+          availability: "available",
+          extractionStatus: "completed",
+          extractedCharacterCount: repeatedText.length,
+        },
+      ],
+    });
+    const result = buildBrowserDeterministicAnalysis({
+      caseId: CASE_ID,
+      approvedRedactedInputDigest: DIGEST,
+      safeShareRecipientCategory: "legal_aid_team",
+      documents: [document(), secondDocument],
+      segments: [
+        segment("D01-P1-S1", repeatedText),
+        segment("D01-P1-S2", "Violence."),
+        segment("D02-P1-S1", repeatedText, {
+          documentId: "D02",
+          pageId: "D02-P1",
+        }),
+      ],
+      completedAt: NOW,
+    });
+    const passportCandidates = result.candidates.filter(
+      (candidate) =>
+        candidate.kind === "review_lane_item" &&
+        candidate.deterministicMatch?.ruleCode === "A-CONTROL",
+    );
+
+    expect(passportCandidates).toHaveLength(1);
+    expect(
+      passportCandidates[0].dependencies.filter(
+        (dependency) => dependency.kind === "source",
+      ),
+    ).toHaveLength(2);
+    expect(passportCandidates[0].deterministicMatch).toMatchObject({
+      reviewPriority: "review_first",
+    });
+    expect(
+      passportCandidates[0].deterministicMatch?.priorityReason,
+    ).toContain("2 exact source locations across 2 documents");
+    expect(
+      passportCandidates[0].unknowns.join(" "),
+    ).toContain("not a confidence");
+    for (const dependency of passportCandidates[0].dependencies) {
+      if (dependency.kind !== "source") continue;
+      expect(
+        result.citations.some(
+          (citation) =>
+            citation.id === dependency.citationId &&
+            citation.segmentId === dependency.sourceSegmentId,
+        ),
+      ).toBe(true);
+    }
+    const laneItems = result.candidates.filter(
+      (candidate) => candidate.kind === "review_lane_item",
+    );
+    expect(laneItems[0].deterministicMatch?.reviewPriority).toBe(
+      "review_first",
+    );
+    expect(laneItems.at(-1)?.deterministicMatch?.reviewPriority).toBe(
+      "standard",
+    );
   });
 
   it("is deterministic, ignores advisory/evidence-only text, and succeeds honestly with zero matches", () => {

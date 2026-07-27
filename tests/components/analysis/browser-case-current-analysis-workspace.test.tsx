@@ -174,7 +174,10 @@ describe("browser-created current-analysis destinations", () => {
       "href",
       `/case/${CASE_ID}/audit`,
     );
-    expect(screen.getByText(/No operational needs recorded/i)).toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", { name: "Add an urgent need" }),
+    ).toBeInTheDocument();
+    expect(screen.queryByText(/No operational needs recorded/i)).not.toBeInTheDocument();
     await user.type(
       screen.getByLabelText("Practitioner description"),
       "Synthetic safe-contact support is needed.",
@@ -380,7 +383,8 @@ describe("browser-created current-analysis destinations", () => {
     expect(
       await screen.findByRole("heading", { name: "Case Tasks" }),
     ).toBeInTheDocument();
-    const taskPanel = screen.getByRole("heading", { name: "Create task" }).closest("aside");
+    await user.click(screen.getByRole("button", { name: "Create task" }));
+    const taskPanel = screen.getByRole("dialog", { name: "Create task" });
     if (!taskPanel) throw new Error("create-task panel missing");
     await user.type(within(taskPanel).getByLabelText("Title"), "Review safe-contact plan");
     await user.type(
@@ -465,7 +469,8 @@ describe("browser-created current-analysis destinations", () => {
     expect(
       await screen.findByRole("heading", { name: "Notes & Journal" }),
     ).toBeInTheDocument();
-    const notePanel = screen.getByRole("heading", { name: "New note" }).closest("aside");
+    await user.click(screen.getByRole("button", { name: "New note" }));
+    const notePanel = screen.getByRole("dialog", { name: "New note" });
     if (!notePanel) throw new Error("new-note panel missing");
     await user.type(
       within(notePanel).getByLabelText("Commentary"),

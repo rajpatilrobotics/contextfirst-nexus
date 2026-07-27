@@ -386,9 +386,17 @@ function CandidateList({
                         {candidate.currentText}
                       </span>
                       {candidate.deterministicMatch ? (
-                        <span className="mt-1 block truncate font-mono text-[10px] text-foreground/70">
-                          Matched “{candidate.deterministicMatch.exactPhrase}”
-                        </span>
+                        <>
+                          <span className="mt-1 block truncate font-mono text-[10px] text-foreground/70">
+                            Matched “{candidate.deterministicMatch.exactPhrase}”
+                          </span>
+                          {candidate.deterministicMatch.reviewPriority ===
+                          "review_first" ? (
+                            <span className="mt-1 inline-flex rounded-full border border-[color-mix(in_oklab,var(--amber)_45%,transparent)] bg-[color-mix(in_oklab,var(--amber)_10%,transparent)] px-1.5 py-0.5 font-mono text-[9px] uppercase tracking-[0.08em] text-foreground">
+                              Review first
+                            </span>
+                          ) : null}
+                        </>
                       ) : null}
                     </span>
                     <span className="shrink-0">
@@ -497,6 +505,14 @@ function CandidateDetail({
                 <span className="font-semibold text-foreground">Why flagged:</span>{" "}
                 {candidate.deterministicMatch.rationale}
               </p>
+              {candidate.deterministicMatch.priorityReason ? (
+                <p className="text-muted-foreground">
+                  <span className="font-semibold text-foreground">
+                    Review order:
+                  </span>{" "}
+                  {candidate.deterministicMatch.priorityReason}
+                </p>
+              ) : null}
             </div>
           ) : null}
         </div>

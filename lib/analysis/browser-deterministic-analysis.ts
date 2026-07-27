@@ -13,7 +13,7 @@ import {
 
 const VERSION = "1.0.0" as const;
 export const CURRENT_BROWSER_DETERMINISTIC_ADAPTER_VERSION =
-  "browser-deterministic-analysis-v4" as const;
+  "browser-deterministic-analysis-v5" as const;
 const MAX_CANDIDATES = 30;
 const MAX_CONTEXT_GAPS = 6;
 const MAX_TIMELINE_EVENTS = 8;
@@ -36,16 +36,32 @@ type MatchedRuleRecord = {
   candidateId: string;
   exactPhrase: string;
   matchRationale: string;
+  priorityReason: string;
   quote: { start: number; end: number; text: string };
+  reviewPriority: "review_first" | "standard";
   rule: ReviewRule;
   segment: SourceSegment;
 };
 
 type RuleMatch = {
+  contextSignalCount: number;
   index: number;
   length: number;
+  matchKind: "contextual" | "strong";
   exactPhrase: string;
   rationale: string;
+};
+
+type RuleMatchDraft = Omit<MatchedRuleRecord, "candidateId" | "priorityReason" | "reviewPriority"> & {
+  contextSignalCount: number;
+  matchKind: RuleMatch["matchKind"];
+};
+
+type ConsolidatedRuleMatch = {
+  priorityReason: string;
+  records: RuleMatchDraft[];
+  reviewPriority: "review_first" | "standard";
+  score: number;
 };
 
 const CASE_NARRATIVE_PATTERNS: readonly RegExp[] = [
@@ -380,6 +396,7 @@ export function buildBrowserDeterministicAnalysis(input: {
     );
   });
 
+  const matchDrafts: RuleMatchDraft[] = [];
   for (const segment of scopedSegments) {
     if (!documentsById.has(segment.documentId)) {
       throw new Error(
@@ -394,84 +411,113 @@ export function buildBrowserDeterministicAnalysis(input: {
         matched.index,
         matched.length,
       );
-      const ordinal = candidates.length + 1;
-      const suffix = String(ordinal).padStart(4, "0");
-      const candidateId = `CAND-LOCAL-${rule.code}-${suffix}`;
-      const citationId = `CIT-LOCAL-${rule.code}-${suffix}`;
-      const dependencyId = `DEP-LOCAL-${rule.code}-${suffix}`;
-      const pageLabel = segment.pageNumber
-        ? ` · page ${segment.pageNumber}`
-        : "";
-
-      citations.push(
-        exactCitation({
-          caseId: input.caseId,
-          completedAt,
-          id: citationId,
-          quote,
-          runId,
-          segment,
-        }),
-      );
-      candidates.push(
-        CaseCandidateSchema.parse({
-          id: candidateId,
-          revision: 0,
-          caseId: input.caseId,
-          analysisRunId: runId,
-          kind: "review_lane_item",
-          lane: rule.lane,
-          title: `${rule.title}${pageLabel}`,
-          proposedText:
-            `Exact source phrase “${matched.exactPhrase}” triggered this review prompt. ${matched.rationale} This is a review prompt, not a finding.`,
-          currentText:
-            `Exact source phrase “${matched.exactPhrase}” triggered this review prompt. ${matched.rationale} This is a review prompt, not a finding.`,
-          deterministicMatch: {
-            ruleCode: rule.code,
-            exactPhrase: matched.exactPhrase,
-            rationale: matched.rationale,
-          },
-          currentTextOrigin: "source_extraction",
-          itemOrigin: "source_extraction",
-          assertionMode: "neutral_procedural_fact",
-          reviewRequirement: "individual",
-          inclusionStatus: "active",
-          supportStatus: "exact_source_supported",
-          reviewStatus: "pending",
-          dependencies: [
-            {
-              id: dependencyId,
-              kind: "source",
-              sourceSegmentId: segment.id,
-              citationId,
-              evidenceNature: "documented_in_source",
-              relationship: "context_only",
-              active: true,
-            },
-          ],
-          relatedCoverageIssueIds: [],
-          unknowns: [
-            "The meaning, surrounding context, and legal relevance of this language have not been determined.",
-            "Browser-local deterministic review is pattern-based, not semantic AI analysis, and is capped at 30 review prompts per run.",
-          ],
-          reviewQuestion: rule.reviewQuestion,
-          consequential: false,
-          prohibitedConclusionCheck: "passed",
-          safeShareRecipientCategories: [input.safeShareRecipientCategory],
-          createdAt: completedAt,
-        }),
-      );
-      matchedRecords.push({
-        candidateId,
+      matchDrafts.push({
+        contextSignalCount: matched.contextSignalCount,
         exactPhrase: matched.exactPhrase,
+        matchKind: matched.matchKind,
         matchRationale: matched.rationale,
         quote,
         rule,
         segment,
       });
-      if (candidates.length >= MAX_CANDIDATES) break;
     }
-    if (candidates.length >= MAX_CANDIDATES) break;
+  }
+
+  const consolidatedMatches = consolidateAndOrderMatches(matchDrafts).slice(
+    0,
+    MAX_CANDIDATES,
+  );
+  for (const [index, group] of consolidatedMatches.entries()) {
+    const representative = group.records[0];
+    const ordinal = index + 1;
+    const suffix = String(ordinal).padStart(4, "0");
+    const candidateId = `CAND-LOCAL-${representative.rule.code}-${suffix}`;
+    const sourceLocations = group.records.map((record, sourceIndex) => {
+      const sourceSuffix = `${suffix}-${String(sourceIndex + 1).padStart(2, "0")}`;
+      const citationId = `CIT-LOCAL-${representative.rule.code}-${sourceSuffix}`;
+      citations.push(
+        exactCitation({
+          caseId: input.caseId,
+          completedAt,
+          id: citationId,
+          quote: record.quote,
+          runId,
+          segment: record.segment,
+        }),
+      );
+      return {
+        dependency: {
+          id: `DEP-LOCAL-${representative.rule.code}-${sourceSuffix}`,
+          kind: "source" as const,
+          sourceSegmentId: record.segment.id,
+          citationId,
+          evidenceNature: "documented_in_source" as const,
+          relationship: "context_only" as const,
+          active: true,
+        },
+        record,
+      };
+    });
+    const pageLabel = representative.segment.pageNumber
+      ? ` · page ${representative.segment.pageNumber}`
+      : "";
+    const consolidatedDetail =
+      sourceLocations.length > 1
+        ? ` ${sourceLocations.length} exact source locations are consolidated in this one review item.`
+        : "";
+    candidates.push(
+      CaseCandidateSchema.parse({
+        id: candidateId,
+        revision: 0,
+        caseId: input.caseId,
+        analysisRunId: runId,
+        kind: "review_lane_item",
+        lane: representative.rule.lane,
+        title: `${representative.rule.title}${pageLabel}`,
+        proposedText:
+          `Exact source phrase “${representative.exactPhrase}” triggered this review prompt. ${representative.matchRationale}${consolidatedDetail} This is a review prompt, not a finding.`,
+        currentText:
+          `Exact source phrase “${representative.exactPhrase}” triggered this review prompt. ${representative.matchRationale}${consolidatedDetail} This is a review prompt, not a finding.`,
+        deterministicMatch: {
+          ruleCode: representative.rule.code,
+          exactPhrase: representative.exactPhrase,
+          rationale: representative.matchRationale,
+          reviewPriority: group.reviewPriority,
+          priorityReason: group.priorityReason,
+        },
+        currentTextOrigin: "source_extraction",
+        itemOrigin: "source_extraction",
+        assertionMode: "neutral_procedural_fact",
+        reviewRequirement: "individual",
+        inclusionStatus: "active",
+        supportStatus: "exact_source_supported",
+        reviewStatus: "pending",
+        dependencies: sourceLocations.map(({ dependency }) => dependency),
+        relatedCoverageIssueIds: [],
+        unknowns: [
+          "The meaning, surrounding context, and legal relevance of this language have not been determined.",
+          "Browser-local deterministic review is pattern-based, not semantic AI analysis, and is capped at 30 review prompts per run.",
+          "Review order reflects phrase explicitness, nearby case context, and repeated exact source locations. It is not a confidence, credibility, truth, risk, or legal-strength score.",
+        ],
+        reviewQuestion: representative.rule.reviewQuestion,
+        consequential: false,
+        prohibitedConclusionCheck: "passed",
+        safeShareRecipientCategories: [input.safeShareRecipientCategory],
+        createdAt: completedAt,
+      }),
+    );
+    matchedRecords.push(
+      ...sourceLocations.map(({ record }) => ({
+        candidateId,
+        exactPhrase: record.exactPhrase,
+        matchRationale: record.matchRationale,
+        priorityReason: group.priorityReason,
+        quote: record.quote,
+        reviewPriority: group.reviewPriority,
+        rule: record.rule,
+        segment: record.segment,
+      })),
+    );
   }
 
   appendContextGaps({
@@ -1058,10 +1104,133 @@ function countMatchingPatterns(text: string, patterns: readonly RegExp[]) {
   );
 }
 
+function consolidateAndOrderMatches(
+  drafts: RuleMatchDraft[],
+): ConsolidatedRuleMatch[] {
+  const groups = new Map<string, RuleMatchDraft[]>();
+  for (const draft of drafts) {
+    const key = [
+      draft.rule.code,
+      normalizeForConsolidation(draft.quote.text),
+    ].join(":");
+    const current = groups.get(key) ?? [];
+    if (
+      !current.some(
+        (record) =>
+          record.segment.id === draft.segment.id &&
+          record.quote.start === draft.quote.start &&
+          record.quote.end === draft.quote.end,
+      )
+    ) {
+      current.push(draft);
+      groups.set(key, current);
+    }
+  }
+
+  return [...groups.values()]
+    .map((records) => {
+      const orderedRecords = [...records].sort((left, right) => {
+        const kindOrder =
+          Number(right.matchKind === "strong") -
+          Number(left.matchKind === "strong");
+        if (kindOrder !== 0) return kindOrder;
+        const contextOrder =
+          right.contextSignalCount - left.contextSignalCount;
+        return contextOrder !== 0
+          ? contextOrder
+          : compareSegments(left.segment, right.segment);
+      });
+      const explicit = orderedRecords.some(
+        (record) => record.matchKind === "strong",
+      );
+      const contextSignalCount = Math.max(
+        ...orderedRecords.map((record) => record.contextSignalCount),
+      );
+      const documentCount = new Set(
+        orderedRecords.map((record) => record.segment.documentId),
+      ).size;
+      const locationCount = orderedRecords.length;
+      const hasExplicitDate = orderedRecords.some(
+        (record) => firstExplicitDate(record.quote.text) !== null,
+      );
+      const score =
+        (explicit ? 6 : 2) +
+        Math.min(contextSignalCount, 4) +
+        Math.min(documentCount - 1, 2) * 3 +
+        Math.min(locationCount - 1, 2) +
+        (hasExplicitDate ? 1 : 0);
+      const reviewPriority =
+        documentCount > 1 ||
+        locationCount > 1 ||
+        (explicit && contextSignalCount > 0)
+          ? "review_first"
+          : "standard";
+      const reasons = [
+        explicit ? "an explicit review phrase" : "a contextual review phrase",
+        contextSignalCount > 0
+          ? `${contextSignalCount} nearby case-context ${contextSignalCount === 1 ? "signal" : "signals"}`
+          : null,
+        locationCount > 1
+          ? `${locationCount} exact source locations across ${documentCount} ${documentCount === 1 ? "document" : "documents"}`
+          : "one exact source location",
+        hasExplicitDate ? "an explicit date in the cited excerpt" : null,
+      ].filter((value): value is string => Boolean(value));
+      return {
+        priorityReason: `${reasons.join(", ")}. This determines review order only; it does not measure truth, credibility, risk, or legal strength.`,
+        records: orderedRecords,
+        reviewPriority,
+        score,
+      } satisfies ConsolidatedRuleMatch;
+    })
+    .sort((left, right) => {
+      const priorityOrder =
+        Number(right.reviewPriority === "review_first") -
+        Number(left.reviewPriority === "review_first");
+      if (priorityOrder !== 0) return priorityOrder;
+      if (left.score !== right.score) return right.score - left.score;
+      const laneOrder =
+        reviewLaneOrder(left.records[0].rule.lane) -
+        reviewLaneOrder(right.records[0].rule.lane);
+      if (laneOrder !== 0) return laneOrder;
+      const ruleOrder = left.records[0].rule.code.localeCompare(
+        right.records[0].rule.code,
+      );
+      return ruleOrder !== 0
+        ? ruleOrder
+        : compareSegments(
+            left.records[0].segment,
+            right.records[0].segment,
+          );
+    });
+}
+
+function normalizeForConsolidation(value: string) {
+  return value
+    .normalize("NFKC")
+    .toLowerCase()
+    .replace(/[^\p{L}\p{N}]+/gu, " ")
+    .trim();
+}
+
+function reviewLaneOrder(lane: ReviewLane) {
+  return [
+    "trafficking_indicators",
+    "non_punishment_relevance",
+    "protection_remedy_urgency",
+  ].indexOf(lane);
+}
+
 function firstRuleMatch(text: string, rule: ReviewRule): RuleMatch | null {
   const strongMatches = findPatternMatches(text, rule.strongPatterns).map(
     (match) => ({
       ...match,
+      contextSignalCount: nearbyContextSignalCount(
+        text,
+        match.index,
+        match.length,
+        CASE_NARRATIVE_PATTERNS,
+      ),
+      matchKind: "strong" as const,
       rationale:
         `It matched the browser-local “${rule.title}” rule because it is ${rule.contextDescription}.`,
     }),
@@ -1080,6 +1249,13 @@ function firstRuleMatch(text: string, rule: ReviewRule): RuleMatch | null {
     )
     .map((match) => ({
       ...match,
+      contextSignalCount: nearbyContextSignalCount(
+        text,
+        match.index,
+        match.length,
+        rule.contextPatterns ?? [],
+      ),
+      matchKind: "contextual" as const,
       rationale:
         `It matched the browser-local “${rule.title}” rule because the phrase appears within ${rule.contextDescription}.`,
     }));
@@ -1115,14 +1291,30 @@ function hasNearbyContext(
   matchLength: number,
   patterns: readonly RegExp[],
 ) {
-  if (patterns.length === 0) return false;
+  return (
+    nearbyContextSignalCount(
+      text,
+      matchStart,
+      matchLength,
+      patterns,
+    ) > 0
+  );
+}
+
+function nearbyContextSignalCount(
+  text: string,
+  matchStart: number,
+  matchLength: number,
+  patterns: readonly RegExp[],
+) {
+  if (patterns.length === 0) return 0;
   const start = Math.max(0, matchStart - CONTEXT_WINDOW_RADIUS);
   const end = Math.min(
     text.length,
     matchStart + matchLength + CONTEXT_WINDOW_RADIUS,
   );
   const context = text.slice(start, end);
-  return patterns.some((pattern) => pattern.test(context));
+  return countMatchingPatterns(context, patterns);
 }
 
 function displayPhrase(value: string) {

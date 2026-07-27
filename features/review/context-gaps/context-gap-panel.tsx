@@ -285,11 +285,11 @@ export function ContextGapPanel({
       id={`candidate-${gap.id}`}
       tabIndex={-1}
     >
-      <header className="grid gap-2 border-b border-border p-4">
+      <header className="grid gap-2 border-b border-border px-4 py-3">
         <div className="flex flex-wrap items-start justify-between gap-2">
           <div>
-            <p className="font-mono text-[11px] text-muted-foreground">{gap.id}</p>
-            <h3 className="mt-1 font-serif text-xl sm:text-2xl" id={`gap-${gap.id}-heading`}>
+            <p className="font-mono text-[10px] uppercase tracking-[0.12em] text-muted-foreground">{gap.id}</p>
+            <h3 className="mt-1 font-serif text-xl leading-tight" id={`gap-${gap.id}-heading`}>
               {gap.title}
             </h3>
           </div>
@@ -298,31 +298,35 @@ export function ContextGapPanel({
             <ReviewStatusBadge value={gap.reviewStatus} />
           </div>
         </div>
-        <p className="font-semibold">{gap.reviewQuestion}</p>
+        <p className="max-w-4xl text-sm font-semibold leading-5">{gap.reviewQuestion}</p>
       </header>
 
-      <div className="mx-4 mt-4 grid gap-2 rounded-md border border-border/70 bg-muted/30 p-3">
-        <p className="text-sm font-semibold">Context response</p>
-        <p>{responseLabel(gap.responseStatus)}</p>
+      <div className="mx-4 mt-3 flex flex-wrap items-center gap-x-3 gap-y-1 rounded-md border border-border/70 bg-muted/30 px-3 py-2">
+        <p className="font-mono text-[10px] uppercase tracking-[0.12em] text-muted-foreground">Context response</p>
+        <p className="text-sm font-semibold">{responseLabel(gap.responseStatus)}</p>
         {gap.responseStatus === "answered" ? (
-          <div className="flex items-start gap-2 text-sm">
+          <div className="flex basis-full items-start gap-2 text-sm">
             <UserRoundPen aria-hidden="true" className="mt-0.5 shrink-0" size={17} />
             <p>Reviewer-supplied context: {gap.response}</p>
           </div>
         ) : null}
         {gap.responseExplanation ? (
-          <p className="text-sm text-[var(--color-ink-muted)]">Explanation: {gap.responseExplanation}</p>
+          <p className="basis-full text-sm text-[var(--color-ink-muted)]">Explanation: {gap.responseExplanation}</p>
         ) : null}
       </div>
 
       {gap.unknowns.length ? (
-        <Alert title="Unknown from the available packet" tone="neutral">
-          {gap.unknowns.join(" ")} This gap is not adverse evidence and does not have to be answered.
-        </Alert>
+        <div className="mx-4 mt-3 flex items-start gap-2 border-l-2 border-[var(--color-control-border)] bg-muted/20 px-3 py-2 text-sm">
+          <CircleHelp aria-hidden="true" className="mt-0.5 shrink-0 text-muted-foreground" size={16} />
+          <p className="leading-5 text-muted-foreground">
+            <span className="font-semibold text-foreground">Not established by the available packet. </span>
+            {gap.unknowns.join(" ")} This gap is not adverse evidence and does not have to be answered.
+          </p>
+        </div>
       ) : null}
 
-      <section aria-label={`Evidence and dependencies for ${gap.id}`} className="grid gap-3 px-4">
-        <h4 className="text-sm font-semibold">Evidence, limitations, and dependencies</h4>
+      <section aria-label={`Evidence and dependencies for ${gap.id}`} className="mt-3 grid gap-2 px-4">
+        <h4 className="font-mono text-[10px] uppercase tracking-[0.12em] text-muted-foreground">Evidence, limitations, and dependencies</h4>
         {gap.dependencies.length ? (
           <ul className="grid gap-2">
             {gap.dependencies.map((dependency) => {
@@ -345,12 +349,14 @@ export function ContextGapPanel({
                     {dependency.active ? "active" : "inactive after recalculation"}
                   </p>
                   {dependency.kind === "source" && onOpenSource ? (
-                    <CitationLink
-                      candidateId={gap.id}
-                      citationId={dependency.citationId}
-                      onOpen={onOpenSource}
-                      state={state}
-                    />
+                    <div className="flex [&>button]:px-3 [&>button]:py-1.5 [&>button]:text-xs [&>button]:shadow-none">
+                      <CitationLink
+                        candidateId={gap.id}
+                        citationId={dependency.citationId}
+                        onOpen={onOpenSource}
+                        state={state}
+                      />
+                    </div>
                   ) : null}
                 </li>
               );
@@ -369,31 +375,41 @@ export function ContextGapPanel({
         ) : null}
       </section>
 
-      <div aria-label={`Context gap actions for ${gap.id}`} className="flex flex-wrap gap-2 border-t border-border bg-muted/30 p-3">
-        <Button disabled={actionCoverage.hasQuestion} onClick={() => createGapAction("create_interview_question")} variant="secondary">
-          Create interview question
-        </Button>
-        <Button disabled={actionCoverage.hasDocumentRequest} onClick={() => createGapAction("create_document_request")} variant="secondary">
-          Create document request
-        </Button>
-        <Button disabled={actionCoverage.hasCaseTask} onClick={() => createGapAction("create_case_task")} variant="secondary">
-          Create case task
-        </Button>
-        <Button disabled={actionCoverage.hasCompareTask} onClick={() => createGapAction("compare_conflicting_sources")} variant="secondary">
-          Compare conflicting sources
-        </Button>
-        <Button disabled={reviewComplete} onClick={() => setActiveAction("answered")} variant="secondary">
-          Answer
-        </Button>
-        <Button disabled={reviewComplete} onClick={() => setActiveAction("deferred")} variant="secondary">
-          Defer
-        </Button>
-        <Button disabled={reviewComplete} onClick={preserveUnknown} variant="secondary">
-          Preserve as unknown
-        </Button>
-        <Button disabled={reviewComplete} onClick={() => setActiveAction("outside_scope")} variant="secondary">
-          Outside current scope
-        </Button>
+      <div aria-label={`Context gap actions for ${gap.id}`} className="mt-3 grid gap-3 border-t border-border bg-muted/20 px-4 py-3 lg:grid-cols-2">
+        <div className="grid content-start gap-2">
+          <p className="font-mono text-[10px] uppercase tracking-[0.12em] text-muted-foreground">Create follow-up</p>
+          <div className="flex flex-wrap gap-1.5">
+            <Button aria-label="Create interview question" className="px-3 py-1.5 text-xs shadow-none" disabled={actionCoverage.hasQuestion} onClick={() => createGapAction("create_interview_question")} variant="secondary">
+              Interview question
+            </Button>
+            <Button aria-label="Create document request" className="px-3 py-1.5 text-xs shadow-none" disabled={actionCoverage.hasDocumentRequest} onClick={() => createGapAction("create_document_request")} variant="secondary">
+              Document request
+            </Button>
+            <Button aria-label="Create case task" className="px-3 py-1.5 text-xs shadow-none" disabled={actionCoverage.hasCaseTask} onClick={() => createGapAction("create_case_task")} variant="secondary">
+              Case task
+            </Button>
+            <Button aria-label="Compare conflicting sources" className="px-3 py-1.5 text-xs shadow-none" disabled={actionCoverage.hasCompareTask} onClick={() => createGapAction("compare_conflicting_sources")} variant="secondary">
+              Compare sources
+            </Button>
+          </div>
+        </div>
+        <div className="grid content-start gap-2">
+          <p className="font-mono text-[10px] uppercase tracking-[0.12em] text-muted-foreground">Record outcome</p>
+          <div className="flex flex-wrap gap-1.5">
+            <Button className="px-3 py-1.5 text-xs shadow-none" disabled={reviewComplete} onClick={() => setActiveAction("answered")} variant="secondary">
+              Answer
+            </Button>
+            <Button className="px-3 py-1.5 text-xs shadow-none" disabled={reviewComplete} onClick={() => setActiveAction("deferred")} variant="secondary">
+              Defer
+            </Button>
+            <Button className="px-3 py-1.5 text-xs shadow-none" disabled={reviewComplete} onClick={preserveUnknown} variant="secondary">
+              Preserve as unknown
+            </Button>
+            <Button aria-label="Outside current scope" className="px-3 py-1.5 text-xs shadow-none" disabled={reviewComplete} onClick={() => setActiveAction("outside_scope")} variant="secondary">
+              Outside scope
+            </Button>
+          </div>
+        </div>
       </div>
 
       {activeAction ? (

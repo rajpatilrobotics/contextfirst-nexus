@@ -296,9 +296,9 @@ describe("browser-created Structured Analysis workspace", () => {
       />,
     );
     expect(await screen.findByText("Live service ready")).toBeInTheDocument();
-    expect(
-      screen.getByRole("region", { name: "Recommended live analysis" }),
-    ).toBeInTheDocument();
+    await user.click(
+      screen.getByRole("radio", { name: /Live AI analysis/i }),
+    );
     await user.click(
       screen.getByRole("checkbox", {
         name: /I confirm this packet contains only synthetic or authorized public material/i,
@@ -306,7 +306,7 @@ describe("browser-created Structured Analysis workspace", () => {
     );
     await user.click(
       screen.getByRole("button", {
-        name: "Start recommended live analysis",
+        name: "Start live AI analysis",
       }),
     );
     expect(
@@ -322,6 +322,32 @@ describe("browser-created Structured Analysis workspace", () => {
       caseTasks: [],
       practitionerNotes: [],
     });
+    expect(
+      screen.getByRole("link", { name: "Review Documents" }),
+    ).toHaveAttribute("href", `/case/${CASE_ID}/documents`);
+    await user.click(
+      screen.getByRole("button", { name: "Choose analysis mode" }),
+    );
+    expect(
+      screen.getByRole("region", { name: "Run another analysis" }),
+    ).toHaveTextContent(/current reviewed result stays saved/i);
+    expect(
+      screen.getByRole("radio", { name: /Private browser analysis/i }),
+    ).toBeEnabled();
+    expect(
+      screen.getByRole("radio", { name: /Live AI analysis/i }),
+    ).toBeEnabled();
+    expect(analysisStore.snapshots.get(CASE_ID)?.activeAnalysisRunId).toBe(
+      "RUN-DYNAMIC-001",
+    );
+    await user.click(
+      screen.getByRole("button", { name: "Keep current result" }),
+    );
+    expect(
+      await screen.findByRole("region", {
+        name: "Analysis completed with zero candidates",
+      }),
+    ).toBeInTheDocument();
 
     first.unmount();
     const second = render(
@@ -428,6 +454,12 @@ describe("browser-created Structured Analysis workspace", () => {
         name: "Run browser-local analysis",
       }),
     ).toBeEnabled();
+    expect(
+      screen.getByRole("radio", { name: /Private browser analysis/i }),
+    ).toBeChecked();
+    expect(
+      screen.getByRole("radio", { name: /Live AI analysis/i }),
+    ).toBeDisabled();
     await user.click(
       screen.getByRole("button", {
         name: "Run browser-local analysis",
@@ -443,7 +475,7 @@ describe("browser-created Structured Analysis workspace", () => {
     expect(saved?.analysisRuns[0]).toMatchObject({
       mode: "deterministic_replay",
       provider: {
-        adapterVersion: "browser-deterministic-analysis-v4",
+        adapterVersion: "browser-deterministic-analysis-v5",
         providerTransmission: false,
       },
       status: "succeeded",

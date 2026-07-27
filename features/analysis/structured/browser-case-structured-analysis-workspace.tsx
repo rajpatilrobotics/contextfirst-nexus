@@ -48,6 +48,8 @@ type ProcessSources = (
   caseId: string,
 ) => Promise<LocalPdfDocumentServiceResult>;
 
+type AnalysisMode = "browser" | "live";
+
 const DEFAULT_PROCESS_SOURCES: ProcessSources = (files, caseId) =>
   processLocalPdfSources(files, undefined, caseId);
 
@@ -77,6 +79,9 @@ export function BrowserCaseStructuredAnalysisWorkspace({
   >("loading");
   const [message, setMessage] = useState<string | null>(null);
   const [acknowledged, setAcknowledged] = useState(false);
+  const [analysisMode, setAnalysisMode] =
+    useState<AnalysisMode>("browser");
+  const [showModeChooser, setShowModeChooser] = useState(false);
   const [persistenceError, setPersistenceError] = useState<string | null>(null);
   const [serviceState, setServiceState] = useState<
     "loading" | "available" | "unavailable"
@@ -276,6 +281,7 @@ export function BrowserCaseStructuredAnalysisWorkspace({
       });
       await analysisStore.save(caseId, next);
       setState(next);
+      setShowModeChooser(false);
       setStatus("ready");
     } catch {
       setMessage(
@@ -324,6 +330,7 @@ export function BrowserCaseStructuredAnalysisWorkspace({
       });
       await analysisStore.save(caseId, next);
       setState(next);
+      setShowModeChooser(false);
       setStatus("ready");
     } catch {
       setMessage(
@@ -349,7 +356,7 @@ export function BrowserCaseStructuredAnalysisWorkspace({
     );
   }
 
-  if (state) {
+  if (state && !showModeChooser) {
     return (
       <BrowserCaseShell
         activeStage="analysis"
@@ -357,6 +364,26 @@ export function BrowserCaseStructuredAnalysisWorkspace({
         record={record}
       >
         <div className="space-y-4">
+          <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-border bg-card px-3 py-2">
+            <p className="text-xs text-muted-foreground">
+              This reviewed result remains saved until another analysis completes successfully.
+            </p>
+            <div className="flex flex-wrap items-center gap-2">
+              <Link
+                className="inline-flex min-h-9 items-center justify-center rounded-md border border-border bg-card px-3 py-1.5 text-xs font-semibold hover:bg-muted"
+                href={`/case/${caseId}/documents`}
+              >
+                Review Documents
+              </Link>
+              <Button
+                className="!min-h-9 !px-3 !py-1.5 !text-xs"
+                onClick={() => setShowModeChooser(true)}
+                variant="primary"
+              >
+                Choose analysis mode
+              </Button>
+            </div>
+          </div>
           {persistenceError ? (
             <Alert title="Analysis changes are not persisted" tone="warning">
               {persistenceError}
@@ -414,6 +441,23 @@ export function BrowserCaseStructuredAnalysisWorkspace({
           </Alert>
         ) : null}
 
+        {state && showModeChooser ? (
+          <Alert title="Run another analysis" tone="neutral">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <p>
+                Choose browser or Live AI below. The current reviewed result stays saved unless the new run succeeds.
+              </p>
+              <Button
+                className="!min-h-8 !px-3 !py-1 !text-xs"
+                onClick={() => setShowModeChooser(false)}
+                variant="secondary"
+              >
+                Keep current result
+              </Button>
+            </div>
+          </Alert>
+        ) : null}
+
         <section className="rounded-xl border border-border bg-card p-5">
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div>
@@ -452,68 +496,111 @@ export function BrowserCaseStructuredAnalysisWorkspace({
             </div>
           </div>
 
-          {serviceState === "available" ? (
-            <section
-              aria-label="Recommended live analysis"
-              className="mt-4 rounded-lg border border-[color-mix(in_oklab,var(--sage)_45%,transparent)] bg-[color-mix(in_oklab,var(--sage)_8%,transparent)] p-3"
-            >
-              <div className="flex flex-wrap items-center gap-2">
-                <h3 className="text-sm font-semibold">
-                  Recommended: admitted live analysis
-                </h3>
-                <Chip tone="sage">Broader semantic interpretation</Chip>
-              </div>
-              <p className="mt-2 text-xs leading-5 text-muted-foreground">
-                The admitted live release is preferred when available because
-                it can assess broader context than deterministic language
-                rules. Only approved redacted text is eligible; raw PDFs are
-                never sent.
-              </p>
-              <label className="mt-3 flex cursor-pointer items-start gap-3 text-sm">
-                <input
-                  checked={acknowledged}
-                  className="mt-1 h-4 w-4"
-                  onChange={(event) => setAcknowledged(event.target.checked)}
-                  type="checkbox"
-                />
-                <span>
-                  I confirm this packet contains only synthetic or authorized
-                  public material, and I understand that its approved redacted
-                  text may be sent to the admitted live provider shown in the
-                  resulting provenance.
+          <fieldset className="mt-4">
+            <legend className="font-mono text-[11px] uppercase tracking-[0.16em] text-muted-foreground">
+              Analysis mode
+            </legend>
+            <div className="mt-2 grid gap-2 md:grid-cols-2">
+              <label
+                className={`cursor-pointer rounded-lg border p-3 transition ${
+                  analysisMode === "browser"
+                    ? "border-[color:var(--navy)] bg-[color-mix(in_oklab,var(--navy)_5%,transparent)]"
+                    : "border-border hover:bg-muted/40"
+                }`}
+              >
+                <span className="flex items-start gap-3">
+                  <input
+                    checked={analysisMode === "browser"}
+                    className="mt-1 h-4 w-4"
+                    name="analysis-mode"
+                    onChange={() => setAnalysisMode("browser")}
+                    type="radio"
+                    value="browser"
+                  />
+                  <span>
+                    <span className="flex items-center gap-2 text-sm font-semibold">
+                      <ShieldCheck aria-hidden="true" className="h-4 w-4" />
+                      Private browser analysis
+                    </span>
+                    <span className="mt-1 block text-xs leading-5 text-muted-foreground">
+                      Deterministic source-grounded review prompts. No API,
+                      provider transmission, or credits.
+                    </span>
+                  </span>
                 </span>
               </label>
-              <Button
-                className="mt-3"
-                disabled={
-                  !corpusReady ||
-                  !acknowledged ||
-                  status === "running" ||
-                  !runtimeResult
-                }
-                onClick={() => void startLiveAnalysis()}
+              <label
+                aria-disabled={serviceState !== "available"}
+                className={`rounded-lg border p-3 transition ${
+                  serviceState === "available"
+                    ? "cursor-pointer"
+                    : "cursor-not-allowed opacity-60"
+                } ${
+                  analysisMode === "live"
+                    ? "border-[color:var(--sage)] bg-[color-mix(in_oklab,var(--sage)_8%,transparent)]"
+                    : "border-border"
+                }`}
               >
-                <Sparkles aria-hidden="true" className="h-4 w-4" />
-                Start recommended live analysis
-              </Button>
-            </section>
-          ) : (
-            <p className="mt-2 text-xs leading-5 text-muted-foreground">
-              {serviceState === "loading"
-                ? "Checking whether an admitted browser-upload live release is available. No provider call occurs during this check."
-                : "No browser-upload-eligible release is currently admitted and enabled. No provider call or credit usage can occur."}
-            </p>
-          )}
+                <span className="flex items-start gap-3">
+                  <input
+                    checked={analysisMode === "live"}
+                    className="mt-1 h-4 w-4"
+                    disabled={serviceState !== "available"}
+                    name="analysis-mode"
+                    onChange={() => setAnalysisMode("live")}
+                    type="radio"
+                    value="live"
+                  />
+                  <span>
+                    <span className="flex items-center gap-2 text-sm font-semibold">
+                      <Sparkles aria-hidden="true" className="h-4 w-4" />
+                      Live AI analysis
+                    </span>
+                    <span className="mt-1 block text-xs leading-5 text-muted-foreground">
+                      {serviceState === "available"
+                        ? "Broader semantic review through the admitted server-managed provider chain."
+                        : serviceState === "loading"
+                          ? "Checking admitted provider availability."
+                          : "No browser-upload-eligible provider is currently admitted and enabled."}
+                    </span>
+                  </span>
+                </span>
+              </label>
+            </div>
+          </fieldset>
+
+          {analysisMode === "live" ? (
+            <label className="mt-3 flex cursor-pointer items-start gap-3 rounded-lg border border-border p-3 text-sm">
+              <input
+                checked={acknowledged}
+                className="mt-1 h-4 w-4"
+                onChange={(event) => setAcknowledged(event.target.checked)}
+                type="checkbox"
+              />
+              <span>
+                I confirm this packet contains only synthetic or authorized
+                public material, and I understand that only its approved
+                redacted text—not raw PDFs—may be sent to the server-managed
+                live provider shown in the resulting provenance.
+              </span>
+            </label>
+          ) : null}
 
           <div className="mt-4 flex flex-wrap items-center gap-3">
             <Button
               disabled={
                 !corpusReady ||
+                (analysisMode === "live" &&
+                  (serviceState !== "available" || !acknowledged)) ||
                 status === "running" ||
                 !runtimeResult
               }
-              onClick={() => void startLocalAnalysis()}
-              variant={serviceState === "available" ? "secondary" : "primary"}
+              onClick={() =>
+                void (analysisMode === "live"
+                  ? startLiveAnalysis()
+                  : startLocalAnalysis())
+              }
+              variant="primary"
             >
               {status === "running" ? (
                 <LoaderCircle
@@ -525,8 +612,8 @@ export function BrowserCaseStructuredAnalysisWorkspace({
               )}
               {status === "running"
                 ? "Analyzing safely…"
-                : serviceState === "available"
-                  ? "Use private browser-local fallback"
+                : analysisMode === "live"
+                  ? "Start live AI analysis"
                   : "Run browser-local analysis"}
             </Button>
             <Link
