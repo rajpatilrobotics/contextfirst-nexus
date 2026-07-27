@@ -21,3 +21,6 @@
 # local browser-test artifacts
 /test-results
 /playwright-report
+
+# generated local packet output (deployable fixture copies live under /public)
+/output

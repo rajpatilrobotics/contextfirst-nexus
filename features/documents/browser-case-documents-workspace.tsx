@@ -1,7 +1,16 @@
 "use client";
 
 import Link from "next/link";
-import { FileText, LoaderCircle, UploadCloud } from "lucide-react";
+import {
+  ArrowRight,
+  FileText,
+  FolderOpen,
+  LoaderCircle,
+  Sparkles,
+  Trash2,
+  UploadCloud,
+  X,
+} from "lucide-react";
 import {
   type DragEvent,
   type ChangeEvent,
@@ -19,6 +28,7 @@ import { Alert, Skeleton } from "../../components/ui";
 import {
   type BrowserCaseDocumentPacket,
   type BrowserCaseRecord,
+  clearBrowserCaseDocumentPacket,
   findBrowserCase,
   loadBrowserCaseRegistry,
   persistBrowserCaseRegistry,
@@ -58,6 +68,7 @@ import {
   createEmptyMaskingReview,
   detectMaskSuggestions,
   makeManualSuggestion,
+  normalizeApprovedMaskOverlaps,
   removeMaskSuggestion,
   reviewMask,
   scanProviderPayload,
@@ -66,6 +77,10 @@ import { DocumentCards } from "./document-cards";
 import { DocumentPacketTools } from "./document-packet-tools";
 import { MaskedPdfPreview } from "./masked-pdf-preview";
 import { MaskingReviewPanel } from "./masking-review-panel";
+import {
+  PacketMaskReviewQueue,
+  type MaskNavigationTarget,
+} from "./packet-mask-review-queue";
 import { localPdfSelectionIssueMessage } from "./pdf-selection-panel";
 
 type SelectionMode = "add" | "initial" | "replace" | "reselect" | "upgrade";
@@ -77,6 +92,31 @@ type ProcessSources = (
 
 const DEFAULT_PROCESS_SOURCES: ProcessSources = (files, caseId, options) =>
   processLocalPdfSources(files, undefined, caseId, options);
+
+const SYNTHETIC_PACKET_BASE_PATH =
+  "/fixtures/cfn-nila-verin-packet" as const;
+const SYNTHETIC_PACKET_FILES = [
+  { fileName: "01_case_notice_and_packet_index.pdf", sourceType: "other" },
+  { fileName: "02_job_advertisement.pdf", sourceType: "recruitment_record" },
+  { fileName: "03_recruiter_messages.pdf", sourceType: "communication" },
+  { fileName: "04_offer_letter_and_contract.pdf", sourceType: "recruitment_record" },
+  { fileName: "05_identity_and_travel_extract.pdf", sourceType: "travel_record" },
+  { fileName: "06_accommodation_and_movement_log.pdf", sourceType: "travel_record" },
+  { fileName: "07_debt_and_wage_ledger.pdf", sourceType: "operational_financial_record" },
+  { fileName: "08_synthetic_bank_statement.pdf", sourceType: "operational_financial_record" },
+  { fileName: "09_task_and_penalty_log.pdf", sourceType: "operational_financial_record" },
+  { fileName: "10_supervisor_messages.pdf", sourceType: "communication" },
+  { fileName: "11_police_incident_record.pdf", sourceType: "proceeding_record" },
+  { fileName: "12_practitioner_intake_note.pdf", sourceType: "practitioner_note" },
+  { fileName: "13_support_and_health_note.pdf", sourceType: "support_provider_note" },
+  { fileName: "14_hearing_and_charge_summary.pdf", sourceType: "proceeding_record" },
+  { fileName: "scan_001.pdf", sourceType: "other" },
+  { fileName: "attachment_02.pdf", sourceType: "other" },
+  { fileName: "document_final.pdf", sourceType: "other" },
+] as const satisfies readonly {
+  fileName: string;
+  sourceType: DocumentRecord["sourceType"];
+}[];
 
 function readableMegabytes(bytes: number) {
   return `${Math.round(bytes / (1024 * 1024))} MB`;
@@ -130,9 +170,24 @@ export function BrowserCaseDocumentsWorkspace({
     title: string;
     detail: string;
   } | null>(null);
+  const [privacyActionFeedback, setPrivacyActionFeedback] = useState<{
+    tone: "success" | "warning";
+    message: string;
+  } | null>(null);
   const [isDragging, setIsDragging] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [isLoadingSynthetic, setIsLoadingSynthetic] = useState(false);
   const [isRestoringFiles, setIsRestoringFiles] = useState(false);
+  const [sourceChooserOpen, setSourceChooserOpen] = useState(false);
+  const [syntheticReplaceConfirm, setSyntheticReplaceConfirm] = useState(false);
+  const [pendingRemovalDocumentId, setPendingRemovalDocumentId] =
+    useState<string | null>(null);
+  const [bulkRemovalMode, setBulkRemovalMode] = useState<
+    "select" | "all" | null
+  >(null);
+  const [bulkRemovalDocumentIds, setBulkRemovalDocumentIds] = useState<
+    readonly string[]
+  >([]);
   const [sanitizedPdfState, setSanitizedPdfState] = useState<
     "idle" | "generating_text" | "generating_visual"
   >("idle");
@@ -144,6 +199,8 @@ export function BrowserCaseDocumentsWorkspace({
   const [ocrDrafts, setOcrDrafts] = useState<
     Record<string, VerifiedOcrPage | undefined>
   >({});
+  const [maskNavigationTarget, setMaskNavigationTarget] =
+    useState<MaskNavigationTarget | null>(null);
   const documentFiles = useMemo(() => {
     const mapping: Record<string, File> = {};
     runtimeResult?.fileMetadata?.forEach((metadata, index) => {
@@ -171,6 +228,15 @@ export function BrowserCaseDocumentsWorkspace({
         ]),
       ),
     [runtimeResult?.runtimeMetadata],
+  );
+  const automaticMaskSuggestionIds = useMemo(
+    () =>
+      runtimeResult
+        ? detectMaskSuggestions(runtimeResult.segments).map(
+            (suggestion) => suggestion.id,
+          )
+        : [],
+    [runtimeResult],
   );
   const displayedDocuments = useMemo(
     () =>
@@ -348,7 +414,16 @@ export function BrowserCaseDocumentsWorkspace({
   }
 
   function openPicker(mode: SelectionMode) {
-    if (!record?.purposeBrief || isProcessing || isRestoringFiles) return;
+    if (
+      !record?.purposeBrief ||
+      isProcessing ||
+      isLoadingSynthetic ||
+      isRestoringFiles
+    ) {
+      return;
+    }
+    setSourceChooserOpen(false);
+    setSyntheticReplaceConfirm(false);
     selectionModeRef.current = mode;
     if (inputRef.current) {
       inputRef.current.value = "";
@@ -356,7 +431,12 @@ export function BrowserCaseDocumentsWorkspace({
     }
   }
 
-  async function processSelection(files: readonly File[]): Promise<boolean> {
+  async function processSelection(
+    files: readonly File[],
+    declaredSourceTypes: Readonly<
+      Record<string, DocumentRecord["sourceType"]>
+    > = {},
+  ): Promise<boolean> {
     if (!record?.purposeBrief || files.length === 0 || isProcessing) return false;
     setIsProcessing(true);
     setNotice(null);
@@ -379,6 +459,30 @@ export function BrowserCaseDocumentsWorkspace({
       if (!result.fileMetadata) {
         throw new Error("document_metadata_missing");
       }
+      const resultFileMetadata = result.fileMetadata;
+      const previousPacket = record.documentPacket;
+      const previousSourceTypes = new Map(
+        previousPacket?.fileMetadata.map((metadata, index) => [
+          `${metadata.fileName}:${metadata.byteLength}`,
+          previousPacket.documents[index]?.sourceType ?? "other",
+        ]) ?? [],
+      );
+      result = {
+        ...result,
+        documents: result.documents.map((document, index) => {
+          const metadata = resultFileMetadata[index];
+          if (!metadata) return document;
+          const sourceType =
+            declaredSourceTypes[metadata.fileName] ??
+            previousSourceTypes.get(
+              `${metadata.fileName}:${metadata.byteLength}`,
+            ) ??
+            document.sourceType;
+          return sourceType === document.sourceType
+            ? document
+            : { ...document, sourceType };
+        }),
+      };
       if (
         passwordUnlockDocumentRef.current &&
         result.runtimeMetadata?.some(
@@ -389,12 +493,11 @@ export function BrowserCaseDocumentsWorkspace({
       ) {
         throw new Error("pdf_password_rejected");
       }
-      const previousPacket = record.documentPacket;
       const mode = selectionModeRef.current;
 
       if (mode === "upgrade" && previousPacket) {
         const selectedFiles = new Map(
-          result.fileMetadata.map((metadata) => [
+          resultFileMetadata.map((metadata) => [
             `${metadata.fileName}:${metadata.byteLength}`,
             metadata,
           ]),
@@ -504,6 +607,207 @@ export function BrowserCaseDocumentsWorkspace({
     void processSelection(Array.from(event.dataTransfer.files));
   }
 
+  function openSourceChooser() {
+    if (
+      !record?.purposeBrief ||
+      isProcessing ||
+      isLoadingSynthetic ||
+      isRestoringFiles
+    ) {
+      return;
+    }
+    setSyntheticReplaceConfirm(false);
+    setSourceChooserOpen(true);
+  }
+
+  async function loadSyntheticPacket() {
+    if (!record?.purposeBrief || isProcessing || isLoadingSynthetic) return;
+    if (record.documentPacket && !syntheticReplaceConfirm) {
+      setSyntheticReplaceConfirm(true);
+      return;
+    }
+
+    setIsLoadingSynthetic(true);
+    setNotice(null);
+    try {
+      const files = await Promise.all(
+        SYNTHETIC_PACKET_FILES.map(async ({ fileName }) => {
+          const response = await fetch(
+            `${SYNTHETIC_PACKET_BASE_PATH}/${encodeURIComponent(fileName)}`,
+          );
+          if (!response.ok) throw new Error("synthetic_pdf_unavailable");
+          return new File([await response.blob()], fileName, {
+            type: "application/pdf",
+            lastModified: 0,
+          });
+        }),
+      );
+      selectionModeRef.current = record.documentPacket ? "replace" : "initial";
+      const processed = await processSelection(
+        files,
+        Object.fromEntries(
+          SYNTHETIC_PACKET_FILES.map(({ fileName, sourceType }) => [
+            fileName,
+            sourceType,
+          ]),
+        ),
+      );
+      if (processed) {
+        setSourceChooserOpen(false);
+        setSyntheticReplaceConfirm(false);
+        setNotice({
+          tone: "success",
+          title: "Synthetic demo packet loaded",
+          detail:
+            "Seventeen fictional PDFs were processed through the same browser-local extraction, coverage, and masking workflow as local uploads.",
+        });
+      }
+    } catch {
+      setNotice({
+        tone: "warning",
+        title: "Synthetic packet could not be loaded",
+        detail:
+          "The bundled PDF assets were unavailable. No case state was changed.",
+      });
+    } finally {
+      setIsLoadingSynthetic(false);
+    }
+  }
+
+  async function removeDocuments(documentIds: readonly string[]) {
+    const currentPacket = record?.documentPacket;
+    if (
+      documentIds.length === 0 ||
+      !currentPacket ||
+      !runtimeResult?.fileMetadata ||
+      isProcessing
+    ) {
+      return false;
+    }
+
+    const requestedIds = new Set(documentIds);
+    const removalIndexes = new Set(
+      runtimeResult.fileMetadata.flatMap((metadata, index) =>
+        requestedIds.has(metadata.documentId) ? [index] : [],
+      ),
+    );
+    const allSourcesAvailable =
+      removalIndexes.size === requestedIds.size &&
+      [...removalIndexes].every((index) => Boolean(runtimeFiles[index]));
+    if (!allSourcesAvailable) {
+      setNotice({
+        tone: "warning",
+        title: "Reselect the packet before removing PDFs",
+        detail:
+          "The saved metadata is available, but the browser does not currently hold every PDF byte needed to rebuild the remaining packet safely.",
+      });
+      return false;
+    }
+
+    const remainingFiles = runtimeFiles.filter(
+      (_, index) => !removalIndexes.has(index),
+    );
+    if (remainingFiles.length > 0) {
+      const sourceTypes = Object.fromEntries(
+        currentPacket.fileMetadata.flatMap((metadata, index) => {
+          if (removalIndexes.has(index)) return [];
+          return [
+            [
+              metadata.fileName,
+              currentPacket.documents[index]?.sourceType ?? "other",
+            ],
+          ];
+        }),
+      );
+      selectionModeRef.current = "replace";
+      const processed = await processSelection(remainingFiles, sourceTypes);
+      if (processed) {
+        setNotice({
+          tone: "success",
+          title:
+            documentIds.length === 1 ? "PDF removed" : "Selected PDFs removed",
+          detail:
+            `${documentIds.length} PDF${documentIds.length === 1 ? " was" : "s were"} removed. The remaining packet was reprocessed and saved; previous analysis is no longer current.`,
+        });
+      }
+      return processed;
+    }
+
+    const loaded = loadBrowserCaseRegistry(window.localStorage);
+    if (!loaded.ok) {
+      setStorageError(loaded.reason);
+      return false;
+    }
+    const cleared = clearBrowserCaseDocumentPacket(
+      loaded.registry,
+      caseId,
+    );
+    if (!cleared.ok) {
+      setStorageError(cleared.reason);
+      return false;
+    }
+    const persisted = persistBrowserCaseRegistry(
+      window.localStorage,
+      cleared.registry,
+    );
+    if (!persisted.ok) {
+      setStorageError(persisted.reason);
+      return false;
+    }
+    try {
+      await fileStore.save(caseId, []);
+    } catch {
+      setStorageError(
+        "The packet was cleared, but browser file storage could not be cleaned. The saved case remains empty.",
+      );
+    }
+    setRecord(cleared.record);
+    setRuntimeFiles([]);
+    setRuntimeResult(null);
+    setIngestionManifest(null);
+    setMaskNavigationTarget(null);
+    setNotice({
+      tone: "success",
+      title: documentIds.length === 1 ? "PDF removed" : "All PDFs removed",
+      detail:
+        "The case now has an empty document packet. No PDF bytes remain in browser storage for this case.",
+    });
+    return true;
+  }
+
+  async function removeSelectedDocument() {
+    const documentId = pendingRemovalDocumentId;
+    if (!documentId) return;
+    setPendingRemovalDocumentId(null);
+    await removeDocuments([documentId]);
+  }
+
+  async function confirmBulkRemoval() {
+    const documentIds =
+      bulkRemovalMode === "all"
+        ? displayedDocuments.map((document) => document.id)
+        : bulkRemovalDocumentIds;
+    if (documentIds.length === 0) return;
+    const removed = await removeDocuments(documentIds);
+    if (removed) {
+      setBulkRemovalMode(null);
+      setBulkRemovalDocumentIds([]);
+    }
+  }
+
+  function openBulkRemoval(mode: "select" | "all") {
+    setBulkRemovalDocumentIds([]);
+    setBulkRemovalMode(mode);
+  }
+
+  function toggleBulkRemovalDocument(documentId: string) {
+    setBulkRemovalDocumentIds((current) =>
+      current.includes(documentId)
+        ? current.filter((id) => id !== documentId)
+        : [...current, documentId],
+    );
+  }
+
   function saveMasking(masking: MaskingReview) {
     if (!record?.documentPacket) return false;
     return persistPacket({
@@ -521,6 +825,7 @@ export function BrowserCaseDocumentsWorkspace({
     replacementToken: string;
   }) {
     if (!record?.documentPacket) return;
+    setPrivacyActionFeedback(null);
     saveMasking(
       addMaskSuggestion(
         record.documentPacket.masking,
@@ -531,6 +836,7 @@ export function BrowserCaseDocumentsWorkspace({
 
   function removeMask(maskId: string) {
     if (!record?.documentPacket) return;
+    setPrivacyActionFeedback(null);
     saveMasking(
       removeMaskSuggestion(record.documentPacket.masking, maskId).review,
     );
@@ -542,6 +848,7 @@ export function BrowserCaseDocumentsWorkspace({
     replacementToken: string,
   ) {
     if (!record?.documentPacket) return;
+    setPrivacyActionFeedback(null);
     saveMasking(
       reviewMask(
         record.documentPacket.masking,
@@ -550,6 +857,93 @@ export function BrowserCaseDocumentsWorkspace({
         replacementToken,
       ).review,
     );
+  }
+
+  function applyAllDetectedMasks(requestedMaskIds: readonly string[]) {
+    if (!runtimeResult || !record?.documentPacket) return;
+    setPrivacyActionFeedback(null);
+    const detectedIds = new Set(
+      detectMaskSuggestions(runtimeResult.segments).map(
+        (suggestion) => suggestion.id,
+      ),
+    );
+    const requestedIds = new Set(requestedMaskIds);
+    const eligible = record.documentPacket.masking.suggestions.filter(
+      (suggestion) =>
+        suggestion.reviewStatus === "pending" &&
+        detectedIds.has(suggestion.id) &&
+        requestedIds.has(suggestion.id),
+    );
+    if (eligible.length === 0) return;
+
+    let nextReview = record.documentPacket.masking;
+    eligible.forEach((suggestion) => {
+      nextReview = reviewMask(
+        nextReview,
+        suggestion.id,
+        "approved",
+        suggestion.replacementToken,
+      ).review;
+    });
+
+    const approval = approveMaskingReview(
+      nextReview,
+      runtimeResult.segments,
+      new Date().toISOString(),
+    );
+    if (!approval.ok) {
+      const saved = saveMasking(nextReview);
+      const hasOverlappingRange = approval.issues.some(
+        (issue) => issue.code === "overlapping_masks",
+      );
+      setPrivacyActionFeedback({
+        tone: "warning",
+        message: saved
+          ? hasOverlappingRange
+            ? "All detected masks were saved. Click “Run final privacy check” above once; it will safely refresh the older overlapping automatic range and scan the packet."
+            : "Detected masks were saved. Use the single next-step button above to open and resolve the remaining mask."
+          : "The detected-mask decisions could not be saved in browser storage.",
+      });
+      setNotice({
+        tone: saved ? "neutral" : "warning",
+        title: saved
+          ? "Detected masks applied; review remains"
+          : "Bulk mask decisions were not saved",
+        detail: saved
+          ? `${eligible.length} automatic suggestion${eligible.length === 1 ? " is" : "s are"} now approved. Resolve any remaining manual or needing-correction masks before the final leak scan can run.`
+          : "Browser storage rejected the updated packet. No bulk decision was retained.",
+      });
+      return;
+    }
+
+    const redactedSegments = runtimeResult.segments.map((segment) => {
+      const masks = approval.review.suggestions.filter(
+        (suggestion) =>
+          suggestion.segmentId === segment.id &&
+          (suggestion.reviewStatus === "approved" ||
+            suggestion.reviewStatus === "edited"),
+      );
+      return buildSegmentRedaction(segment, masks).redactedText;
+    });
+    const masking = applyLeakScanResult(
+      approval.review,
+      scanProviderPayload(redactedSegments.join("\n")),
+    );
+    const saved = saveMasking(masking);
+    setNotice({
+      tone:
+        saved && masking.leakScanStatus === "passed" ? "success" : "warning",
+      title: !saved
+        ? "Bulk mask decisions were not saved"
+        : masking.leakScanStatus === "passed"
+          ? "Detected masks applied and privacy check passed"
+          : "Detected masks applied; privacy check needs attention",
+      detail: !saved
+        ? "Browser storage rejected the updated packet. No bulk decision was retained."
+        : masking.leakScanStatus === "passed"
+          ? `${eligible.length} automatic suggestion${eligible.length === 1 ? " is" : "s are"} approved. Review the black overlays; each mask remains editable or removable.`
+          : "A supported identifier pattern remains in the masked text. Analysis stays blocked until it is corrected and the check passes.",
+    });
   }
 
   function updateSourceType(
@@ -778,7 +1172,13 @@ export function BrowserCaseDocumentsWorkspace({
   }
 
   function completeMasking() {
+    setPrivacyActionFeedback(null);
     if (!runtimeResult || !record?.documentPacket) {
+      setPrivacyActionFeedback({
+        tone: "warning",
+        message:
+          "Restore the saved PDFs before running the final privacy check.",
+      });
       setNotice({
         tone: "warning",
         title: "Restore the document files",
@@ -787,16 +1187,180 @@ export function BrowserCaseDocumentsWorkspace({
       });
       return;
     }
-    const approval = approveMaskingReview(
+    let reviewForApproval = record.documentPacket.masking;
+    let approval = approveMaskingReview(
       record.documentPacket.masking,
       runtimeResult.segments,
       new Date().toISOString(),
     );
+    let refreshedAutomaticRangeCount = 0;
+    let normalizedOverlapCount = 0;
+
     if (!approval.ok) {
+      const currentDetected = detectMaskSuggestions(runtimeResult.segments);
+      const currentDetectedIds = new Set(
+        currentDetected.map((suggestion) => suggestion.id),
+      );
+      const overlappingIds = new Set(
+        approval.issues
+          .filter((issue) => issue.code === "overlapping_masks")
+          .map((issue) => issue.maskId)
+          .filter((maskId): maskId is string => Boolean(maskId)),
+      );
+      const nextSuggestions = [...reviewForApproval.suggestions];
+
+      overlappingIds.forEach((maskId) => {
+        const staleIndex = nextSuggestions.findIndex(
+          (suggestion) => suggestion.id === maskId,
+        );
+        const staleSuggestion = nextSuggestions[staleIndex];
+        if (!staleSuggestion || currentDetectedIds.has(staleSuggestion.id)) {
+          return;
+        }
+        const correctedSuggestion = currentDetected.find(
+          (suggestion) =>
+            suggestion.segmentId === staleSuggestion.segmentId &&
+            suggestion.maskClass === staleSuggestion.maskClass &&
+            suggestion.originalStart < staleSuggestion.originalEnd &&
+            suggestion.originalEnd > staleSuggestion.originalStart,
+        );
+        if (!correctedSuggestion) return;
+
+        const existingCorrectedIndex = nextSuggestions.findIndex(
+          (suggestion) => suggestion.id === correctedSuggestion.id,
+        );
+        const refreshedSuggestion = {
+          ...correctedSuggestion,
+          replacementToken: staleSuggestion.replacementToken,
+          redactedEnd:
+            correctedSuggestion.redactedStart +
+            staleSuggestion.replacementToken.length,
+          reviewStatus: staleSuggestion.reviewStatus,
+        };
+        if (existingCorrectedIndex >= 0) {
+          nextSuggestions[existingCorrectedIndex] = refreshedSuggestion;
+          nextSuggestions.splice(staleIndex, 1);
+        } else {
+          nextSuggestions[staleIndex] = refreshedSuggestion;
+        }
+        refreshedAutomaticRangeCount += 1;
+      });
+
+      if (refreshedAutomaticRangeCount > 0) {
+        reviewForApproval = {
+          ...reviewForApproval,
+          revision: reviewForApproval.revision + 1,
+          reviewStatus: "invalidated",
+          suggestions: nextSuggestions,
+          reviewedBy: null,
+          approvedAt: undefined,
+          leakScanStatus: "not_run",
+          failedClasses: [],
+        };
+        approval = approveMaskingReview(
+          reviewForApproval,
+          runtimeResult.segments,
+          new Date().toISOString(),
+        );
+      }
+    }
+
+    if (
+      !approval.ok &&
+      approval.issues.some((issue) => issue.code === "overlapping_masks")
+    ) {
+      const normalized = normalizeApprovedMaskOverlaps(
+        reviewForApproval,
+        runtimeResult.segments,
+      );
+      if (normalized.normalizedCount > 0) {
+        reviewForApproval = normalized.review;
+        normalizedOverlapCount = normalized.normalizedCount;
+        approval = approveMaskingReview(
+          reviewForApproval,
+          runtimeResult.segments,
+          new Date().toISOString(),
+        );
+      }
+    }
+
+    if (!approval.ok) {
+      const pendingCount = reviewForApproval.suggestions.filter(
+        (suggestion) => suggestion.reviewStatus === "pending",
+      ).length;
+      const correctionCount = reviewForApproval.suggestions.filter(
+        (suggestion) => suggestion.reviewStatus === "rejected",
+      ).length;
+      const locatedIssue = approval.issues.find(
+        (issue) => issue.maskId && issue.segmentId,
+      );
+      const issueSuggestion = locatedIssue?.maskId
+        ? reviewForApproval.suggestions.find(
+            (suggestion) => suggestion.id === locatedIssue.maskId,
+          )
+        : undefined;
+      const issueSegment = locatedIssue?.segmentId
+        ? runtimeResult.segments.find(
+            (segment) => segment.id === locatedIssue.segmentId,
+          )
+        : undefined;
+      const issueDocument = issueSegment
+        ? record.documentPacket.documents.find(
+            (document) => document.id === issueSegment.documentId,
+          )
+        : undefined;
+      const issueLabel =
+        locatedIssue?.code === "overlapping_masks"
+          ? "overlaps another approved mask"
+          : locatedIssue?.code === "invalid_range"
+            ? "no longer matches a valid source-text range"
+            : locatedIssue?.code === "unsafe_replacement_token"
+              ? "uses an unsafe replacement label"
+              : locatedIssue?.code === "pending_mask"
+                ? "still needs a review decision"
+                : locatedIssue?.code === "rejected_mask"
+                  ? "is marked as needing correction"
+                  : "needs correction";
+      const locatedFeedback =
+        locatedIssue &&
+        issueSuggestion &&
+        issueSegment &&
+        typeof issueSegment.pageNumber === "number"
+          ? `Opened ${issueDocument?.fileName ?? issueSegment.documentId}, page ${issueSegment.pageNumber}. The highlighted ${issueSuggestion.maskClass.replaceAll("_", " ")} mask ${issueLabel}. Approve, adjust, or remove it, then run the check again.`
+          : null;
+
+      if (
+        locatedFeedback &&
+        locatedIssue?.maskId &&
+        issueSegment &&
+        typeof issueSegment.pageNumber === "number"
+      ) {
+        if (
+          refreshedAutomaticRangeCount > 0 ||
+          normalizedOverlapCount > 0
+        ) {
+          saveMasking(reviewForApproval);
+        }
+        navigateToMask({
+          documentId: issueSegment.documentId,
+          maskId: locatedIssue.maskId,
+          pageNumber: issueSegment.pageNumber,
+        });
+      }
+      const feedback =
+        locatedFeedback ??
+        (pendingCount > 0 || correctionCount > 0
+          ? `Review ${pendingCount} pending and ${correctionCount} needing-correction mask${pendingCount + correctionCount === 1 ? "" : "s"} before approval.`
+          : "The privacy check could not locate the invalid range in the current PDF view. Reprocess the packet to refresh its source mapping.");
+      setPrivacyActionFeedback({ tone: "warning", message: feedback });
       setNotice({
         tone: "warning",
         title: "Mask review remains blocked",
-        detail: "Resolve every pending or rejected mask before approval.",
+        detail: locatedFeedback
+          ? locatedFeedback
+          : pendingCount > 0 || correctionCount > 0
+            ? `Review ${pendingCount} pending and ${correctionCount} needing-correction mask${pendingCount + correctionCount === 1 ? "" : "s"}. Use the single next-step action at the top of Masking Status.`
+            : "The invalid range could not be located in the current PDF view. Reprocess the packet to refresh its source mapping.",
       });
       return;
     }
@@ -814,6 +1378,11 @@ export function BrowserCaseDocumentsWorkspace({
       scanProviderPayload(redactedSegments.join("\n")),
     );
     if (!saveMasking(masking)) {
+      setPrivacyActionFeedback({
+        tone: "warning",
+        message:
+          "The privacy result could not be saved in browser storage. Your previous masking state is unchanged.",
+      });
       setNotice({
         tone: "warning",
         title: "Privacy result was not saved",
@@ -833,6 +1402,60 @@ export function BrowserCaseDocumentsWorkspace({
           ? "The approved masked text passed the deterministic local leak scan."
           : "A supported identifier pattern remains. Correct the masking review and run the check again.",
     });
+    setPrivacyActionFeedback({
+      tone: masking.leakScanStatus === "passed" ? "success" : "warning",
+      message:
+        masking.leakScanStatus === "passed"
+          ? `${refreshedAutomaticRangeCount > 0 ? "An older automatic address range was safely refreshed. " : ""}${normalizedOverlapCount > 0 ? `${normalizedOverlapCount} overlapping mask range${normalizedOverlapCount === 1 ? " was" : "s were"} safely consolidated without exposing covered text. ` : ""}Privacy check passed and was saved. Analysis is now available.`
+          : "The local scan still finds a supported identifier. Correct its mask and run the check again.",
+    });
+  }
+
+  function focusFirstUnresolvedMask() {
+    if (!runtimeResult || !record?.documentPacket) return;
+    const suggestion = record.documentPacket.masking.suggestions.find(
+      (candidate) =>
+        candidate.reviewStatus === "pending" ||
+        candidate.reviewStatus === "rejected",
+    );
+    if (!suggestion) {
+      completeMasking();
+      return;
+    }
+    const segment = runtimeResult.segments.find(
+      (candidate) => candidate.id === suggestion.segmentId,
+    );
+    if (!segment || typeof segment.pageNumber !== "number") {
+      setPrivacyActionFeedback({
+        tone: "warning",
+        message:
+          "This unresolved mask has no usable page location. Remove it from the accessible mask list or reprocess the PDF.",
+      });
+      return;
+    }
+
+    navigateToMask({
+      documentId: segment.documentId,
+      maskId: suggestion.id,
+      pageNumber: segment.pageNumber,
+    });
+  }
+
+  function navigateToMask(target: MaskNavigationTarget) {
+    const suggestion = record?.documentPacket?.masking.suggestions.find(
+      (candidate) => candidate.id === target.maskId,
+    );
+    setMaskNavigationTarget(target);
+    setPrivacyActionFeedback({
+      tone: "warning",
+      message: `Opened the ${suggestion?.maskClass.replaceAll("_", " ") ?? "selected"} mask in ${target.documentId}, page ${target.pageNumber}. Approve, correct, or remove it.`,
+    });
+    window.setTimeout(() => {
+      const heading = document.getElementById("masked-preview-heading");
+      if (heading && typeof heading.scrollIntoView === "function") {
+        heading.scrollIntoView({ behavior: "smooth", block: "start" });
+      }
+    }, 0);
   }
 
   async function downloadSanitizedTextPdf() {
@@ -1028,7 +1651,7 @@ export function BrowserCaseDocumentsWorkspace({
           accept="application/pdf,.pdf"
           aria-label="Select PDF documents"
           className="sr-only"
-          disabled={!purposeComplete || isProcessing}
+          disabled={!purposeComplete || isProcessing || isLoadingSynthetic}
           multiple
           onChange={handleInput}
           ref={inputRef}
@@ -1121,11 +1744,15 @@ export function BrowserCaseDocumentsWorkspace({
                 </p>
                 <button
                   className="mt-4 inline-flex min-h-9 items-center justify-center rounded-md bg-[color:var(--amber)] px-4 py-2 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50"
-                  disabled={!purposeComplete || isProcessing}
-                  onClick={() => openPicker("initial")}
+                  disabled={
+                    !purposeComplete || isProcessing || isLoadingSynthetic
+                  }
+                  onClick={openSourceChooser}
                   type="button"
                 >
-                  {isProcessing ? "Processing locally…" : "Choose PDFs"}
+                  {isProcessing || isLoadingSynthetic
+                    ? "Processing locally…"
+                    : "Add PDFs"}
                 </button>
                 <p className="mt-4 max-w-xs text-[11px] leading-5 text-muted-foreground">
                   1–{LOCAL_PDF_SELECTION_LIMITS.maxFiles} PDFs ·{" "}
@@ -1176,14 +1803,12 @@ export function BrowserCaseDocumentsWorkspace({
             documentMetadata={documentMetadata}
             documents={displayedDocuments}
             maskingStatus={packet.masking.reviewStatus}
+            maskingTarget={maskNavigationTarget}
             ocrDrafts={ocrDrafts}
-            onAddSource={() => {
-              if (runtimeFiles.length === 0) {
-                openPicker("upgrade");
-              } else {
-                openPicker("add");
-              }
-            }}
+            onAddSource={openSourceChooser}
+            onRemove={setPendingRemovalDocumentId}
+            onRemoveAll={() => openBulkRemoval("all")}
+            onSelectForRemoval={() => openBulkRemoval("select")}
             onReplace={() => openPicker("replace")}
             onReselectPreview={() =>
               openPicker(runtimeFiles.length === 0 ? "upgrade" : "reselect")
@@ -1212,6 +1837,28 @@ export function BrowserCaseDocumentsWorkspace({
             onUnlockDocument={unlockDocument}
             onUpdateSourceType={updateSourceType}
             pageProgress={pageProgress}
+            packetPrimaryAction={
+              analysisCorpusResult?.ok ? (
+                <Link
+                  aria-label="Continue to Structured Analysis from packet header"
+                  className="inline-flex min-h-7 items-center gap-1 rounded-md border border-[var(--color-brand)] bg-[var(--color-brand)] px-2 py-1 text-xs font-semibold !text-white hover:bg-[var(--color-brand-hover)]"
+                  href={`/case/${record.id}/analysis`}
+                >
+                  Continue to analysis
+                  <ArrowRight aria-hidden="true" className="h-3.5 w-3.5" />
+                </Link>
+              ) : (
+                <button
+                  aria-label="Structured Analysis unavailable"
+                  className="inline-flex min-h-7 items-center gap-1 rounded-md border border-border bg-muted px-2 py-1 text-xs font-semibold text-muted-foreground"
+                  disabled
+                  title="Complete source preparation and the final privacy check first."
+                  type="button"
+                >
+                  Analysis blocked
+                </button>
+              )
+            }
             qualityContent={
               <DocumentPacketTools
                 analysisHref={`/case/${record.id}/analysis`}
@@ -1221,12 +1868,45 @@ export function BrowserCaseDocumentsWorkspace({
                 runtimeAvailable={Boolean(runtimeResult)}
               />
             }
-            renderMaskingContent={({ document, file }) => (
+            renderMaskingContent={({ document, file, focusedMaskId }) => (
               <div className="grid gap-5">
+                <PacketMaskReviewQueue
+                  automaticSuggestionIds={automaticMaskSuggestionIds}
+                  disabled={!runtimeResult}
+                  documents={displayedDocuments}
+                  focusedMaskId={maskNavigationTarget?.maskId}
+                  onApplyAllDetected={applyAllDetectedMasks}
+                  onComplete={completeMasking}
+                  onNavigate={navigateToMask}
+                  onRestore={() =>
+                    openPicker(
+                      runtimeFiles.length === 0 ? "upgrade" : "reselect",
+                    )
+                  }
+                  review={packet.masking}
+                  segments={runtimeResult?.segments ?? []}
+                />
+                {privacyActionFeedback ? (
+                  <p
+                    className={
+                      privacyActionFeedback.tone === "success"
+                        ? "rounded-md border border-[color-mix(in_oklab,var(--sage)_35%,transparent)] bg-[color-mix(in_oklab,var(--sage)_9%,transparent)] px-3 py-2 text-xs leading-5"
+                        : "rounded-md border border-[color-mix(in_oklab,var(--rust)_35%,transparent)] bg-[color-mix(in_oklab,var(--rust)_8%,transparent)] px-3 py-2 text-xs leading-5"
+                    }
+                    role={
+                      privacyActionFeedback.tone === "warning"
+                        ? "alert"
+                        : "status"
+                    }
+                  >
+                    {privacyActionFeedback.message}
+                  </p>
+                ) : null}
                 <MaskedPdfPreview
                   disabled={!runtimeResult}
                   document={document}
                   file={file}
+                  focusedMaskId={focusedMaskId}
                   onAdd={addMask}
                   onRemove={removeMask}
                   onReselect={() =>
@@ -1246,12 +1926,14 @@ export function BrowserCaseDocumentsWorkspace({
                       downloadFlattenedSanitizedPdf
                     }
                     onRemove={removeMask}
+                    onReviewUnresolved={focusFirstUnresolvedMask}
                     onReview={reviewMaskDecision}
                     review={packet.masking}
                     sanitizedPdfState={sanitizedPdfState}
                     segmentIds={
                       runtimeResult?.segments.map((segment) => segment.id) ?? []
                     }
+                    showPrimaryAction={false}
                     visualSelectionAvailable
                   />
                 </div>
@@ -1269,6 +1951,330 @@ export function BrowserCaseDocumentsWorkspace({
           until a practitioner verifies the OCR draft. Handwriting and
           low-quality scans may still require replacement or manual review.
         </p>
+
+        {sourceChooserOpen ? (
+          <div
+            className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 p-3 sm:items-center sm:p-5"
+            onKeyDown={(event) => {
+              if (event.key === "Escape" && !isLoadingSynthetic) {
+                setSourceChooserOpen(false);
+                setSyntheticReplaceConfirm(false);
+              }
+            }}
+          >
+            <section
+              aria-labelledby="pdf-source-heading"
+              aria-modal="true"
+              className="max-h-[calc(100vh-1.5rem)] w-full max-w-3xl overflow-y-auto rounded-xl border border-border bg-card shadow-2xl"
+              role="dialog"
+            >
+              <header className="flex items-start justify-between gap-4 border-b border-border px-5 py-4">
+                <div>
+                  <p className="font-mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
+                    Source intake
+                  </p>
+                  <h2 className="mt-1 font-serif text-xl" id="pdf-source-heading">
+                    Add PDFs
+                  </h2>
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    Upload a permitted local packet or explore the complete
+                    fictional demonstration packet.
+                  </p>
+                </div>
+                <button
+                  aria-label="Close Add PDFs"
+                  className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-md border border-border hover:bg-muted"
+                  disabled={isLoadingSynthetic}
+                  onClick={() => {
+                    setSourceChooserOpen(false);
+                    setSyntheticReplaceConfirm(false);
+                  }}
+                  type="button"
+                >
+                  <X aria-hidden="true" className="h-4 w-4" />
+                </button>
+              </header>
+
+              <div className="grid gap-3 p-5 md:grid-cols-2">
+                <article className="flex min-h-64 flex-col rounded-xl border border-border bg-background p-4">
+                  <span className="flex h-10 w-10 items-center justify-center rounded-full border border-border bg-muted/40">
+                    <FolderOpen
+                      aria-hidden="true"
+                      className="h-4.5 w-4.5 text-muted-foreground"
+                    />
+                  </span>
+                  <h3 className="mt-4 font-serif text-lg">
+                    Upload from this device
+                  </h3>
+                  <p className="mt-1 text-sm leading-6 text-muted-foreground">
+                    Choose one or multiple synthetic or authorized-public PDFs.
+                    Files remain in this browser.
+                  </p>
+                  <button
+                    className="mt-auto inline-flex min-h-10 items-center justify-center gap-2 rounded-md border border-border bg-card px-4 py-2 text-sm font-semibold hover:bg-muted"
+                    onClick={() =>
+                      openPicker(
+                        record.documentPacket
+                          ? runtimeFiles.length === 0
+                            ? "upgrade"
+                            : "add"
+                          : "initial",
+                      )
+                    }
+                    type="button"
+                  >
+                    <UploadCloud aria-hidden="true" className="h-4 w-4" />
+                    Choose local PDFs
+                  </button>
+                </article>
+
+                <article className="flex min-h-64 flex-col rounded-xl border border-[color:var(--amber)]/45 bg-[color:var(--amber)]/5 p-4">
+                  <span className="flex h-10 w-10 items-center justify-center rounded-full border border-[color:var(--amber)]/30 bg-[color:var(--amber)]/10">
+                    <Sparkles
+                      aria-hidden="true"
+                      className="h-4.5 w-4.5 text-[color:var(--amber)]"
+                    />
+                  </span>
+                  <div className="mt-4 flex flex-wrap items-center gap-2">
+                    <h3 className="font-serif text-lg">
+                      Use synthetic demo packet
+                    </h3>
+                    <Chip tone="amber">Judge ready</Chip>
+                  </div>
+                  <p className="mt-1 text-sm leading-6 text-muted-foreground">
+                    17 fictional PDFs · 35 pages · 14 clearly named records and
+                    3 generic-filename records.
+                  </p>
+                  <p className="mt-2 text-xs leading-5 text-muted-foreground">
+                    Actual PDF bytes run through the same extraction, masking,
+                    coverage, and analysis-input pipeline. No analysis result is
+                    preloaded.
+                  </p>
+                  {syntheticReplaceConfirm ? (
+                    <div
+                      aria-label="Confirm synthetic packet replacement"
+                      className="mt-auto rounded-lg border border-[color:var(--rust)]/30 bg-[color:var(--rust)]/5 p-3"
+                      role="alert"
+                    >
+                      <p className="text-xs leading-5">
+                        This will replace the current packet. Existing PDFs will
+                        not be mixed with the synthetic demonstration.
+                      </p>
+                      <div className="mt-3 flex flex-wrap gap-2">
+                        <button
+                          className="inline-flex min-h-9 items-center justify-center rounded-md bg-[color:var(--rust)] px-3 py-2 text-xs font-semibold text-white"
+                          onClick={() => void loadSyntheticPacket()}
+                          type="button"
+                        >
+                          Replace with synthetic packet
+                        </button>
+                        <button
+                          className="inline-flex min-h-9 items-center justify-center rounded-md border border-border bg-card px-3 py-2 text-xs font-semibold"
+                          onClick={() => setSyntheticReplaceConfirm(false)}
+                          type="button"
+                        >
+                          Keep current packet
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <button
+                      className="mt-auto inline-flex min-h-10 items-center justify-center gap-2 rounded-md bg-[color:var(--amber)] px-4 py-2 text-sm font-semibold text-white disabled:cursor-wait disabled:opacity-60"
+                      disabled={isLoadingSynthetic}
+                      onClick={() => void loadSyntheticPacket()}
+                      type="button"
+                    >
+                      {isLoadingSynthetic ? (
+                        <LoaderCircle
+                          aria-hidden="true"
+                          className="h-4 w-4 animate-spin"
+                        />
+                      ) : (
+                        <Sparkles aria-hidden="true" className="h-4 w-4" />
+                      )}
+                      {isLoadingSynthetic
+                        ? "Loading synthetic packet…"
+                        : record.documentPacket
+                          ? "Replace with synthetic packet"
+                          : "Load synthetic packet"}
+                    </button>
+                  )}
+                </article>
+              </div>
+
+              <p className="border-t border-border px-5 py-3 text-xs leading-5 text-muted-foreground">
+                Demonstration boundary: never upload confidential client or
+                survivor records. Uploaded files are not transmitted to an AI
+                provider during document processing.
+              </p>
+            </section>
+          </div>
+        ) : null}
+
+        {bulkRemovalMode ? (
+          <div className="fixed inset-0 z-[55] flex items-end justify-center bg-black/40 p-3 sm:items-center sm:p-5">
+            <section
+              aria-labelledby="bulk-remove-pdf-heading"
+              aria-modal="true"
+              className="max-h-[calc(100vh-2rem)] w-full max-w-lg overflow-hidden rounded-xl border border-border bg-card shadow-2xl"
+              role="dialog"
+            >
+              <header className="flex items-start gap-3 border-b border-border p-5">
+                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-[color:var(--rust)]/30 bg-[color:var(--rust)]/5 text-[color:var(--rust)]">
+                  <Trash2 aria-hidden="true" className="h-4.5 w-4.5" />
+                </span>
+                <div>
+                  <p className="font-mono text-[10px] uppercase tracking-[0.16em] text-muted-foreground">
+                    Packet management
+                  </p>
+                  <h2
+                    className="mt-1 font-serif text-xl"
+                    id="bulk-remove-pdf-heading"
+                  >
+                    {bulkRemovalMode === "all"
+                      ? "Remove all PDFs?"
+                      : "Select PDFs to remove"}
+                  </h2>
+                  <p className="mt-1 text-sm leading-5 text-muted-foreground">
+                    {bulkRemovalMode === "all"
+                      ? `This will clear all ${displayedDocuments.length} PDFs from the current case.`
+                      : "Choose one or more PDFs. Unselected files will be reprocessed as the current packet."}
+                  </p>
+                </div>
+              </header>
+
+              {bulkRemovalMode === "select" ? (
+                <fieldset className="max-h-80 overflow-y-auto p-3">
+                  <legend className="sr-only">PDFs selected for removal</legend>
+                  <div className="grid gap-1">
+                    {displayedDocuments.map((document) => {
+                      const checked = bulkRemovalDocumentIds.includes(
+                        document.id,
+                      );
+                      return (
+                        <label
+                          className={`flex cursor-pointer items-start gap-3 rounded-lg border px-3 py-2.5 ${
+                            checked
+                              ? "border-[color:var(--rust)]/40 bg-[color:var(--rust)]/5"
+                              : "border-transparent hover:bg-muted/50"
+                          }`}
+                          key={document.id}
+                        >
+                          <input
+                            checked={checked}
+                            className="mt-0.5 h-4 w-4 accent-[color:var(--rust)]"
+                            onChange={() =>
+                              toggleBulkRemovalDocument(document.id)
+                            }
+                            type="checkbox"
+                          />
+                          <span className="min-w-0">
+                            <span className="block truncate text-sm font-semibold">
+                              {document.fileName}
+                            </span>
+                            <span className="mt-0.5 block font-mono text-[10px] text-muted-foreground">
+                              {document.id} · {document.expectedPageCount} page
+                              {document.expectedPageCount === 1 ? "" : "s"}
+                            </span>
+                          </span>
+                        </label>
+                      );
+                    })}
+                  </div>
+                </fieldset>
+              ) : (
+                <div className="p-5">
+                  <div className="rounded-lg border border-[color:var(--rust)]/25 bg-[color:var(--rust)]/5 p-3 text-sm leading-6">
+                    Masking decisions, coverage, and current analysis derived
+                    from this packet will no longer be current. You can add a
+                    new packet afterward.
+                  </div>
+                </div>
+              )}
+
+              <footer className="flex flex-wrap items-center justify-between gap-3 border-t border-border px-5 py-4">
+                <span className="text-xs text-muted-foreground">
+                  {bulkRemovalMode === "select"
+                    ? `${bulkRemovalDocumentIds.length} selected`
+                    : `${displayedDocuments.length} PDFs will be removed`}
+                </span>
+                <div className="flex flex-wrap gap-2">
+                  <button
+                    className="inline-flex min-h-10 items-center justify-center rounded-md border border-border bg-card px-4 py-2 text-sm font-semibold hover:bg-muted"
+                    disabled={isProcessing}
+                    onClick={() => {
+                      setBulkRemovalMode(null);
+                      setBulkRemovalDocumentIds([]);
+                    }}
+                    type="button"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    className="inline-flex min-h-10 items-center justify-center gap-2 rounded-md bg-[color:var(--rust)] px-4 py-2 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50"
+                    disabled={
+                      isProcessing ||
+                      (bulkRemovalMode === "select" &&
+                        bulkRemovalDocumentIds.length === 0)
+                    }
+                    onClick={() => void confirmBulkRemoval()}
+                    type="button"
+                  >
+                    <Trash2 aria-hidden="true" className="h-4 w-4" />
+                    {bulkRemovalMode === "all"
+                      ? `Remove all ${displayedDocuments.length} PDFs`
+                      : `Remove selected (${bulkRemovalDocumentIds.length})`}
+                  </button>
+                </div>
+              </footer>
+            </section>
+          </div>
+        ) : null}
+
+        {pendingRemovalDocumentId ? (
+          <div className="fixed inset-0 z-[55] flex items-end justify-center bg-black/40 p-3 sm:items-center sm:p-5">
+            <section
+              aria-labelledby="remove-pdf-heading"
+              aria-modal="true"
+              className="w-full max-w-md rounded-xl border border-border bg-card p-5 shadow-2xl"
+              role="dialog"
+            >
+              <span className="flex h-10 w-10 items-center justify-center rounded-full border border-[color:var(--rust)]/30 bg-[color:var(--rust)]/5 text-[color:var(--rust)]">
+                <Trash2 aria-hidden="true" className="h-4.5 w-4.5" />
+              </span>
+              <h2 className="mt-4 font-serif text-xl" id="remove-pdf-heading">
+                Remove this PDF?
+              </h2>
+              <p className="mt-2 text-sm leading-6 text-muted-foreground">
+                {displayedDocuments.find(
+                  (document) => document.id === pendingRemovalDocumentId,
+                )?.fileName ?? pendingRemovalDocumentId}
+              </p>
+              <p className="mt-2 text-sm leading-6">
+                The remaining files will be reprocessed. Masking, coverage,
+                packet integrity, and analysis freshness will update to match
+                the new packet.
+              </p>
+              <div className="mt-5 flex flex-wrap justify-end gap-2">
+                <button
+                  className="inline-flex min-h-10 items-center justify-center rounded-md border border-border bg-card px-4 py-2 text-sm font-semibold hover:bg-muted"
+                  onClick={() => setPendingRemovalDocumentId(null)}
+                  type="button"
+                >
+                  Keep PDF
+                </button>
+                <button
+                  className="inline-flex min-h-10 items-center justify-center gap-2 rounded-md bg-[color:var(--rust)] px-4 py-2 text-sm font-semibold text-white"
+                  onClick={() => void removeSelectedDocument()}
+                  type="button"
+                >
+                  <Trash2 aria-hidden="true" className="h-4 w-4" />
+                  Remove PDF
+                </button>
+              </div>
+            </section>
+          </div>
+        ) : null}
       </div>
     </BrowserCaseShell>
   );

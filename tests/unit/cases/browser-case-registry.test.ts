@@ -71,6 +71,23 @@ describe("browser-local case registry", () => {
     });
   });
 
+  it("adds the REF- prefix for a simple judge-entered reference", () => {
+    const created = createBrowserCase(
+      createEmptyBrowserCaseRegistry(),
+      {
+        assignedPractitioner: "Demo practitioner",
+        displayReference: "raj1",
+        personAlias: "J. Example",
+      },
+      { idNonce: "SIMPLE", now: NOW },
+    );
+
+    expect(created.ok).toBe(true);
+    if (created.ok) {
+      expect(created.record.displayReference).toBe("REF-RAJ1");
+    }
+  });
+
   it("restores legacy browser-created cases with an empty document packet", () => {
     const created = addCase(
       createEmptyBrowserCaseRegistry(),

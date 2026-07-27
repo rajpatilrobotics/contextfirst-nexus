@@ -18,5 +18,9 @@ export {
 } from "./pdf-selection-panel";
 export { MaskingReviewPanel } from "./masking-review-panel";
 export { MaskedPdfPreview } from "./masked-pdf-preview";
+export {
+  PacketMaskReviewQueue,
+  type MaskNavigationTarget,
+} from "./packet-mask-review-queue";
 export { PROCESSING_STAGE_ORDER, ProcessingStageList } from "./processing-stage-list";
 export { SensitiveReveal } from "./sensitive-reveal";

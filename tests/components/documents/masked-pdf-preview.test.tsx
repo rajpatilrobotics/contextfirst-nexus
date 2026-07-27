@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import { MaskedPdfPreview } from "../../../features/documents";
@@ -207,6 +207,40 @@ describe("browser-local masked PDF preview", () => {
       maskClass: "person_name",
       replacementToken: "[Person name masked]",
     });
+  });
+
+  it("opens a packet-queue target on its exact highlighted PDF page", async () => {
+    const scrollTo = vi.fn();
+    Object.defineProperty(HTMLDivElement.prototype, "scrollTo", {
+      configurable: true,
+      value: scrollTo,
+    });
+    const masking = review();
+    const maskId = masking.suggestions[0]!.id;
+
+    render(
+      <MaskedPdfPreview
+        document={sourceDocument()}
+        file={pdfFile()}
+        focusedMaskId={maskId}
+        onAdd={vi.fn()}
+        onRemove={vi.fn()}
+        onReview={vi.fn()}
+        review={masking}
+        segments={[segment()]}
+      />,
+    );
+
+    const overlay = await screen.findByRole("button", {
+      name: "Awaiting review Email mask on page 1",
+    });
+    await waitFor(() =>
+      expect(scrollTo).toHaveBeenCalledWith(
+        expect.objectContaining({ behavior: "smooth" }),
+      ),
+    );
+    expect(overlay).toHaveClass("ring-2", "ring-sky-400");
+    expect(screen.getByDisplayValue("[Email masked]")).toBeInTheDocument();
   });
 
   it("extends an ordinary selection across adjacent visible words", async () => {

@@ -262,6 +262,9 @@ export function MaskingReviewPanel({
   onDownloadSanitizedPdf,
   onDownloadVisualSanitizedPdf,
   sanitizedPdfState = "idle",
+  actionFeedback = null,
+  onReviewUnresolved,
+  showPrimaryAction = true,
 }: {
   review: MaskingReview;
   segmentIds: string[];
@@ -278,6 +281,12 @@ export function MaskingReviewPanel({
   onDownloadSanitizedPdf?: () => void;
   onDownloadVisualSanitizedPdf?: () => void;
   sanitizedPdfState?: "idle" | "generating_text" | "generating_visual";
+  actionFeedback?: {
+    tone: "success" | "warning";
+    message: string;
+  } | null;
+  onReviewUnresolved?: () => void;
+  showPrimaryAction?: boolean;
 }) {
   const pendingCount = review.suggestions.filter(
     (suggestion) => suggestion.reviewStatus === "pending",
@@ -345,10 +354,14 @@ export function MaskingReviewPanel({
                 className="font-serif text-base leading-tight"
                 id="privacy-gate-heading"
               >
-                Final privacy check
+                {showPrimaryAction
+                  ? "Final privacy check"
+                  : "Privacy result & downloads"}
               </h3>
               <p className="text-[10px] leading-4 text-muted-foreground">
-                Validate decisions and scan the masked text locally.
+                {showPrimaryAction
+                  ? "Validate decisions and scan the masked text locally."
+                  : "Review the saved result and create sanitized derivatives."}
               </p>
             </div>
           </div>
@@ -424,20 +437,26 @@ export function MaskingReviewPanel({
                   : "Download visual sanitized PDF"}
               </Button>
             ) : null}
-            <Button
-              className="!min-h-0 !rounded-md !px-3 !py-1.5 !text-xs !shadow-none"
-              disabled={disabled || !readyToComplete}
-              onClick={onComplete}
-              variant="primary"
-            >
-              {!hasProcessedSegments
-                ? "Restore PDFs first"
-                : unresolvedCount > 0
-                  ? `Review ${unresolvedCount} mask${unresolvedCount === 1 ? "" : "s"}`
-                  : scanPassed
-                    ? "Run check again"
-                    : "Approve privacy check"}
-            </Button>
+            {showPrimaryAction ? (
+              <Button
+                className="!min-h-0 !rounded-md !px-3 !py-1.5 !text-xs !shadow-none"
+                disabled={disabled || !hasProcessedSegments}
+                onClick={
+                  unresolvedCount > 0 && onReviewUnresolved
+                    ? onReviewUnresolved
+                    : onComplete
+                }
+                variant="primary"
+              >
+                {!hasProcessedSegments
+                  ? "Restore PDFs first"
+                  : unresolvedCount > 0
+                    ? `Open ${unresolvedCount} unresolved mask${unresolvedCount === 1 ? "" : "s"}`
+                    : scanPassed
+                      ? "Run check again"
+                      : "Approve privacy check"}
+              </Button>
+            ) : null}
           </div>
         </div>
 
@@ -465,6 +484,18 @@ export function MaskingReviewPanel({
             </ul>
           </details>
         </div>
+        {actionFeedback ? (
+          <p
+            className={
+              actionFeedback.tone === "success"
+                ? "mt-2 rounded-md border border-[color-mix(in_oklab,var(--sage)_35%,transparent)] bg-[color-mix(in_oklab,var(--sage)_9%,transparent)] px-2.5 py-1.5 text-[11px] leading-4 text-foreground"
+                : "mt-2 rounded-md border border-[color-mix(in_oklab,var(--rust)_35%,transparent)] bg-[color-mix(in_oklab,var(--rust)_8%,transparent)] px-2.5 py-1.5 text-[11px] leading-4 text-foreground"
+            }
+            role={actionFeedback.tone === "warning" ? "alert" : "status"}
+          >
+            {actionFeedback.message}
+          </p>
+        ) : null}
       </section>
     );
   }

@@ -275,7 +275,10 @@ export function createBrowserCase(
 ):
   | { ok: true; registry: BrowserCaseRegistry; record: BrowserCaseRecord }
   | { ok: false; reason: string } {
-  const displayReference = input.displayReference.trim().toUpperCase();
+  const enteredReference = input.displayReference.trim().toUpperCase();
+  const displayReference = enteredReference.startsWith("REF-")
+    ? enteredReference
+    : `REF-${enteredReference}`;
   const parsedInput = z
     .strictObject({
       assignedPractitioner: PractitionerNameSchema,
@@ -292,7 +295,7 @@ export function createBrowserCase(
     return {
       ok: false,
       reason:
-        "Enter a REF- case reference, a person alias, and an assigned practitioner.",
+        "Enter a case reference, a person alias, and an assigned practitioner.",
     };
   }
   if (
@@ -405,6 +408,38 @@ export function saveBrowserCaseDocumentPacket(
   });
   if (!nextRegistry.success) {
     return { ok: false, reason: "The document packet could not be saved." };
+  }
+  return {
+    ok: true,
+    registry: nextRegistry.data,
+    record: nextRegistry.data.cases[index],
+  };
+}
+
+export function clearBrowserCaseDocumentPacket(
+  registry: BrowserCaseRegistry,
+  caseId: string,
+  updatedAt = new Date().toISOString(),
+):
+  | { ok: true; registry: BrowserCaseRegistry; record: BrowserCaseRecord }
+  | { ok: false; reason: string } {
+  const index = registry.cases.findIndex((record) => record.id === caseId);
+  if (index < 0) {
+    return { ok: false, reason: "This browser-local case no longer exists." };
+  }
+
+  const cases = [...registry.cases];
+  cases[index] = {
+    ...cases[index],
+    documentPacket: null,
+    updatedAt,
+  };
+  const nextRegistry = BrowserCaseRegistrySchema.safeParse({
+    ...registry,
+    cases,
+  });
+  if (!nextRegistry.success) {
+    return { ok: false, reason: "The empty document packet could not be saved." };
   }
   return {
     ok: true,

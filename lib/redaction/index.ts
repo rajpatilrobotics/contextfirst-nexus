@@ -195,7 +195,7 @@ const PATTERN_DETECTORS: PatternDetector[] = [
   {
     maskClass: "address",
     pattern:
-      /\b\d{1,6}\s+(?:[A-Za-z0-9.'-]+\s+){1,6}(?:Street|St|Road|Rd|Avenue|Ave|Lane|Ln|Boulevard|Blvd|Drive|Dr|Court|Ct|Way)\b/gi,
+      /\b\d{1,6}[ \t]+(?:[A-Za-z0-9.'-]+[ \t]+){1,6}(?:Street|St|Road|Rd|Avenue|Ave|Lane|Ln|Boulevard|Blvd|Drive|Dr|Court|Ct|Way)\b/gi,
   },
   {
     maskClass: "date_of_birth",
@@ -307,6 +307,81 @@ export function approveMaskingReview(
       leakScanStatus: "not_run",
       failedClasses: [],
     },
+  };
+}
+
+export function normalizeApprovedMaskOverlaps(
+  review: MaskingReview,
+  segments: readonly SegmentInput[],
+): { review: MaskingReview; normalizedCount: number } {
+  const segmentById = new Map(segments.map((segment) => [segment.id, segment]));
+  const nextById = new Map(
+    review.suggestions.map((suggestion) => [suggestion.id, suggestion]),
+  );
+  let normalizedCount = 0;
+
+  for (const segment of segments) {
+    const approved = effectiveSuggestionsForSegment(
+      review.suggestions,
+      segment.id,
+    ).filter(
+      (suggestion) =>
+        suggestion.originalStart >= 0 &&
+        suggestion.originalEnd <= segment.rawText.length &&
+        suggestion.originalEnd > suggestion.originalStart,
+    );
+    let previous = approved[0];
+    for (let index = 1; index < approved.length; index += 1) {
+      const current = approved[index];
+      if (!previous || !current) continue;
+      if (current.originalStart >= previous.originalEnd) {
+        previous = current;
+        continue;
+      }
+
+      if (!segmentById.has(current.segmentId)) continue;
+      if (current.originalEnd <= previous.originalEnd) {
+        nextById.delete(current.id);
+        normalizedCount += 1;
+        continue;
+      }
+
+      const originalStart = previous.originalEnd;
+      const adjusted = {
+        ...current,
+        id: makeSuggestionId(
+          current.segmentId,
+          current.maskClass,
+          originalStart,
+          current.originalEnd,
+        ),
+        originalStart,
+        redactedStart: originalStart,
+        redactedEnd: originalStart + current.replacementToken.length,
+      };
+      nextById.delete(current.id);
+      nextById.set(adjusted.id, adjusted);
+      normalizedCount += 1;
+      previous = adjusted;
+    }
+  }
+
+  if (normalizedCount === 0) {
+    return { review, normalizedCount };
+  }
+
+  return {
+    review: {
+      ...review,
+      revision: review.revision + 1,
+      reviewStatus: "invalidated",
+      suggestions: stableUniqueSuggestions([...nextById.values()]),
+      reviewedBy: null,
+      approvedAt: undefined,
+      leakScanStatus: "not_run",
+      failedClasses: [],
+    },
+    normalizedCount,
   };
 }
 

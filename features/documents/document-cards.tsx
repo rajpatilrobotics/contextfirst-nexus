@@ -13,12 +13,14 @@ import type {
   RenderTask,
 } from "pdfjs-dist/types/src/display/api";
 import {
+  ChevronDown,
   Check,
   EyeOff,
   FileText,
   Lock,
   RefreshCw,
   ScanLine,
+  Trash2,
   TriangleAlert,
   UploadCloud,
 } from "lucide-react";
@@ -38,6 +40,7 @@ import type {
   PdfRuntimeMetadata,
   VerifiedOcrPage,
 } from "../../lib/documents";
+import type { MaskNavigationTarget } from "./packet-mask-review-queue";
 
 const SOURCE_TYPE_LABELS: Record<DocumentRecord["sourceType"], string> = {
   recruitment_record: "Recruitment record",
@@ -188,6 +191,7 @@ export type BrowserLocalDocumentMetadata = {
 export type DocumentMaskingContext = {
   document: DocumentRecord;
   file?: File;
+  focusedMaskId?: string;
   metadata?: BrowserLocalDocumentMetadata;
 };
 
@@ -421,10 +425,15 @@ export function DocumentCards({
   documentMetadata,
   maskingStatus = "pending",
   maskingContent,
+  maskingTarget,
+  packetPrimaryAction,
   qualityContent,
   renderMaskingContent,
   onAddSource,
   onReselectPreview,
+  onRemove,
+  onRemoveAll,
+  onSelectForRemoval,
   onReplace,
   onRetry,
   onRetryPage,
@@ -445,10 +454,15 @@ export function DocumentCards({
   >;
   maskingStatus?: string;
   maskingContent?: ReactNode;
+  maskingTarget?: MaskNavigationTarget | null;
+  packetPrimaryAction?: ReactNode;
   qualityContent?: ReactNode;
   renderMaskingContent?: (context: DocumentMaskingContext) => ReactNode;
   onAddSource?: () => void;
   onReselectPreview?: () => void;
+  onRemove?: (documentId: string) => void;
+  onRemoveAll?: () => void;
+  onSelectForRemoval?: () => void;
   onReplace?: (documentId: string) => void;
   onRetry?: (documentId: string) => void;
   onRetryPage?: (documentId: string, pageNumber: number) => void;
@@ -488,6 +502,7 @@ export function DocumentCards({
   >(selectedDocumentForDraft?.sourceType ?? "other");
   const [passwordDraft, setPasswordDraft] = useState("");
   const [unlocking, setUnlocking] = useState(false);
+  const [removeMenuOpen, setRemoveMenuOpen] = useState(false);
   const tabRefs = useRef<Partial<Record<DocumentTab, HTMLButtonElement | null>>>(
     {},
   );
@@ -495,7 +510,14 @@ export function DocumentCards({
   useEffect(() => {
     setSourceTypeDraft(selectedDocumentForDraft?.sourceType ?? "other");
     setPasswordDraft("");
+    setRemoveMenuOpen(false);
   }, [selectedDocumentForDraft?.id, selectedDocumentForDraft?.sourceType]);
+
+  useEffect(() => {
+    if (!maskingTarget) return;
+    setSelectedDocumentId(maskingTarget.documentId);
+    setTab("masking");
+  }, [maskingTarget]);
 
   if (documents.length === 0) {
     return null;
@@ -630,24 +652,27 @@ export function DocumentCards({
           aria-labelledby="packet-list-heading"
           className="rounded-xl border border-border bg-card"
         >
-          <div className="flex items-center justify-between gap-3 border-b border-border p-3">
+          <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border p-3">
             <h4 className="font-serif text-base" id="packet-list-heading">
               Packet ({documents.length})
             </h4>
-            <button
-              className="inline-flex items-center gap-1.5 rounded-md border border-border bg-background px-2 py-1 text-xs hover:bg-muted"
-              onClick={() =>
-                onAddSource
-                  ? onAddSource()
-                  : document
-                      .getElementById("documents")
-                      ?.scrollIntoView({ behavior: "smooth" })
-              }
-              type="button"
-            >
-              <UploadCloud className="h-3.5 w-3.5" />
-              {actionLabels.add ?? "Open source intake"}
-            </button>
+            <div className="flex flex-wrap items-center justify-end gap-1.5">
+              <button
+                className="inline-flex items-center gap-1.5 rounded-md border border-border bg-background px-2 py-1 text-xs hover:bg-muted"
+                onClick={() =>
+                  onAddSource
+                    ? onAddSource()
+                    : document
+                        .getElementById("documents")
+                        ?.scrollIntoView({ behavior: "smooth" })
+                }
+                type="button"
+              >
+                <UploadCloud className="h-3.5 w-3.5" />
+                {actionLabels.add ?? "Open source intake"}
+              </button>
+              {packetPrimaryAction}
+            </div>
           </div>
           <ul>
             {documents.map((document) => {
@@ -761,6 +786,67 @@ export function DocumentCards({
                 <UploadCloud className="h-3.5 w-3.5" />
                 {actionLabels.replace ?? "Replace via source intake"}
               </button>
+              {onRemove ? (
+                <div className="relative inline-flex">
+                  <button
+                    className="inline-flex items-center gap-1.5 rounded-l-md border border-r-0 border-[color:var(--rust)]/35 px-2.5 py-1 text-xs text-[color:var(--rust)] hover:bg-[color:var(--rust)]/5"
+                    onClick={() => onRemove(selectedDocument.id)}
+                    type="button"
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                    Remove PDF
+                  </button>
+                  <button
+                    aria-expanded={removeMenuOpen}
+                    aria-haspopup="menu"
+                    aria-label="More PDF removal options"
+                    className="inline-flex items-center rounded-r-md border border-[color:var(--rust)]/35 px-1.5 py-1 text-[color:var(--rust)] hover:bg-[color:var(--rust)]/5"
+                    onClick={() => setRemoveMenuOpen((open) => !open)}
+                    type="button"
+                  >
+                    <ChevronDown aria-hidden="true" className="h-3.5 w-3.5" />
+                  </button>
+                  {removeMenuOpen ? (
+                    <div
+                      aria-label="PDF removal options"
+                      className="absolute right-0 top-[calc(100%+0.35rem)] z-30 min-w-52 rounded-lg border border-border bg-card p-1.5 shadow-xl"
+                      role="menu"
+                    >
+                      {onSelectForRemoval ? (
+                        <button
+                          className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-xs font-semibold hover:bg-muted"
+                          onClick={() => {
+                            setRemoveMenuOpen(false);
+                            onSelectForRemoval();
+                          }}
+                          role="menuitem"
+                          type="button"
+                        >
+                          <Check aria-hidden="true" className="h-3.5 w-3.5" />
+                          Select PDFs to remove
+                        </button>
+                      ) : null}
+                      {onRemoveAll ? (
+                        <button
+                          className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-xs font-semibold text-[color:var(--rust)] hover:bg-[color:var(--rust)]/5"
+                          onClick={() => {
+                            setRemoveMenuOpen(false);
+                            onRemoveAll();
+                          }}
+                          role="menuitem"
+                          type="button"
+                        >
+                          <Trash2
+                            aria-hidden="true"
+                            className="h-3.5 w-3.5"
+                          />
+                          Remove all PDFs
+                        </button>
+                      ) : null}
+                    </div>
+                  ) : null}
+                </div>
+              ) : null}
             </div>
           </header>
 
@@ -1306,6 +1392,10 @@ export function DocumentCards({
               renderMaskingContent?.({
                 document: selectedDocument,
                 file: selectedFile,
+                focusedMaskId:
+                  maskingTarget?.documentId === selectedDocument.id
+                    ? maskingTarget.maskId
+                    : undefined,
                 metadata: selectedMetadata,
               }) ??
               maskingContent ?? (

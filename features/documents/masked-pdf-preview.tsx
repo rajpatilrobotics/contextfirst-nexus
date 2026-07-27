@@ -168,13 +168,16 @@ function CanvasPage({ page, viewport }: { page: PDFPageProxy; viewport: Viewport
 
 function MaskedPage({
   model,
+  pageElementRef,
   suggestions,
   draft,
   selectedMaskId,
   onSelectItem,
+  onMaskElement,
   onSelectMask,
 }: {
   model: PageModel;
+  pageElementRef: (element: HTMLElement | null) => void;
   suggestions: MaskSuggestion[];
   draft: TextSelection | null;
   selectedMaskId: string | null;
@@ -184,6 +187,7 @@ function MaskedPage({
     pageNumber: number,
     extend: boolean,
   ) => void;
+  onMaskElement: (maskId: string, element: HTMLButtonElement | null) => void;
   onSelectMask: (maskId: string) => void;
 }) {
   const pageSuggestions = model.segment
@@ -193,7 +197,7 @@ function MaskedPage({
     : [];
 
   return (
-    <figure className="mx-auto grid w-max gap-2">
+    <figure className="mx-auto grid w-max gap-2" ref={pageElementRef}>
       <figcaption className="flex items-center justify-between gap-4 font-mono text-[10px] uppercase tracking-[0.12em] text-muted-foreground">
         <span>Page {model.pageNumber}</span>
         <span>
@@ -289,6 +293,7 @@ function MaskedPage({
                       )}`}
                       key={`${suggestion.id}-${itemIndex}`}
                       onClick={() => onSelectMask(suggestion.id)}
+                      ref={(element) => onMaskElement(suggestion.id, element)}
                       style={rectStyle(rect)}
                       title={`${STATUS_LABELS[suggestion.reviewStatus]}: ${MASK_CLASS_LABELS[suggestion.maskClass]}`}
                       type="button"
@@ -326,6 +331,7 @@ export function MaskedPdfPreview({
   review,
   segments,
   disabled = false,
+  focusedMaskId,
   onAdd,
   onReview,
   onRemove,
@@ -336,6 +342,7 @@ export function MaskedPdfPreview({
   review: MaskingReview;
   segments: SourceSegment[];
   disabled?: boolean;
+  focusedMaskId?: string;
   onAdd: (input: {
     segmentId: string;
     originalStart: number;
@@ -362,6 +369,9 @@ export function MaskedPdfPreview({
     DEFAULT_REPLACEMENT_TOKENS.person_name,
   );
   const [selectedReplacement, setSelectedReplacement] = useState("");
+  const maskElementsRef = useRef(new Map<string, HTMLButtonElement>());
+  const pageElementsRef = useRef(new Map<number, HTMLElement>());
+  const previewScrollerRef = useRef<HTMLDivElement | null>(null);
   const documentSegments = useMemo(
     () =>
       segments
@@ -401,6 +411,41 @@ export function MaskedPdfPreview({
   useEffect(() => {
     setSelectedReplacement(selectedSuggestion?.replacementToken ?? "");
   }, [selectedSuggestion?.id, selectedSuggestion?.replacementToken]);
+
+  function focusSuggestion(maskId: string) {
+    const suggestion = documentSuggestions.find((item) => item.id === maskId);
+    if (!suggestion) return;
+    const sourceSegment = documentSegments.find(
+      (segment) => segment.id === suggestion.segmentId,
+    );
+    setDraft(null);
+    setSelectedMaskId(maskId);
+    if (sourceSegment?.pageNumber !== null) {
+      window.requestAnimationFrame(() => {
+        const scroller = previewScrollerRef.current;
+        const target =
+          maskElementsRef.current.get(maskId) ??
+          pageElementsRef.current.get(sourceSegment?.pageNumber ?? -1);
+        if (!scroller || !target) return;
+        const scrollerRect = scroller.getBoundingClientRect();
+        const targetRect = target.getBoundingClientRect();
+        scroller.scrollTo({
+          behavior: "smooth",
+          top:
+            scroller.scrollTop +
+            targetRect.top -
+            scrollerRect.top -
+            scroller.clientHeight / 2 +
+            targetRect.height / 2,
+        });
+      });
+    }
+  }
+
+  useEffect(() => {
+    if (!focusedMaskId || loadingState !== "ready") return;
+    focusSuggestion(focusedMaskId);
+  }, [focusedMaskId, loadingState]);
 
   useEffect(() => {
     if (!file) {
@@ -586,6 +631,7 @@ export function MaskedPdfPreview({
         <div
           aria-label={`Masked PDF preview: ${document.fileName}`}
           className="h-[42rem] overflow-auto rounded-xl border border-border bg-slate-200/60 p-4"
+          ref={previewScrollerRef}
           role="region"
           tabIndex={0}
         >
@@ -608,7 +654,21 @@ export function MaskedPdfPreview({
                   key={page.pageNumber}
                   model={page}
                   onSelectItem={selectItem}
+                  onMaskElement={(maskId, element) => {
+                    if (element) {
+                      maskElementsRef.current.set(maskId, element);
+                    } else {
+                      maskElementsRef.current.delete(maskId);
+                    }
+                  }}
                   onSelectMask={setSelectedMaskId}
+                  pageElementRef={(element) => {
+                    if (element) {
+                      pageElementsRef.current.set(page.pageNumber, element);
+                    } else {
+                      pageElementsRef.current.delete(page.pageNumber);
+                    }
+                  }}
                   selectedMaskId={selectedMaskId}
                   suggestions={documentSuggestions}
                 />
@@ -819,10 +879,7 @@ export function MaskedPdfPreview({
                     <li key={suggestion.id}>
                       <button
                         className="w-full rounded-md border border-border px-2 py-2 text-left text-xs hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--amber)]"
-                        onClick={() => {
-                          setDraft(null);
-                          setSelectedMaskId(suggestion.id);
-                        }}
+                        onClick={() => focusSuggestion(suggestion.id)}
                         type="button"
                       >
                         <span className="block font-semibold">

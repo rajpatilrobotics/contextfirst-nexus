@@ -13,6 +13,7 @@ import {
   makeManualSuggestion,
   mapOriginalOffsetToRedacted,
   mapRedactedOffsetToOriginal,
+  normalizeApprovedMaskOverlaps,
   removeMaskSuggestion,
   reviewMask,
   scanProviderPayload,
@@ -36,6 +37,35 @@ function approveAll(suggestions: MaskingReview["suggestions"]): MaskingReview["s
 }
 
 describe("redaction detection", () => {
+  it("keeps an address on its own line separate from a preceding phone number", () => {
+    const rawText =
+      "Phone\n+1 202-555-0147\n\nAddress\n\n42 Example Lane";
+    const source = segment("D01-P1-S01", rawText);
+    const suggestions = detectMaskSuggestions([source]);
+    const phone = suggestions.find(
+      (suggestion) => suggestion.maskClass === "phone",
+    );
+    const address = suggestions.find(
+      (suggestion) => suggestion.maskClass === "address",
+    );
+
+    expect(phone).toBeDefined();
+    expect(address).toBeDefined();
+    expect(rawText.slice(phone!.originalStart, phone!.originalEnd)).toBe(
+      "+1 202-555-0147",
+    );
+    expect(rawText.slice(address!.originalStart, address!.originalEnd)).toBe(
+      "42 Example Lane",
+    );
+    expect(address!.originalStart).toBeGreaterThanOrEqual(phone!.originalEnd);
+    expect(
+      approveMaskingReview(
+        reviewWithSuggestions(approveAll(suggestions)),
+        [source],
+      ),
+    ).toMatchObject({ ok: true });
+  });
+
   it("detects the exact supported seeded classes with stable ranges and readable tokens", () => {
     const rawText =
       "Maya K. emailed maya.k@example.test, called +1 202-555-0147, used passport X0000007, account 000123456789, address 18 Example Lane, Sample City, and DOB 1997-08-14.";
@@ -249,6 +279,42 @@ describe("review, approval, and invalidation", () => {
         expect.objectContaining({ code: "unsafe_replacement_token" }),
       ]),
     });
+  });
+
+  it("normalizes approved overlaps without exposing previously covered text", () => {
+    const source = segment("D01-P1-S01", "0123456789ABCDEFGHIJ");
+    const overlapping = [
+      makeManualSuggestion({
+        segmentId: source.id,
+        originalStart: 0,
+        originalEnd: 8,
+        maskClass: "passport",
+        reviewStatus: "approved",
+      }),
+      makeManualSuggestion({
+        segmentId: source.id,
+        originalStart: 5,
+        originalEnd: 14,
+        maskClass: "bank_account",
+        reviewStatus: "approved",
+      }),
+    ];
+
+    const normalized = normalizeApprovedMaskOverlaps(
+      reviewWithSuggestions(overlapping),
+      [source],
+    );
+
+    expect(normalized.normalizedCount).toBe(1);
+    expect(
+      approveMaskingReview(normalized.review, [source]),
+    ).toMatchObject({ ok: true });
+    const redacted = buildSegmentRedaction(
+      source,
+      normalized.review.suggestions,
+    ).redactedText;
+    expect(redacted).not.toContain(source.rawText.slice(0, 14));
+    expect(redacted.endsWith(source.rawText.slice(14))).toBe(true);
   });
 
   it("invalidates approval and returns stale downstream signals after mask changes", () => {

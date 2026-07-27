@@ -1,0 +1,144 @@
+{
+  "packetReference": "CFN-TRAINING-NV-01",
+  "synthetic": true,
+  "disclaimer": "SYNTHETIC TRAINING RECORD - NOT A REAL PERSON, ORGANIZATION, OR CASE",
+  "documentCount": 17,
+  "documents": [
+    {
+      "id": "D01",
+      "filename": "01_case_notice_and_packet_index.pdf",
+      "displayTitle": "Fictional Case Notice and Packet Index",
+      "sourceType": "Other",
+      "provenance": "fixture-authored synthetic notice",
+      "expectedPageCount": 2
+    },
+    {
+      "id": "D02",
+      "filename": "02_job_advertisement.pdf",
+      "displayTitle": "Customer Support Opportunity",
+      "sourceType": "Recruitment record",
+      "provenance": "fictional recruitment publication",
+      "expectedPageCount": 2
+    },
+    {
+      "id": "D03",
+      "filename": "03_recruiter_messages.pdf",
+      "displayTitle": "Recruiter Message Export",
+      "sourceType": "Communication",
+      "provenance": "sender identity unverified",
+      "expectedPageCount": 3
+    },
+    {
+      "id": "D04",
+      "filename": "04_offer_letter_and_contract.pdf",
+      "displayTitle": "Offer Letter and Employment Terms",
+      "sourceType": "Recruitment record",
+      "provenance": "fictional signed copy; signature authenticity unverified",
+      "expectedPageCount": 3
+    },
+    {
+      "id": "D05",
+      "filename": "05_identity_and_travel_extract.pdf",
+      "displayTitle": "Identity and Travel Extract",
+      "sourceType": "Travel record",
+      "provenance": "fictional administrative extract",
+      "expectedPageCount": 2
+    },
+    {
+      "id": "D06",
+      "filename": "06_accommodation_and_movement_log.pdf",
+      "displayTitle": "Accommodation and Movement Log",
+      "sourceType": "Travel record",
+      "provenance": "unverified internal log",
+      "expectedPageCount": 2
+    },
+    {
+      "id": "D07",
+      "filename": "07_debt_and_wage_ledger.pdf",
+      "displayTitle": "Debt and Wage Ledger",
+      "sourceType": "Operational or financial record",
+      "provenance": "unverified spreadsheet export",
+      "expectedPageCount": 2
+    },
+    {
+      "id": "D08",
+      "filename": "08_synthetic_bank_statement.pdf",
+      "displayTitle": "Synthetic Bank Statement",
+      "sourceType": "Operational or financial record",
+      "provenance": "fictional financial statement",
+      "expectedPageCount": 2
+    },
+    {
+      "id": "D09",
+      "filename": "09_task_and_penalty_log.pdf",
+      "displayTitle": "Task and Penalty Log",
+      "sourceType": "Operational or financial record",
+      "provenance": "unverified internal export",
+      "expectedPageCount": 2
+    },
+    {
+      "id": "D10",
+      "filename": "10_supervisor_messages.pdf",
+      "displayTitle": "Supervisor Message Export",
+      "sourceType": "Communication",
+      "provenance": "sender identity unverified",
+      "expectedPageCount": 3
+    },
+    {
+      "id": "D11",
+      "filename": "11_police_incident_record.pdf",
+      "displayTitle": "Fictional Police Incident Record",
+      "sourceType": "Alleged-offence and procedural record",
+      "provenance": "fictional procedural record",
+      "expectedPageCount": 2
+    },
+    {
+      "id": "D12",
+      "filename": "12_practitioner_intake_note.pdf",
+      "displayTitle": "Practitioner Intake Note",
+      "sourceType": "Practitioner note of a reported account",
+      "provenance": "fictional practitioner-authored note of reported information",
+      "expectedPageCount": 3
+    },
+    {
+      "id": "D13",
+      "filename": "13_support_and_health_note.pdf",
+      "displayTitle": "Support and Health Coordination Note",
+      "sourceType": "Support-provider note",
+      "provenance": "fictional support-provider record",
+      "expectedPageCount": 2
+    },
+    {
+      "id": "D14",
+      "filename": "14_hearing_and_charge_summary.pdf",
+      "displayTitle": "Fictional Hearing and Charge Summary",
+      "sourceType": "Alleged-offence and procedural record",
+      "provenance": "fictional court summary",
+      "expectedPageCount": 2
+    },
+    {
+      "id": "D15",
+      "filename": "scan_001.pdf",
+      "displayTitle": "Property Custody Record",
+      "sourceType": "Other",
+      "provenance": "unsigned and unverified",
+      "expectedPageCount": 1
+    },
+    {
+      "id": "D16",
+      "filename": "attachment_02.pdf",
+      "displayTitle": "Vehicle Transfer Sheet",
+      "sourceType": "Other",
+      "provenance": "unverified operational attachment",
+      "expectedPageCount": 1
+    },
+    {
+      "id": "D17",
+      "filename": "document_final.pdf",
+      "displayTitle": "Interpretation Request Response",
+      "sourceType": "Other",
+      "provenance": "unverified administrative response",
+      "expectedPageCount": 1
+    }
+  ]
+}

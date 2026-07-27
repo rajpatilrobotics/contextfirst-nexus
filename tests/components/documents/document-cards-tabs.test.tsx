@@ -261,6 +261,45 @@ describe("DocumentCards dynamic Document View", () => {
   });
 });
 
+describe("DocumentCards packet mask navigation", () => {
+  it("opens the masking tab for the targeted packet document and forwards the mask ID", async () => {
+    const first = sourceDocument("D01", "first.pdf", [
+      page("D01", 1, "available", 20),
+    ]);
+    const second = sourceDocument("D02", "second.pdf", [
+      page("D02", 1, "available", 30),
+    ]);
+
+    render(
+      <DocumentCards
+        documents={[first, second]}
+        maskingTarget={{
+          documentId: "D02",
+          maskId: "mask-D02-P1-S1-email-1-10",
+          pageNumber: 1,
+        }}
+        renderMaskingContent={({ document, focusedMaskId }) => (
+          <div>
+            Target {document.id} · {focusedMaskId}
+          </div>
+        )}
+      />,
+    );
+
+    expect(
+      await screen.findByText(
+        "Target D02 · mask-D02-P1-S1-email-1-10",
+      ),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("tab", { name: "Masking Status" }),
+    ).toHaveAttribute("aria-selected", "true");
+    expect(
+      screen.getAllByText("second.pdf")[0]?.closest("button"),
+    ).toHaveAttribute("aria-pressed", "true");
+  });
+});
+
 describe("DocumentCards extraction facts", () => {
   it("reports mixed readable, OCR-required, and failed pages without scoring credibility", async () => {
     const user = userEvent.setup();

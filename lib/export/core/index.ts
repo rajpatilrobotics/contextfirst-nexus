@@ -1,4 +1,3 @@
-import { createHash } from "node:crypto";
 import {
   ExportGateSchema,
   ExportManifestSchema,
@@ -18,6 +17,7 @@ import {
   analysisRunInputMatchesState,
   selectSuccessfulActiveAnalysisRun,
 } from "../../analysis/freshness";
+import { sha256TextHex } from "../../crypto/sha256";
 
 const MANIFEST_SCHEMA_VERSION = "1.0.0" as const;
 const REVIEWED_HASH_PROJECTION_VERSION = "1.0.0" as const;
@@ -59,7 +59,9 @@ export function canonicalJson(value: unknown): string {
 }
 
 export function sha256Hex(value: unknown): string {
-  return createHash("sha256").update(typeof value === "string" ? value : canonicalJson(value)).digest("hex");
+  return sha256TextHex(
+    typeof value === "string" ? value : canonicalJson(value),
+  );
 }
 
 export function normalizeExportSelection(selection: ExportSelection): ExportSelection {
