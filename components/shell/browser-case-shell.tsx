@@ -10,6 +10,7 @@ import {
   HandHelping,
   HelpCircle,
   Home,
+  LockKeyhole,
   MessageSquare,
   Network,
   NotebookPen,
@@ -56,6 +57,15 @@ const DISABLED_NAVIGATION: Array<{
 ];
 
 const GROUPS = ["Intake", "Analysis", "Planning", "Review", "Export"] as const;
+
+function UnavailableIndicator() {
+  return (
+    <span className="inline-flex shrink-0 items-center text-muted-foreground">
+      <LockKeyhole aria-hidden="true" className="h-3 w-3" />
+      <span className="sr-only">Unavailable</span>
+    </span>
+  );
+}
 
 export function BrowserCaseShell({
   activeStage = "purpose",
@@ -141,19 +151,23 @@ export function BrowserCaseShell({
   }, [analysisCurrent, record]);
 
   return (
-    <div className="min-h-screen overflow-x-hidden bg-background text-foreground">
+    <div className="min-h-screen overflow-x-clip bg-background text-foreground lg:flex lg:h-dvh lg:min-h-0 lg:flex-col lg:overflow-hidden">
       <a
         className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-50 focus:rounded-md focus:bg-card focus:px-4 focus:py-2"
         href="#case-workspace"
       >
         Skip to case workspace
       </a>
-      <SyntheticBanner
-        compact
-        detail="— use synthetic or authorized public data only. Files stay in this browser and are not sent to an AI provider."
-        label="Browser-local demonstration"
-      />
-      <header className="border-b border-border bg-card/60">
+      <div
+        className="sticky top-0 z-40 shrink-0 bg-background shadow-[0_1px_0_var(--border)]"
+        data-testid="workspace-sticky-header"
+      >
+        <SyntheticBanner
+          compact
+          detail="— use synthetic or authorized public data only. Files stay in this browser and are not sent to an AI provider."
+          label="Browser-local demonstration"
+        />
+        <header className="border-b border-border bg-card/95 backdrop-blur">
         <div className="mx-auto flex flex-wrap items-center justify-between gap-3 px-6 py-3">
           <div className="flex items-center gap-4">
             <Link href="/" className="flex items-baseline gap-2">
@@ -288,7 +302,8 @@ export function BrowserCaseShell({
             })}
           </ol>
         </section>
-      </header>
+        </header>
+      </div>
 
       <div className="border-b border-border bg-muted/40 px-6 py-2 text-xs text-muted-foreground lg:hidden">
         {analysisReady
@@ -298,8 +313,11 @@ export function BrowserCaseShell({
           : "Approve the document privacy check to unlock Structured Analysis. Later workspace stages are not yet available."}
       </div>
 
-      <div className="mx-auto grid grid-cols-1 gap-0 lg:grid-cols-[240px_1fr]">
-        <aside className="border-r border-border bg-card/40 lg:min-h-[calc(100vh-140px)]">
+      <div className="mx-auto grid w-full grid-cols-1 gap-0 lg:min-h-0 lg:flex-1 lg:grid-cols-[210px_1fr] lg:overflow-hidden">
+        <aside
+          className="border-r border-border bg-card/40 lg:h-full lg:min-h-0 lg:overflow-y-auto lg:overscroll-contain"
+          data-testid="workspace-sticky-sidebar"
+        >
           <nav aria-label="Case workspace" className="p-3">
             {GROUPS.map((group) => (
               <div className="mb-4" key={group}>
@@ -360,9 +378,7 @@ export function BrowserCaseShell({
                               />
                               <span>Documents</span>
                             </span>
-                            <span className="font-mono text-[8px] uppercase tracking-[0.1em]">
-                              Unavailable
-                            </span>
+                            <UnavailableIndicator />
                           </span>
                         )}
                       </li>
@@ -402,9 +418,7 @@ export function BrowserCaseShell({
                               />
                               <span>Structured Analysis</span>
                             </span>
-                            <span className="font-mono text-[8px] uppercase tracking-[0.1em]">
-                              Unavailable
-                            </span>
+                            <UnavailableIndicator />
                           </span>
                         )}
                       </li>
@@ -456,9 +470,7 @@ export function BrowserCaseShell({
                                   />
                                   <span>{item.label}</span>
                                 </span>
-                                <span className="font-mono text-[8px] uppercase tracking-[0.1em]">
-                                  Unavailable
-                                </span>
+                                <UnavailableIndicator />
                               </span>
                             )}
                           </li>
@@ -527,9 +539,7 @@ export function BrowserCaseShell({
                                   />
                                   <span>{item.label}</span>
                                 </span>
-                                <span className="font-mono text-[8px] uppercase tracking-[0.1em]">
-                                  Unavailable
-                                </span>
+                                <UnavailableIndicator />
                               </span>
                             )}
                           </li>
@@ -585,9 +595,7 @@ export function BrowserCaseShell({
                                   />
                                   <span>{item.label}</span>
                                 </span>
-                                <span className="font-mono text-[8px] uppercase tracking-[0.1em]">
-                                  Unavailable
-                                </span>
+                                <UnavailableIndicator />
                               </span>
                             )}
                           </li>
@@ -643,9 +651,7 @@ export function BrowserCaseShell({
                                   />
                                   <span>{item.label}</span>
                                 </span>
-                                <span className="font-mono text-[8px] uppercase tracking-[0.1em]">
-                                  Unavailable
-                                </span>
+                                <UnavailableIndicator />
                               </span>
                             )}
                           </li>
@@ -684,9 +690,7 @@ export function BrowserCaseShell({
                             />
                             <span>{item.label}</span>
                           </span>
-                          <span className="font-mono text-[8px] uppercase tracking-[0.1em]">
-                            Unavailable
-                          </span>
+                          <UnavailableIndicator />
                         </span>
                       </li>
                     );
@@ -696,7 +700,10 @@ export function BrowserCaseShell({
             ))}
           </nav>
         </aside>
-        <main className="min-w-0 px-6 py-6" id="case-workspace">
+        <main
+          className="min-w-0 px-6 py-6 lg:h-full lg:min-h-0 lg:overflow-y-auto lg:overscroll-contain"
+          id="case-workspace"
+        >
           {children}
         </main>
       </div>

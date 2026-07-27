@@ -22,7 +22,6 @@ import {
 } from "../../components/ui";
 import {
   Chip,
-  DemoOnlyNotice,
 } from "../../components/lovable/nexus-ui";
 
 type FormErrors = Record<string, string>;
@@ -115,6 +114,17 @@ export function CasePurposeBriefForm({
       else next.delete(decision);
       return next;
     });
+  }
+
+  function acknowledgeAllSafeguards() {
+    setAuthorityAttested(true);
+    setAuthorityNotVerified(true);
+    setSyntheticAttested(true);
+    setSyntheticAcknowledged(true);
+    setProhibitedAcknowledged(true);
+    setCooperationAcknowledged(true);
+    setAnalysisAcknowledged(Boolean(analysisOption));
+    setExcludedDecisions(new Set(RequiredExcludedDecisions));
   }
 
   function validate(): FormErrors {
@@ -271,9 +281,20 @@ export function CasePurposeBriefForm({
     analysisAcknowledgement: "analysis-disclosure-acknowledgement",
     form: "purpose-form",
   };
+  const allSafeguardsAcknowledged =
+    authorityAttested &&
+    authorityNotVerified &&
+    syntheticAttested &&
+    syntheticAcknowledged &&
+    prohibitedAcknowledged &&
+    cooperationAcknowledged &&
+    (!analysisOption || analysisAcknowledged) &&
+    RequiredExcludedDecisions.every((decision) =>
+      excludedDecisions.has(decision),
+    );
 
   return (
-    <form className="space-y-6" id="purpose-form" noValidate onSubmit={handleSubmit} tabIndex={-1}>
+    <form className="space-y-4" id="purpose-form" noValidate onSubmit={handleSubmit} tabIndex={-1}>
       {Object.keys(errors).length > 0 ? (
         <div
           aria-labelledby="purpose-error-summary-heading"
@@ -295,9 +316,8 @@ export function CasePurposeBriefForm({
         </div>
       ) : null}
 
-      <div className="grid gap-6 lg:grid-cols-[1fr_320px]">
-        <div className="space-y-6">
-          <fieldset className="rounded-xl border border-border bg-card p-5">
+      <div className="space-y-4">
+          <fieldset className="rounded-xl border border-border bg-card p-3.5">
             <legend className="px-2 font-mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
               Practitioner &amp; recipient
             </legend>
@@ -414,7 +434,7 @@ export function CasePurposeBriefForm({
             </div>
           </fieldset>
 
-          <fieldset className="rounded-xl border border-border bg-card p-5">
+          <fieldset className="rounded-xl border border-border bg-card p-3.5">
             <legend className="px-2 font-mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
               Handoff type
             </legend>
@@ -426,10 +446,10 @@ export function CasePurposeBriefForm({
                 <option value="minimum_necessary_safe_share">Minimum-necessary safe share</option>
               </Select>
             </div>
-            <div className="grid gap-3 sm:grid-cols-2">
+            <div className="grid gap-2 sm:grid-cols-2">
               <button
                 aria-pressed={requestedExport === "full_practitioner_handoff"}
-                className={`cursor-pointer rounded-lg border p-4 text-left ${
+                className={`cursor-pointer rounded-lg border p-3 text-left ${
                   requestedExport === "full_practitioner_handoff"
                     ? "border-[color:var(--amber)] bg-[color-mix(in_oklab,var(--amber)_10%,transparent)]"
                     : "border-border hover:bg-muted/50"
@@ -437,14 +457,14 @@ export function CasePurposeBriefForm({
                 onClick={() => setRequestedExport("full_practitioner_handoff")}
                 type="button"
               >
-                <p className="font-serif text-lg">Full Practitioner Handoff</p>
-                <p className="mt-1 text-xs text-muted-foreground">
+                <p className="font-serif text-base">Full Practitioner Handoff</p>
+                <p className="mt-0.5 text-[11px] leading-4 text-muted-foreground">
                   All source-linked observations, limitations, and reviewed notes for a designated practitioner.
                 </p>
               </button>
               <button
                 aria-pressed={requestedExport === "minimum_necessary_safe_share"}
-                className={`cursor-pointer rounded-lg border p-4 text-left ${
+                className={`cursor-pointer rounded-lg border p-3 text-left ${
                   requestedExport === "minimum_necessary_safe_share"
                     ? "border-[color:var(--amber)] bg-[color-mix(in_oklab,var(--amber)_10%,transparent)]"
                     : "border-border hover:bg-muted/50"
@@ -452,8 +472,8 @@ export function CasePurposeBriefForm({
                 onClick={() => setRequestedExport("minimum_necessary_safe_share")}
                 type="button"
               >
-                <p className="font-serif text-lg">Minimum-Necessary Safe Share</p>
-                <p className="mt-1 text-xs text-muted-foreground">
+                <p className="font-serif text-base">Minimum-Necessary Safe Share</p>
+                <p className="mt-0.5 text-[11px] leading-4 text-muted-foreground">
                   Only the fields required by the named recipient and declared purpose.
                 </p>
               </button>
@@ -461,37 +481,69 @@ export function CasePurposeBriefForm({
             {errors.requestedExport ? <FieldError id="requested-export-error">{errors.requestedExport}</FieldError> : null}
           </fieldset>
 
-          <fieldset className="rounded-xl border border-border bg-card p-5">
-            <legend className="px-2 font-mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
-              Required acknowledgements
-            </legend>
-            <ul className="space-y-2">
-              <li className="rounded-md border border-border/70 bg-background px-3 py-1 text-sm">
+          <section
+            aria-label="Purpose safeguards"
+            className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-[color-mix(in_oklab,var(--sage)_42%,var(--border))] bg-[color-mix(in_oklab,var(--sage)_8%,var(--card))] px-3 py-2"
+          >
+            <div>
+              <p className="text-xs font-semibold">Required safety boundaries</p>
+              <p className="text-[10px] leading-4 text-muted-foreground">
+                Review the listed safeguards, then acknowledge them together.
+                Machine-assisted suggestions remain unverified until a
+                practitioner reviews them.
+              </p>
+            </div>
+            <Button
+              className="!min-h-0 !px-3 !py-1.5 !text-xs !shadow-none"
+              disabled={
+                disabled ||
+                !analysisOption ||
+                !sourceMaterialClassification ||
+                allSafeguardsAcknowledged
+              }
+              onClick={acknowledgeAllSafeguards}
+              type="button"
+              variant="secondary"
+            >
+              <CheckCircle2 aria-hidden="true" className="mr-1.5 h-3.5 w-3.5" />
+              {allSafeguardsAcknowledged
+                ? "All safeguards acknowledged"
+                : "Acknowledge all required safeguards"}
+            </Button>
+          </section>
+
+          <div className="space-y-4">
+            <fieldset className="rounded-xl border border-border bg-card p-3.5">
+              <legend className="px-2 font-mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
+                Required acknowledgements
+              </legend>
+              <ul className="grid gap-x-3 gap-y-0 text-[13px] sm:grid-cols-2">
+              <li className="px-1 py-0.5">
                 <Checkbox checked={authorityAttested} id="authority-attested" label="I attest that I am authorized to use the selected source material for this stated workflow." onChange={(event) => setAuthorityAttested(event.currentTarget.checked)} />
                 {errors.authorityAttested ? <FieldError id="authority-attested-error">{errors.authorityAttested}</FieldError> : null}
               </li>
-              <li className="rounded-md border border-border/70 bg-background px-3 py-1 text-sm">
+              <li className="px-1 py-0.5">
                 <Checkbox checked={authorityNotVerified} id="authority-not-verified" label="I understand that the system cannot verify my authority." onChange={(event) => setAuthorityNotVerified(event.currentTarget.checked)} />
                 {errors.authorityNotVerified ? <FieldError id="authority-not-verified-error">{errors.authorityNotVerified}</FieldError> : null}
               </li>
-              <li className="rounded-md border border-border/70 bg-background px-3 py-1 text-sm">
+              <li className="px-1 py-0.5">
                 <Checkbox checked={syntheticAttested} id="synthetic-attested" label="I attest that every selected PDF matches the source-material classification above." onChange={(event) => setSyntheticAttested(event.currentTarget.checked)} />
                 {errors.syntheticAttested ? <FieldError id="synthetic-attested-error">{errors.syntheticAttested}</FieldError> : null}
               </li>
-              <li className="rounded-md border border-border/70 bg-background px-3 py-1 text-sm">
+              <li className="px-1 py-0.5">
                 <Checkbox checked={syntheticAcknowledged} id="synthetic-acknowledged" label="I acknowledge that private or confidential case material is unavailable in this demonstration." onChange={(event) => setSyntheticAcknowledged(event.currentTarget.checked)} />
                 {errors.syntheticAcknowledged ? <FieldError id="synthetic-acknowledged-error">{errors.syntheticAcknowledged}</FieldError> : null}
               </li>
-              <li className="rounded-md border border-border/70 bg-background px-3 py-1 text-sm">
+              <li className="px-1 py-0.5">
                 <Checkbox checked={prohibitedAcknowledged} id="prohibited-acknowledged" label="I acknowledge that the system does not make the excluded consequential decisions." onChange={(event) => setProhibitedAcknowledged(event.currentTarget.checked)} />
                 {errors.prohibitedAcknowledged ? <FieldError id="prohibited-acknowledged-error">{errors.prohibitedAcknowledged}</FieldError> : null}
               </li>
-              <li className="rounded-md border border-border/70 bg-background px-3 py-1 text-sm">
+              <li className="px-1 py-0.5">
                 <Checkbox checked={cooperationAcknowledged} id="cooperation-acknowledged" label="I confirm that cooperation with authorities is not a condition of analysis." onChange={(event) => setCooperationAcknowledged(event.currentTarget.checked)} />
                 {errors.cooperationAcknowledged ? <FieldError id="cooperation-acknowledged-error">{errors.cooperationAcknowledged}</FieldError> : null}
               </li>
               {analysisOption ? (
-                <li className="rounded-md border border-border/70 bg-background px-3 py-1 text-sm">
+                <li className="px-1 py-0.5 sm:col-span-2">
                   <Checkbox
                     aria-describedby={errors.analysisAcknowledgement ? "analysis-disclosure-error" : undefined}
                     checked={analysisAcknowledged}
@@ -507,39 +559,47 @@ export function CasePurposeBriefForm({
                   ) : null}
                 </li>
               ) : null}
-            </ul>
-          </fieldset>
+              </ul>
+            </fieldset>
 
-          <fieldset
-            className="rounded-xl border border-border bg-muted/30 p-5"
-            id="excluded-decisions"
-            tabIndex={-1}
-          >
-            <legend className="px-2 font-mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
-              Prohibited determinations
-            </legend>
-            <p className="mb-2 text-xs text-muted-foreground">
-              Confirm every consequential decision that remains outside system support.
-            </p>
-            <div className="grid gap-1.5 text-sm sm:grid-cols-2">
-              {RequiredExcludedDecisions.map((decision) => (
-                <div className="flex items-start gap-2" key={decision}>
-                  <Checkbox
-                    checked={excludedDecisions.has(decision)}
-                    id={`excluded-${decision}`}
-                    label={(
-                      <>
-                        <Ban aria-hidden="true" className="shrink-0 text-[color:var(--rust)]" size={15} />
-                        <span>{excludedDecisionLabels[decision]}</span>
-                      </>
-                    )}
-                    onChange={(event) => toggleExcluded(decision, event.currentTarget.checked)}
-                  />
-                </div>
-              ))}
-            </div>
-            {errors.excludedDecisions ? <FieldError id="excluded-decisions-error">{errors.excludedDecisions}</FieldError> : null}
-          </fieldset>
+            <fieldset
+              className="rounded-xl border border-border bg-muted/30 p-3.5"
+              id="excluded-decisions"
+              tabIndex={-1}
+            >
+              <legend className="px-2 font-mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
+                Prohibited determinations
+              </legend>
+              <p className="mb-1.5 text-[11px] leading-4 text-muted-foreground">
+                Decisions that remain outside system support.
+              </p>
+              <div className="grid gap-x-3 gap-y-0 text-[13px] sm:grid-cols-2">
+                {RequiredExcludedDecisions.map((decision, index) => (
+                  <div
+                    className={`px-1 py-0.5 ${
+                      index === RequiredExcludedDecisions.length - 1
+                        ? "sm:col-span-2"
+                        : ""
+                    }`}
+                    key={decision}
+                  >
+                    <Checkbox
+                      checked={excludedDecisions.has(decision)}
+                      id={`excluded-${decision}`}
+                      label={(
+                        <span className="inline-flex items-center gap-2">
+                          <Ban aria-hidden="true" className="shrink-0 text-[color:var(--rust)]" size={14} />
+                          <span>{excludedDecisionLabels[decision]}</span>
+                        </span>
+                      )}
+                      onChange={(event) => toggleExcluded(decision, event.currentTarget.checked)}
+                    />
+                  </div>
+                ))}
+              </div>
+              {errors.excludedDecisions ? <FieldError id="excluded-decisions-error">{errors.excludedDecisions}</FieldError> : null}
+            </fieldset>
+          </div>
 
           <div className="flex flex-wrap items-center gap-3">
             <Button
@@ -564,7 +624,7 @@ export function CasePurposeBriefForm({
           </div>
           {saveMessage ? <p role="status" className="text-[var(--color-supported)]">{saveMessage}</p> : null}
 
-          <div className="grid gap-3 sm:grid-cols-2">
+          <div className="grid gap-2 sm:grid-cols-2">
             <Alert title="Authority and prototype boundary" tone="warning">
               <p className="text-xs leading-5">
                 This role chooser is not authentication. The system records your attestation but
@@ -578,7 +638,7 @@ export function CasePurposeBriefForm({
 
             <section
               aria-label="Human review boundary"
-              className="rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface-subtle)] p-4"
+              className="rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface-subtle)] p-3"
             >
               <div className="flex items-center gap-2">
                 <ShieldCheck aria-hidden="true" className="text-[var(--color-supported)]" size={18} />
@@ -586,35 +646,12 @@ export function CasePurposeBriefForm({
                   Human review boundary
                 </h3>
               </div>
-              <p className="mt-2 text-sm leading-5 text-[var(--color-ink-muted)]">
+              <p className="mt-1 text-xs leading-5 text-[var(--color-ink-muted)]">
                 Saving records purpose and boundaries only. It does not start analysis or turn suggestions
                 into practitioner findings.
               </p>
             </section>
           </div>
-        </div>
-
-        <aside className="space-y-3">
-          <DemoOnlyNotice>
-            the primary action is enabled by local state only.
-          </DemoOnlyNotice>
-
-          {analysisOption ? (
-            <fieldset
-              aria-describedby={errors.analysisAcknowledgement ? "analysis-disclosure-error" : undefined}
-              className="rounded-xl border border-border bg-card p-4 text-xs"
-            >
-              <legend className="sr-only">How analysis works</legend>
-              <div className="font-mono text-[10px] uppercase tracking-[0.18em] text-foreground">
-                Analysis-service disclosure
-              </div>
-              <p className="mt-2 text-muted-foreground">
-                Any machine-assisted suggestion is labelled “Synthetic AI suggestion — not verified”.
-                A suggestion never becomes a finding without an explicit practitioner decision.
-              </p>
-            </fieldset>
-          ) : null}
-        </aside>
       </div>
     </form>
   );

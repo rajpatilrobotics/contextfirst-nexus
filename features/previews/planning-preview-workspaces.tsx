@@ -87,6 +87,72 @@ function PlanningResult({ message }: { message: string | null }) {
   ) : null;
 }
 
+function PlanningComposeDialog({
+  children,
+  description,
+  onClose,
+  onSubmit,
+  open,
+  submitLabel,
+  title,
+}: {
+  children: ReactNode;
+  description: string;
+  onClose: () => void;
+  onSubmit: () => void;
+  open: boolean;
+  submitLabel: string;
+  title: string;
+}) {
+  return (
+    <aside
+      aria-label={title}
+      aria-modal={open || undefined}
+      className={open ? "fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" : undefined}
+      hidden={!open}
+      role={open ? "dialog" : undefined}
+    >
+      <div className="w-full max-w-2xl overflow-hidden rounded-xl border border-border bg-card shadow-xl">
+        <div className="flex items-start justify-between gap-4 border-b border-border px-4 py-3">
+          <div>
+            <h2 className="font-serif text-xl leading-tight">{title}</h2>
+            <p className="mt-1 text-xs text-muted-foreground">{description}</p>
+          </div>
+          {open ? (
+            <button
+              aria-label="Close"
+              className="rounded-md border border-transparent px-2 py-1 text-lg leading-none text-muted-foreground hover:border-border hover:bg-muted hover:text-foreground"
+              onClick={onClose}
+              type="button"
+            >
+              ×
+            </button>
+          ) : null}
+        </div>
+        <div className="grid gap-3 p-4 text-sm">{children}</div>
+        <div className="flex justify-end gap-2 border-t border-border bg-muted/20 px-4 py-3">
+          {open ? (
+            <button
+              className="rounded-md border border-border bg-background px-4 py-2 text-sm hover:bg-muted"
+              onClick={onClose}
+              type="button"
+            >
+              Cancel
+            </button>
+          ) : null}
+          <button
+            className="rounded-md border border-primary bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:opacity-90"
+            onClick={onSubmit}
+            type="button"
+          >
+            {submitLabel}
+          </button>
+        </div>
+      </div>
+    </aside>
+  );
+}
+
 function SourceLinkStateBadge({
   state,
   source,
@@ -375,7 +441,75 @@ export function UrgentNeedsPreview({
 
       <div className="grid gap-4 lg:grid-cols-[1fr_320px]">
         <div className="space-y-4">
-          {state.urgentNeeds.length ? state.urgentNeeds.map((need) => (
+          <div className="rounded-xl border border-border bg-card p-4">
+            <div className="flex flex-wrap items-end justify-between gap-2 border-b border-border pb-3">
+              <div>
+                <h2 className="font-serif text-lg">Add an urgent need</h2>
+                <p className="mt-0.5 text-xs text-muted-foreground">
+                  Record a practitioner-confirmed operational need. Nothing is sent or actioned automatically.
+                </p>
+              </div>
+              <button
+                className="rounded-md bg-primary px-4 py-2 text-sm text-primary-foreground hover:bg-primary/90"
+                onClick={createNeed}
+                type="button"
+              >
+                Record need
+              </button>
+            </div>
+            <div className="mt-3 grid gap-x-3 gap-y-2 sm:grid-cols-2">
+              <label className="block text-xs text-muted-foreground">
+                Category
+                <select
+                  className="mt-1 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                  onChange={(event) => setCategory(event.currentTarget.value as UrgentNeed["category"])}
+                  value={category}
+                >
+                  {["emergency_accommodation", "legal_support", "mental_health_support", "interpretation", "documentation", "safe_contact", "other"].map((value) => <option key={value} value={value}>{pretty(value)}</option>)}
+                </select>
+              </label>
+              <label className="block text-xs text-muted-foreground">
+                Practitioner-confirmed urgency
+                <select
+                  aria-label="Practitioner-confirmed urgency"
+                  className="mt-1 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                  onChange={(event) => setUrgency(event.currentTarget.value as UrgentNeed["urgency"])}
+                  value={urgency}
+                >
+                  {["routine", "within_7_days", "within_72_hours", "within_24_hours"].map((value) => <option key={value} value={value}>{pretty(value)}</option>)}
+                </select>
+              </label>
+              <label className="block text-xs text-muted-foreground sm:col-span-2">
+                Practitioner description
+                <textarea
+                  className="mt-1 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                  onChange={(event) => setDescription(event.currentTarget.value)}
+                  rows={2}
+                  value={description}
+                />
+              </label>
+              <label className="block text-xs text-muted-foreground">
+                Safe-contact constraints
+                <textarea
+                  className="mt-1 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                  onChange={(event) => setSafeContact(event.currentTarget.value)}
+                  rows={2}
+                  value={safeContact}
+                />
+              </label>
+              <label className="block text-xs text-muted-foreground">
+                Next action
+                <input
+                  className="mt-1 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                  onChange={(event) => setNextAction(event.currentTarget.value)}
+                  value={nextAction}
+                />
+              </label>
+            </div>
+            <PlanningResult message={message} />
+          </div>
+
+          {state.urgentNeeds.map((need) => (
             <article key={need.id} className="rounded-xl border border-border bg-card p-5">
               <div className="flex items-start justify-between gap-4">
                 <div>
@@ -424,12 +558,7 @@ export function UrgentNeedsPreview({
                 </label>
               </div>
             </article>
-          )) : (
-            <div className="rounded-xl border border-dashed border-border bg-card p-6 text-center">
-              <div className="font-serif text-base">No operational needs recorded</div>
-              <div className="mt-1 text-xs text-muted-foreground">Add a practitioner-written need using the form.</div>
-            </div>
-          )}
+          ))}
         </div>
 
         <aside className="space-y-3">
@@ -455,64 +584,6 @@ export function UrgentNeedsPreview({
               </div>
             </div>
           ) : null}
-          <div className="rounded-xl border border-border bg-card p-4">
-            <h2 className="font-mono text-[10px] uppercase tracking-[0.16em] text-muted-foreground">Add a need</h2>
-            <label className="mt-2 block text-xs text-muted-foreground">
-              Category
-              <select
-                className="mt-1 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-                onChange={(event) => setCategory(event.currentTarget.value as UrgentNeed["category"])}
-                value={category}
-              >
-                {["emergency_accommodation", "legal_support", "mental_health_support", "interpretation", "documentation", "safe_contact", "other"].map((value) => <option key={value} value={value}>{pretty(value)}</option>)}
-              </select>
-            </label>
-            <label className="mt-2 block text-xs text-muted-foreground">
-              Practitioner-confirmed urgency
-              <select
-                aria-label="Practitioner-confirmed urgency"
-                className="mt-1 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-                onChange={(event) => setUrgency(event.currentTarget.value as UrgentNeed["urgency"])}
-                value={urgency}
-              >
-                {["routine", "within_7_days", "within_72_hours", "within_24_hours"].map((value) => <option key={value} value={value}>{pretty(value)}</option>)}
-              </select>
-            </label>
-            <label className="mt-2 block text-xs text-muted-foreground">
-              Practitioner description
-              <textarea
-                className="mt-1 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-                onChange={(event) => setDescription(event.currentTarget.value)}
-                rows={3}
-                value={description}
-              />
-            </label>
-            <label className="mt-2 block text-xs text-muted-foreground">
-              Safe-contact constraints
-              <textarea
-                className="mt-1 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-                onChange={(event) => setSafeContact(event.currentTarget.value)}
-                rows={2}
-                value={safeContact}
-              />
-            </label>
-            <label className="mt-2 block text-xs text-muted-foreground">
-              Next action
-              <input
-                className="mt-1 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-                onChange={(event) => setNextAction(event.currentTarget.value)}
-                value={nextAction}
-              />
-            </label>
-            <button
-              className="mt-2 w-full rounded-md bg-primary py-1.5 text-sm text-primary-foreground hover:bg-primary/90"
-              onClick={createNeed}
-              type="button"
-            >
-              Record need
-            </button>
-            <PlanningResult message={message} />
-          </div>
           <DemoOnlyNotice>
             {hasBundledExamples
               ? "Bundled examples are fictional; practitioner updates remain browser-local planning records and contact no one."
@@ -546,14 +617,16 @@ export function InterviewPlannerPreview({
   const gapOptions = state.candidates.filter((candidate) => candidate.kind === "context_gap");
   const visible = state.interviewQuestions.filter(
     (question) =>
-      (statusFilter === "all" || question.status === statusFilter) &&
+      (statusFilter === "all"
+        ? question.status !== "removed"
+        : question.status === statusFilter) &&
       (gapFilter === "all" || question.linkedGapCandidateId === gapFilter),
   );
   const selected = visible.find((question) => question.id === selectedId) ?? visible[0] ?? null;
   const selectedQuestionEdit = selected ? questionEdits[selected.id] ?? { body: "", rationale: "" } : { body: "", rationale: "" };
   const questionCounts = useMemo(() => {
     const result: Record<"all" | InterviewQuestion["status"], number> = {
-      all: state.interviewQuestions.length,
+      all: state.interviewQuestions.filter((question) => question.status !== "removed").length,
       draft: 0,
       approved: 0,
       edited: 0,
@@ -578,10 +651,9 @@ export function InterviewPlannerPreview({
     const hash = globalThis.location?.hash ?? "";
     if (!hash.startsWith("#question-")) return;
     const questionId = decodeURIComponent(hash.slice("#question-".length));
-    if (!state.interviewQuestions.some((question) => question.id === questionId)) {
-      return;
-    }
-    setStatusFilter("all");
+    const targetQuestion = state.interviewQuestions.find((question) => question.id === questionId);
+    if (!targetQuestion) return;
+    setStatusFilter(targetQuestion.status === "removed" ? "removed" : "all");
     setGapFilter("all");
     setDetailView("detail");
     setSelectedId(questionId);
@@ -987,34 +1059,21 @@ export function InterviewPlannerPreview({
       <DemoOnlyNotice>Questions and setup are stored in canonical browser-session state; nothing is transmitted.</DemoOnlyNotice>
       <PlanningResult message={message} />
 
-      <aside
-        aria-label="New question"
-        aria-modal={addOpen || undefined}
-        className={addOpen ? "fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" : "sr-only"}
-        role={addOpen ? "dialog" : undefined}
+      <PlanningComposeDialog
+        description="Human-created questions start as drafts pending practitioner review."
+        onClose={() => setAddOpen(false)}
+        onSubmit={createQuestion}
+        open={addOpen}
+        submitLabel="Create question"
+        title="New question"
       >
-        <div className="w-full max-w-lg rounded-xl border border-border bg-card shadow-xl">
-          <div className="flex items-center justify-between border-b border-border p-3">
-            <h2 className="font-serif text-lg">New question</h2>
-            {addOpen ? <button aria-label="Close" className="rounded p-1 hover:bg-muted" onClick={() => setAddOpen(false)} type="button">×</button> : null}
-          </div>
-          <div className="grid gap-3 p-3 text-sm">
-            <InterviewField label="Question">
-              <textarea className="ip-input min-h-[72px]" onChange={(event) => setBody(event.currentTarget.value)} value={body} />
-            </InterviewField>
-            <InterviewField label="Rationale">
-              <textarea className="ip-input min-h-[60px]" onChange={(event) => setRationale(event.currentTarget.value)} value={rationale} />
-            </InterviewField>
-            <div className="rounded-md border border-dashed border-border px-3 py-2 text-xs text-muted-foreground">
-              New questions are human-created and start as draft pending practitioner review.
-            </div>
-          </div>
-          <div className="flex justify-end gap-2 border-t border-border p-3">
-            {addOpen ? <button className="rounded-md border border-border bg-background px-3 py-1.5 text-sm hover:bg-muted" onClick={() => setAddOpen(false)} type="button">Cancel</button> : null}
-            <button className="rounded-md border border-primary bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground hover:opacity-90" onClick={createQuestion} type="button">Create question</button>
-          </div>
-        </div>
-      </aside>
+        <InterviewField label="Question">
+          <textarea className="ip-input min-h-[112px]" onChange={(event) => setBody(event.currentTarget.value)} value={body} />
+        </InterviewField>
+        <InterviewField label="Rationale">
+          <textarea className="ip-input min-h-[88px]" onChange={(event) => setRationale(event.currentTarget.value)} value={rationale} />
+        </InterviewField>
+      </PlanningComposeDialog>
 
       <style>{`.ip-input { border: 1px solid var(--border); background: var(--background); border-radius: 6px; padding: 6px 10px; font-size: 13px; width: 100%; }`}</style>
     </div>
@@ -1314,10 +1373,14 @@ export function TasksPreview({
   const [filter, setFilter] = useState("All");
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
+  const [createOpen, setCreateOpen] = useState(false);
+  const [editingTaskId, setEditingTaskId] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const visible = state.caseTasks.filter((task) => {
     const dueAt = task.dueDate ? Date.parse(`${task.dueDate}T23:59:59.999Z`) : null;
     const now = Date.now();
+    if (filter === "Removed") return task.status === "cancelled";
+    if (task.status === "cancelled") return false;
     if (filter === "My tasks") return task.owner === owner;
     if (filter === "Due soon") {
       return dueAt !== null &&
@@ -1332,26 +1395,67 @@ export function TasksPreview({
     return true;
   });
 
-  function createTask() {
+  function closeTaskComposer() {
+    setCreateOpen(false);
+    setEditingTaskId(null);
+    setTitle("");
+    setDescription("");
+  }
+
+  function openNewTaskComposer() {
+    setEditingTaskId(null);
+    setTitle("");
+    setDescription("");
+    setCreateOpen(true);
+  }
+
+  function openTaskEditor(task: CaseTask) {
+    setEditingTaskId(task.id);
+    setTitle(task.title);
+    setDescription(task.description);
+    setCreateOpen(true);
+  }
+
+  function saveTask() {
+    const existingTask = editingTaskId
+      ? state.caseTasks.find((task) => task.id === editingTaskId)
+      : null;
     const result = dispatchCaseCommand({
-      type: "create_case_task",
-      meta: commandMeta(state, "create-case-task"),
-      input: {
-        kind: "general_task",
-        title,
-        description,
-        owner,
-        priority: "medium",
-      },
+      ...(existingTask
+        ? {
+            type: "update_case_task" as const,
+            meta: commandMeta(state, `update-${existingTask.id.toLowerCase()}`),
+            input: {
+              taskId: existingTask.id,
+              title,
+              description,
+            },
+          }
+        : {
+            type: "create_case_task" as const,
+            meta: commandMeta(state, "create-case-task"),
+            input: {
+              kind: "general_task" as const,
+              title,
+              description,
+              owner,
+              priority: "medium" as const,
+            },
+          }),
     });
     if (!result.ok) {
       setMessage(`Task was not accepted: ${result.reason}.`);
       return;
     }
-    const created = result.state.caseTasks.at(-1);
-    setTitle("");
-    setDescription("");
-    setMessage(`${created?.id ?? "Task"} saved. Completing tasks does not resolve evidence gaps or export blockers.`);
+    const savedTask = existingTask
+      ? result.state.caseTasks.find((task) => task.id === existingTask.id)
+      : result.state.caseTasks.at(-1);
+    closeTaskComposer();
+    setMessage(
+      existingTask
+        ? `${savedTask?.id ?? "Task"} updated without changing evidence.`
+        : `${savedTask?.id ?? "Task"} saved. Completing tasks does not resolve evidence gaps or export blockers.`,
+    );
   }
 
   function updateStatus(task: CaseTask, status: CaseTask["status"]) {
@@ -1367,12 +1471,22 @@ export function TasksPreview({
   return (
     <div className="space-y-6">
       <SectionTitle
+        actions={(
+          <button
+            className="inline-flex items-center gap-1.5 rounded-md border border-primary bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground hover:opacity-90 focus-visible:ring-2 focus-visible:ring-ring"
+            onClick={openNewTaskComposer}
+            type="button"
+          >
+            <Plus className="h-4 w-4" />
+            Create task
+          </button>
+        )}
         description="Operational actions. Operational reminders are not legal deadlines; do not treat them as such."
         eyebrow="Stage 4 · Planning"
         title="Case Tasks"
       />
       <div className="flex flex-wrap gap-1" role="group" aria-label="Task filters">
-        {["All", "My tasks", "Due soon", "Overdue", "Waiting", "Safety-related", "Completed"].map((value) => (
+        {["All", "My tasks", "Due soon", "Overdue", "Waiting", "Safety-related", "Completed", "Removed"].map((value) => (
           <button
             aria-pressed={filter === value}
             className={`rounded-full border px-2 py-0.5 text-[11px] ${filter === value ? "border-[color:var(--amber)] bg-[color-mix(in_oklab,var(--amber)_15%,transparent)]" : "border-border hover:bg-muted"}`}
@@ -1384,6 +1498,7 @@ export function TasksPreview({
           </button>
         ))}
       </div>
+      <PlanningResult message={message} />
       <div className="overflow-x-auto rounded-xl border border-border bg-card">
         <table className="w-full text-sm">
           <thead className="bg-muted/40 text-left font-mono text-[10px] uppercase tracking-[0.14em] text-muted-foreground">
@@ -1395,6 +1510,7 @@ export function TasksPreview({
               <th className="p-3">Priority</th>
               <th className="p-3">Status</th>
               <th className="p-3">Flags</th>
+              <th className="p-3">Actions</th>
             </tr>
           </thead>
           <tbody>
@@ -1445,31 +1561,53 @@ export function TasksPreview({
                       : null}
                   </div>
                 </td>
+                <td className="p-3">
+                  <div className="flex flex-wrap gap-1">
+                    <button
+                      className="rounded-md border border-border px-2 py-1 text-xs hover:bg-muted disabled:cursor-not-allowed disabled:opacity-50"
+                      disabled={task.status === "cancelled"}
+                      onClick={() => openTaskEditor(task)}
+                      type="button"
+                    >
+                      Edit
+                    </button>
+                    <button
+                      aria-label={`Remove task ${task.id}`}
+                      className="rounded-md border border-[color-mix(in_oklab,var(--rust)_35%,transparent)] px-2 py-1 text-xs text-[color:var(--rust)] hover:bg-[color-mix(in_oklab,var(--rust)_8%,transparent)] disabled:cursor-not-allowed disabled:opacity-50"
+                      disabled={task.status === "cancelled"}
+                      onClick={() => updateStatus(task, "cancelled")}
+                      type="button"
+                    >
+                      Remove
+                    </button>
+                  </div>
+                </td>
               </tr>
             ))}
             {!visible.length ? (
-              <tr><td className="p-6 text-center text-xs text-muted-foreground" colSpan={7}>No tasks match this filter.</td></tr>
+              <tr><td className="p-6 text-center text-xs text-muted-foreground" colSpan={8}>No tasks match this filter.</td></tr>
             ) : null}
           </tbody>
         </table>
       </div>
 
-      <div className="grid gap-4 lg:grid-cols-[320px_1fr]">
-        <aside className="rounded-xl border border-border bg-card p-4">
-          <h2 className="font-serif text-lg">Create task</h2>
-          <label className="mt-3 grid gap-1 text-sm">
-            <span className="text-xs text-muted-foreground">Title</span>
-            <input className="rounded-md border border-input bg-background px-2 py-1.5 text-sm" onChange={(event) => setTitle(event.currentTarget.value)} value={title} />
-          </label>
-          <label className="mt-3 grid gap-1 text-sm">
-            <span className="text-xs text-muted-foreground">Description</span>
-            <textarea className="rounded-md border border-input bg-background px-2 py-1.5 text-sm" onChange={(event) => setDescription(event.currentTarget.value)} rows={3} value={description} />
-          </label>
-          <button className="mt-3 w-full rounded-md bg-primary py-1.5 text-sm text-primary-foreground hover:bg-primary/90" onClick={createTask} type="button">Create task</button>
-          <PlanningResult message={message} />
-        </aside>
-        <DemoOnlyNotice>Tasks are operational reminders only. Completing them never changes evidence, candidate review, or export blockers.</DemoOnlyNotice>
-      </div>
+      <PlanningComposeDialog
+        description="Operational reminder only. Completing a task never changes evidence, candidate review, or export readiness."
+        onClose={closeTaskComposer}
+        onSubmit={saveTask}
+        open={createOpen}
+        submitLabel={editingTaskId ? "Save task changes" : "Create task"}
+        title={editingTaskId ? "Edit task" : "Create task"}
+      >
+        <label className="grid gap-1 text-sm">
+          <span className="text-xs text-muted-foreground">Title</span>
+          <input className="rounded-md border border-input bg-background px-3 py-2 text-sm" onChange={(event) => setTitle(event.currentTarget.value)} value={title} />
+        </label>
+        <label className="grid gap-1 text-sm">
+          <span className="text-xs text-muted-foreground">Description</span>
+          <textarea className="min-h-[144px] rounded-md border border-input bg-background px-3 py-2 text-sm" onChange={(event) => setDescription(event.currentTarget.value)} value={description} />
+        </label>
+      </PlanningComposeDialog>
     </div>
   );
 }
@@ -1478,6 +1616,7 @@ export function NotesPreview() {
   const { state, dispatchCaseCommand } = useCaseState();
   const [selectedId, setSelectedId] = useState<string | null>(state.practitionerNotes.find((note) => !note.archived)?.id ?? null);
   const [body, setBody] = useState("");
+  const [newNoteOpen, setNewNoteOpen] = useState(false);
   const [noteEdits, setNoteEdits] = useState<Record<string, string>>({});
   const [message, setMessage] = useState<string | null>(null);
   const visible = useMemo(
@@ -1505,6 +1644,7 @@ export function NotesPreview() {
     const created = result.state.practitionerNotes.at(-1);
     setSelectedId(created?.id ?? null);
     setBody("");
+    setNewNoteOpen(false);
     setMessage(`${created?.id ?? "Note"} saved as practitioner commentary.`);
   }
 
@@ -1541,12 +1681,25 @@ export function NotesPreview() {
   return (
     <div className="space-y-6">
       <SectionTitle
+        actions={(
+          <button
+            className="inline-flex items-center gap-1.5 rounded-md border border-primary bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground hover:opacity-90 focus-visible:ring-2 focus-visible:ring-ring"
+            onClick={() => setNewNoteOpen(true)}
+            type="button"
+          >
+            <Plus className="h-4 w-4" />
+            New note
+          </button>
+        )}
         description="Record reasoning or operational context. A practitioner note never silently becomes a verified fact."
         eyebrow="Stage 4 · Planning"
         title="Notes & Journal"
       />
-      <div className="grid gap-4 lg:grid-cols-[1fr_320px]">
-        <nav aria-label="Practitioner notes" className="space-y-3">
+      <p className="text-xs text-muted-foreground">
+        Notes are practitioner commentary. They are not evidence, not audit records, and are excluded from analysis and exports by default.
+      </p>
+      <PlanningResult message={message} />
+      <nav aria-label="Practitioner notes" className="space-y-3">
           {visible.map((note) => {
             const isSelected = selected?.id === note.id;
             const edit = noteEdits[note.id] ?? "";
@@ -1604,35 +1757,29 @@ export function NotesPreview() {
           {!visible.length ? (
             <div className="rounded-xl border border-dashed border-border bg-card p-6 text-center text-sm text-muted-foreground">No active practitioner notes.</div>
           ) : null}
-        </nav>
-        <aside className="rounded-xl border border-border bg-card p-4">
-          <h2 className="font-serif text-lg">New note</h2>
-          <label className="mt-2 block text-xs text-muted-foreground">
-            Type
-            <select className="mt-1 w-full rounded-md border border-input bg-background px-2 py-1 text-sm" disabled value="practitioner-commentary">
-              <option value="practitioner-commentary">practitioner-commentary</option>
-            </select>
-          </label>
-          <label className="mt-2 block text-xs text-muted-foreground">
+      </nav>
+      <PlanningComposeDialog
+        description="Practitioner commentary only. Notes are excluded from evidence, analysis, audit summaries, and exports."
+        onClose={() => setNewNoteOpen(false)}
+        onSubmit={createNote}
+        open={newNoteOpen}
+        submitLabel="Record note"
+        title="New note"
+      >
+          <label className="block text-xs text-muted-foreground">
             Commentary
             <textarea
-              className="mt-1 w-full rounded-md border border-input bg-background px-2 py-1 text-sm"
+              className="mt-1 min-h-[200px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
               onChange={(event) => setBody(event.currentTarget.value)}
               placeholder="Describe reasoning or context (not evidence)."
-              rows={6}
               value={body}
             />
           </label>
-          <label className="mt-2 flex items-center gap-2 text-xs"><input checked disabled readOnly type="checkbox" /> Classify as commentary (not evidence)</label>
-          <button className="mt-3 w-full rounded-md bg-primary py-1.5 text-sm text-primary-foreground hover:bg-primary/90" onClick={createNote} type="button">
-            Record note
-          </button>
-          <PlanningResult message={message} />
-          <div className="mt-3">
-            <DemoOnlyNotice>Notes are practitioner commentary. They are not evidence, not audit records, and are excluded from analysis and exports by default.</DemoOnlyNotice>
-          </div>
-        </aside>
-      </div>
+          <label className="flex items-center gap-2 text-xs text-muted-foreground">
+            <input checked disabled readOnly type="checkbox" />
+            Classify as practitioner commentary—not evidence
+          </label>
+      </PlanningComposeDialog>
     </div>
   );
 }

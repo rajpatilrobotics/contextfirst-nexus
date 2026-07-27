@@ -374,14 +374,15 @@ export function CaseDashboard() {
                       displayReference: value,
                     }));
                   }}
-                  placeholder="REF-2026-0001-SYN"
+                  placeholder="For example: raj1"
                   value={draft.displayReference}
                 />
                 <p
                   className="text-xs text-muted-foreground"
                   id="new-case-reference-help"
                 >
-                  Must start with REF-. References are unique in this browser.
+                  We automatically add REF- and capitalize it. References are
+                  unique in this browser.
                 </p>
               </div>
               <div className="grid gap-1.5">

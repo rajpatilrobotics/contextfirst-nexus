@@ -172,6 +172,31 @@ describe("shared primitive and identifier contracts", () => {
 });
 
 describe("provider and disclosure contracts", () => {
+  it.each(["gpt-5.6-sol", "gpt-5.6-terra", "gpt-5.6-luna"] as const)(
+    "accepts the allowlisted OpenAI model %s",
+    (requestedModel) => {
+      expect(
+        ProviderReleaseConfigurationSchema.parse({
+          providerId: "openai",
+          releaseConfigurationId: "openai-quality-v1",
+          requestedModel,
+          serviceTier: "paid",
+        }).requestedModel,
+      ).toBe(requestedModel);
+    },
+  );
+
+  it("rejects unsupported OpenAI models", () => {
+    expect(() =>
+      ProviderReleaseConfigurationSchema.parse({
+        providerId: "openai",
+        releaseConfigurationId: "openai-quality-v1",
+        requestedModel: "gpt-5.5",
+        serviceTier: "paid",
+      }),
+    ).toThrow();
+  });
+
   it("preserves exact provider-release bindings", () => {
     expect(
       ProviderReleaseConfigurationSchema.parse({

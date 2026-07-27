@@ -58,10 +58,10 @@ describe("browser-local Case Dashboard", () => {
     await user.click(screen.getByRole("button", { name: "New case" }));
     await user.click(screen.getByRole("button", { name: "Create case" }));
     expect(screen.getByRole("alert")).toHaveTextContent(
-      /Enter a REF- case reference/i,
+      /Enter a case reference/i,
     );
 
-    await user.type(screen.getByLabelText("Case reference"), "REF-2026-0001-SYN");
+    await user.type(screen.getByLabelText("Case reference"), "raj1");
     await user.type(screen.getByLabelText("Person alias"), "J. Example");
     await user.type(
       screen.getByLabelText("Assigned practitioner"),
@@ -80,7 +80,7 @@ describe("browser-local Case Dashboard", () => {
     expect(stored.ok).toBe(true);
     expect(stored.registry.cases).toHaveLength(1);
     expect(stored.registry.cases[0]).toMatchObject({
-      displayReference: "REF-2026-0001-SYN",
+      displayReference: "REF-RAJ1",
       personAlias: "J. Example",
       assignedPractitioner: "Demo practitioner",
       purposeBrief: null,

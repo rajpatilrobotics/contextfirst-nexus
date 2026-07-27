@@ -137,7 +137,7 @@ export function BrowserCasePurposeWorkspace({ caseId }: { caseId: string }) {
 
   return (
     <BrowserCaseShell record={record}>
-      <div className="space-y-6">
+      <div className="space-y-4">
         <SectionTitle
           description="Record why the review is being performed before any later stage. All fields are browser-local and demonstration-only."
           eyebrow="Stage 1 · Intake"

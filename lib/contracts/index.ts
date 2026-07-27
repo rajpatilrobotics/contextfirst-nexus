@@ -151,6 +151,14 @@ export const ProviderReleaseConfigurationIdSchema = z.enum([
   "prepared-replay-v1",
 ]);
 export const ProviderServiceTierSchema = z.enum(["paid", "unpaid", "local"]);
+export const OpenAIRequestedModelSchema = z.enum([
+  "gpt-5.6-sol",
+  "gpt-5.6-terra",
+  "gpt-5.6-luna",
+]);
+export type OpenAIRequestedModel = z.infer<
+  typeof OpenAIRequestedModelSchema
+>;
 
 export type LiveProviderId = z.infer<typeof LiveProviderIdSchema>;
 export type ProviderId = z.infer<typeof ProviderIdSchema>;
@@ -172,7 +180,7 @@ export const ProviderReleaseConfigurationSchema = z.discriminatedUnion(
     strict({
       providerId: z.literal("openai"),
       releaseConfigurationId: z.literal("openai-quality-v1"),
-      requestedModel: z.literal("gpt-5.6-sol"),
+      requestedModel: OpenAIRequestedModelSchema,
       serviceTier: z.literal("paid"),
     }),
     strict({
@@ -1050,6 +1058,8 @@ const CandidateItemBaseSchema = strict({
     ruleCode: z.string().trim().min(1).max(80),
     exactPhrase: z.string().trim().min(1).max(240),
     rationale: safeText,
+    reviewPriority: z.enum(["review_first", "standard"]).optional(),
+    priorityReason: safeText.optional(),
   }).optional(),
   currentTextOrigin: ItemOriginSchema,
   itemOrigin: ItemOriginSchema,
@@ -2373,6 +2383,7 @@ export const AuditEventTypeSchema = z.enum([
   "interview_question_updated",
   "gap_action_created",
   "case_task_created",
+  "case_task_updated",
   "case_task_status_changed",
   "practitioner_note_created",
   "practitioner_note_updated",
@@ -3277,6 +3288,12 @@ export const CreateCaseTaskInputSchema = strict({
   dueDate: dateOnly.optional(),
 });
 
+export const UpdateCaseTaskInputSchema = strict({
+  taskId: IdSchemas.caseTaskId,
+  title: safeText,
+  description: safeText,
+});
+
 export const CreateGapActionInputSchema = z.discriminatedUnion("actionType", [
   strict({
     actionType: z.literal("create_interview_question"),
@@ -3364,6 +3381,7 @@ export const CaseCommandSchema = z.discriminatedUnion("type", [
   strict({ meta: CommandMetaSchema, type: z.literal("update_interview_question"), input: UpdateInterviewQuestionInputSchema }),
   strict({ meta: CommandMetaSchema, type: z.literal("create_gap_action"), input: CreateGapActionInputSchema }),
   strict({ meta: CommandMetaSchema, type: z.literal("create_case_task"), input: CreateCaseTaskInputSchema }),
+  strict({ meta: CommandMetaSchema, type: z.literal("update_case_task"), input: UpdateCaseTaskInputSchema }),
   strict({ meta: CommandMetaSchema, type: z.literal("update_case_task_status"), taskId: IdSchemas.caseTaskId, status: CaseTaskStatusSchema }),
   strict({ meta: CommandMetaSchema, type: z.literal("create_practitioner_note"), input: CreatePractitionerNoteInputSchema }),
   strict({ meta: CommandMetaSchema, type: z.literal("update_practitioner_note"), input: UpdatePractitionerNoteInputSchema }),

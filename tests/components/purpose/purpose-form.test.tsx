@@ -47,6 +47,27 @@ async function completeForm(
 }
 
 describe("TASK-039 CasePurposeBriefForm", () => {
+  it("acknowledges every required safeguard with one explicit action", async () => {
+    const user = userEvent.setup();
+    render(<CasePurposeBriefForm analysisOption={replayOption()} onSave={vi.fn()} />);
+
+    await user.selectOptions(
+      screen.getByLabelText("Source material classification"),
+      "user_attested_synthetic",
+    );
+    await user.click(
+      screen.getByRole("button", {
+        name: "Acknowledge all required safeguards",
+      }),
+    );
+
+    expect(
+      screen
+        .getAllByRole("checkbox")
+        .every((checkbox) => (checkbox as HTMLInputElement).checked),
+    ).toBe(true);
+  });
+
   it("focuses a linked error summary without exposing provider selection validation", async () => {
     const user = userEvent.setup();
     render(<CasePurposeBriefForm analysisOption={replayOption()} onSave={vi.fn()} />);

@@ -609,6 +609,24 @@ function applyValidCommand(state: CaseState, command: CaseCommand): CaseCommandR
         caseRevision: state.caseRevision + 1,
       }, "case_task_created", [task.id]);
     }
+    case "update_case_task": {
+      const task = state.caseTasks.find((item) => item.id === command.input.taskId);
+      if (!task) throw new Error("case_task_not_found");
+      if (task.status === "cancelled") throw new Error("cancelled_case_task_cannot_be_edited");
+      return commit(staleExport(state), command, {
+        caseTasks: state.caseTasks.map((item) =>
+          item.id === command.input.taskId
+            ? {
+                ...item,
+                title: command.input.title,
+                description: command.input.description,
+                updatedAt: command.meta.createdAt,
+              }
+            : item,
+        ),
+        caseRevision: state.caseRevision + 1,
+      }, "case_task_updated", [command.input.taskId]);
+    }
     case "update_case_task_status": {
       const task = state.caseTasks.find((item) => item.id === command.taskId);
       if (!task) throw new Error("case_task_not_found");

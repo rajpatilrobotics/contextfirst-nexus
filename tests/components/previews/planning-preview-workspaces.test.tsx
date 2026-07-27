@@ -62,6 +62,7 @@ describe("planning workspaces", () => {
     renderWorkspace(<InterviewPlannerPreview />);
 
     expect(screen.getByRole("heading", { name: "Interview Planner" })).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Add Question" }));
     const newQuestion = screen.getByRole("heading", { name: "New question" }).closest("aside");
     if (!newQuestion) throw new Error("new-question panel missing");
 
@@ -78,6 +79,21 @@ describe("planning workspaces", () => {
     expect(screen.getByText(/saved for practitioner review/i)).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "Approve for use" }));
     expect(screen.getByText(/updated/i)).toBeInTheDocument();
+
+    const questionList = screen.getByRole("navigation", { name: "Interview questions" });
+    await user.click(screen.getByRole("button", { name: "Remove" }));
+    expect(
+      within(questionList).queryByText(
+        "Could you describe what document support would help you feel prepared?",
+      ),
+    ).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: /Removed1/ }));
+    expect(
+      within(questionList).getByText(
+        "Could you describe what document support would help you feel prepared?",
+      ),
+    ).toBeInTheDocument();
   });
 
   it("saves a Services local referral plan only after both confirmations", async () => {
@@ -194,7 +210,8 @@ describe("planning workspaces", () => {
     await user.clear(screen.getByLabelText("Purpose"));
     await user.type(screen.getByLabelText("Purpose"), "Unsaved local setup edit");
 
-    const newQuestion = screen.getByRole("heading", { name: "New question" }).closest("aside");
+    await user.click(screen.getByRole("button", { name: "Add Question" }));
+    const newQuestion = screen.getByRole("dialog", { name: "New question" });
     if (!newQuestion) throw new Error("new-question panel missing");
     await user.type(
       within(newQuestion).getByLabelText("Question"),
@@ -213,10 +230,11 @@ describe("planning workspaces", () => {
     expect(screen.getByRole("heading", { name: "Case Tasks" })).toBeInTheDocument();
     const filters = screen.getByRole("group", { name: "Task filters" });
     expect(within(filters).queryByRole("button", { name: "Export blockers" })).not.toBeInTheDocument();
-    for (const filter of ["All", "My tasks", "Due soon", "Overdue", "Waiting", "Safety-related", "Completed"]) {
+    for (const filter of ["All", "My tasks", "Due soon", "Overdue", "Waiting", "Safety-related", "Completed", "Removed"]) {
       expect(within(filters).getByRole("button", { name: filter })).toBeInTheDocument();
     }
-    const createTask = screen.getByRole("heading", { name: "Create task" }).closest("aside");
+    await user.click(screen.getByRole("button", { name: "Create task" }));
+    const createTask = screen.getByRole("dialog", { name: "Create task" });
     if (!createTask) throw new Error("create-task panel missing");
     await user.type(within(createTask).getByLabelText("Title"), "Check manual provider verification");
     await user.type(within(createTask).getByLabelText("Description"), "Planning task only.");
@@ -224,6 +242,29 @@ describe("planning workspaces", () => {
 
     expect(screen.getByText(/saved\. Completing tasks does not resolve evidence gaps/i)).toBeInTheDocument();
     expect(screen.getAllByText("Check manual provider verification").length).toBeGreaterThan(0);
+
+    const createdRow = screen.getByText("Check manual provider verification").closest("tr");
+    if (!createdRow) throw new Error("created task row missing");
+    await user.click(within(createdRow).getByRole("button", { name: "Edit" }));
+    const editTask = screen.getByRole("dialog", { name: "Edit task" });
+    await user.clear(within(editTask).getByLabelText("Title"));
+    await user.type(within(editTask).getByLabelText("Title"), "Review provider verification");
+    await user.click(
+      within(editTask).getByRole("button", { name: "Save task changes" }),
+    );
+    expect(screen.getByText("Review provider verification")).toBeInTheDocument();
+
+    const updatedRow = screen.getByText("Review provider verification").closest("tr");
+    if (!updatedRow) throw new Error("updated task row missing");
+    await user.click(
+      within(updatedRow).getByRole("button", { name: /Remove task/i }),
+    );
+    expect(screen.queryByText("Review provider verification")).not.toBeInTheDocument();
+
+    await user.click(within(filters).getByRole("button", { name: "Removed" }));
+    const removedRow = screen.getByText("Review provider verification").closest("tr");
+    if (!removedRow) throw new Error("removed task row missing");
+    expect(within(removedRow).getByRole("combobox")).toHaveValue("cancelled");
   });
 
   it("creates and archives a Notes & Journal commentary record", async () => {
@@ -233,14 +274,17 @@ describe("planning workspaces", () => {
     expect(screen.getByRole("heading", { name: "Notes & Journal" })).toBeInTheDocument();
     expect(screen.getByText(/not evidence, not audit records/i)).toBeInTheDocument();
     expect(screen.getByText(/Bundled fixture reviewer/i)).toBeInTheDocument();
-    const newNote = screen.getByRole("heading", { name: "New note" }).closest("aside");
+    await user.click(screen.getByRole("button", { name: "New note" }));
+    const newNote = screen.getByRole("dialog", { name: "New note" });
     if (!newNote) throw new Error("new-note panel missing");
     await user.type(within(newNote).getByLabelText("Commentary"), "A local practitioner comment.");
     await user.click(within(newNote).getByRole("button", { name: /Record note/i }));
 
     expect(screen.getByText(/saved as practitioner commentary/i)).toBeInTheDocument();
+    const noteList = screen.getByRole("navigation", { name: "Practitioner notes" });
     await user.click(screen.getByRole("button", { name: "Archive note" }));
     expect(screen.getByText(/archived/i)).toBeInTheDocument();
+    expect(within(noteList).queryByText("A local practitioner comment.")).not.toBeInTheDocument();
   });
 
   it("keeps Notes edit buffers scoped to the selected note", async () => {

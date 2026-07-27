@@ -316,6 +316,62 @@ describe("planning canonical state", () => {
     );
   });
 
+  it("edits tasks canonically and retains removed tasks as cancelled history", () => {
+    let state = checkpointState();
+    state = applyOk(state, {
+      type: "create_case_task",
+      meta: meta(state, "cmd-create-editable-task"),
+      input: {
+        kind: "general_task",
+        title: "Original task wording",
+        description: "Original operational description.",
+        owner: "M. Chen",
+        priority: "medium",
+      },
+    });
+    const taskId = state.caseTasks.at(-1)!.id;
+
+    state = applyOk(state, {
+      type: "update_case_task",
+      meta: meta(state, "cmd-update-editable-task"),
+      input: {
+        taskId,
+        title: "Revised task wording",
+        description: "Revised operational description.",
+      },
+    });
+    expect(state.caseTasks.find((task) => task.id === taskId)).toMatchObject({
+      title: "Revised task wording",
+      description: "Revised operational description.",
+      status: "todo",
+    });
+    expect(state.audit.at(-1)).toMatchObject({
+      eventType: "case_task_updated",
+      entityIds: [taskId],
+    });
+
+    state = applyOk(state, {
+      type: "update_case_task_status",
+      meta: meta(state, "cmd-remove-editable-task"),
+      taskId,
+      status: "cancelled",
+    });
+    expect(state.caseTasks.find((task) => task.id === taskId)?.status).toBe(
+      "cancelled",
+    );
+
+    const editCancelled = applyCaseCommand(state, {
+      type: "update_case_task",
+      meta: meta(state, "cmd-edit-cancelled-task"),
+      input: {
+        taskId,
+        title: "Should not reopen",
+        description: "Cancelled history stays closed.",
+      },
+    });
+    expectCommandFailure(editCancelled, "cancelled_case_task_cannot_be_edited");
+  });
+
   it("rejects gap actions when the active analysis source is stale", () => {
     let state = checkpointState();
     if (!state.purposeBrief) throw new Error("checkpoint purpose missing");

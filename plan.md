@@ -1,3 +1,411 @@
+# Synthetic packet chooser and PDF removal, 2026-07-27
+
+## 1. Goal
+
+Give judges one-click access to the real synthetic PDF packet and let users
+remove individual PDFs from browser-created cases.
+
+## 2. Problem
+
+The current Add PDFs action opens the local picker directly, and processed
+documents can be replaced but not removed.
+
+## 3. Proposed solution
+
+- Open a compact two-choice modal from Add PDFs: local upload or bundled
+  synthetic packet.
+- Fetch the bundled PDFs as browser `File` objects and run the unchanged real
+  extraction, masking, coverage, persistence, and analysis-input pipeline.
+- Require confirmation before replacing an existing packet with the bundle.
+- Add a confirmed Remove PDF action that reprocesses and persists the remaining
+  files, or returns the case to an empty packet when the final PDF is removed.
+- Keep the single-file Remove PDF action and add a compact adjacent menu for
+  selecting multiple PDFs or clearing the complete packet.
+
+## 4. Files to change
+
+- Browser-created Documents workspace and document-card actions
+- Browser-case packet persistence helper
+- Bundled synthetic public PDF assets
+- Focused browser-created Documents tests
+
+## 5. Step by step tasks
+
+1. [x] Bundle the generated PDFs as immutable public demonstration assets.
+2. [x] Add the Add PDFs source-choice modal and real bundle loader.
+3. [x] Add confirmed per-document removal and empty-packet handling.
+4. [x] Add focused chooser, loading, replacement, and removal tests.
+5. [x] Run focused tests, typecheck, build, and diff check.
+6. [x] Add selective multi-PDF and confirmed remove-all actions.
+
+## 6. Acceptance criteria
+
+- Add PDFs presents local upload and synthetic packet choices.
+- Synthetic loading processes actual PDF bytes and injects no analysis result.
+- Existing packets are never silently mixed with or replaced by the bundle.
+- Removing a source updates files, packet state, digest, coverage, masking, and
+  analysis freshness through existing canonical behavior.
+- Selective removal reprocesses only the retained packet; remove-all clears
+  browser-stored files only after explicit confirmation.
+- Removing the last source restores the polished empty state.
+
+## 7. Testing plan
+
+- Focused browser-created Documents component tests.
+- Typecheck, production build, and `git diff --check`.
+
+## 8. Open questions
+
+- None. This slice remains browser-local and adds no server file storage.
+
+# Synthetic judge packet for dynamic analysis, 2026-07-27
+
+## 1. Goal
+
+Create a polished, fully fictional PDF packet that exercises real document
+ingestion, masking, Structured Analysis, Evidence Gaps, the Charge-Coercion
+Nexus, and Timeline without preloading application results.
+
+## 2. Problem
+
+The demo needs internally consistent source material with explicit dates,
+cross-document anchors, controlled conflicts, and honest missing information.
+Random PDFs cannot reliably demonstrate the source-grounded workflow.
+
+## 3. Proposed solution
+
+Freeze one non-graphic fictional case blueprint, then generate 14 descriptive
+PDFs plus three generic-filename PDFs. Every page will visibly state that it is
+a synthetic training record. Results must still be discovered from extracted
+PDF text by the selected analysis mode.
+
+## 4. Files to change
+
+- `docs/SYNTHETIC_DEMO_PACKET_BLUEPRINT.md`
+- `scripts/generate-synthetic-judge-packet.py`
+- Generated files under `output/pdf/cfn-nila-verin-packet/`
+
+## 5. Step by step tasks
+
+1. [x] Freeze identities, chronology, source anchors, contradictions, and gaps.
+2. [x] Generate 17 searchable, visibly synthetic PDFs.
+3. [x] Extract and validate the generated text and page counts.
+4. [x] Render representative pages and inspect visual quality.
+
+## 6. Acceptance criteria
+
+- All files are fictional, non-graphic, searchable, and visibly synthetic.
+- The packet covers all six Nexus categories without stating a legal conclusion.
+- Timeline sources include exact, range, approximate, conflicting, and unknown
+  date conditions.
+- Supported identifier patterns exist for the real masking workflow.
+- Generic filenames remain classifiable from their contents.
+
+## 7. Testing plan
+
+- Programmatic PDF open, page-count, text-layer, disclaimer, and anchor checks.
+- Render and inspect representative recruitment, message, ledger, police,
+  intake, and generic-filename pages.
+
+## 8. Open questions
+
+- None for packet generation. Browser-local and live-AI application runs remain
+  separate manual verification steps after the packet is reviewed.
+
+# OpenAI GPT-5.6 model switchboard, 2026-07-27
+
+## 1. Goal
+
+Allow the OpenAI analysis model to switch safely between GPT-5.6 Sol, Terra,
+and Luna through one server-side environment setting.
+
+## 2. Problem
+
+`OPENAI_MODEL` is documented but the runtime release, contracts, provenance,
+and admission binding are currently frozen to Sol, so changing the environment
+value alone does nothing.
+
+## 3. Proposed solution
+
+- Add one canonical allowlist for the three approved GPT-5.6 model IDs.
+- Resolve `OPENAI_MODEL` server-side, default to Sol, and fail closed for an
+  unsupported value.
+- Use the resolved model consistently in the registry, adapter, provenance,
+  admission digest, and truthful display name.
+- Preserve the existing prompt, reasoning effort, schema, safety gates, and
+  provider behavior.
+
+## 4. Files to change
+
+- OpenAI model configuration and shared provider contract
+- Provider registry, admission binding, and fallback provenance
+- Focused contract, registry, and OpenAI adapter tests
+- `.env.example`
+
+## 5. Step by step tasks
+
+1. [x] Add the canonical GPT-5.6 model allowlist and resolver.
+2. [x] Connect the resolved model across runtime and provenance.
+3. [x] Add focused valid/default/invalid configuration tests.
+4. [x] Run focused tests, typecheck, build, and `git diff --check`.
+
+## 6. Acceptance criteria
+
+- `OPENAI_MODEL=gpt-5.6-sol`, `gpt-5.6-terra`, or `gpt-5.6-luna` selects that
+  exact model after restart.
+- Unsupported model values fail closed before any provider call.
+- Canonical provenance and UI disclosure show the exact selected model.
+- Switching does not weaken admission, structured output, citation, or privacy
+  validation.
+
+## 7. Testing plan
+
+- Focused OpenAI adapter, registry/admission, and provider-contract tests.
+- Typecheck, production build, and `git diff --check`.
+
+## 8. Open questions
+
+- None. Production environment changes and live paid calls remain separate,
+  explicitly approved actions.
+
+# Gemini dynamic analysis and explicit mode choice, 2026-07-27
+
+## 1. Goal
+
+Connect Gemini to the existing browser-created-case live-analysis pipeline and
+make the existing private-browser versus live-AI choice explicit, without
+changing or enabling Mistral.
+
+## 2. Problem
+
+OpenAI and Groq already have dynamic browser-packet executors, while Gemini is
+still restricted to the bundled fixture. The Analysis screen exposes separate
+actions but does not present one clear two-mode choice.
+
+## 3. Proposed solution
+
+- Reuse the existing Gemini structured-output transport for approved redacted
+  browser-case input.
+- Keep server-managed provider order in `ANALYSIS_PROVIDER_ORDER`; disabled or
+  unconfigured Mistral remains skipped.
+- Add a compact Browser analysis / Live AI selector to Structured Analysis.
+- Preserve consent, admission, privacy, citation, schema, and canonical
+  post-validation gates.
+
+## 4. Files to change
+
+- Gemini adapter and dynamic orchestrator
+- Browser-created Structured Analysis workspace
+- Focused Gemini, routing, and Structured Analysis tests
+- Environment documentation only where needed
+
+## 5. Step by step tasks
+
+1. [x] Add the browser-packet Gemini executor without weakening fixture checks.
+2. [x] Connect Gemini to managed routing and provider provenance.
+3. [x] Add the explicit two-mode selector.
+4. [x] Add focused adapter, routing, and UI regressions.
+5. [x] Run focused tests, typecheck, build, and diff check.
+
+## 6. Acceptance criteria
+
+- Browser analysis never calls a provider.
+- Live AI sends only the approved redacted canonical projection.
+- Gemini can participate in the configured chain for eligible admitted input.
+- Provider order changes require configuration only, not code changes.
+- Mistral code and release policy are unchanged.
+
+## 7. Testing plan
+
+- Focused Gemini adapter, managed routing, dynamic orchestrator, and browser
+  Structured Analysis component tests.
+- Typecheck, production build, and `git diff --check`.
+
+## 8. Open questions
+
+- A real Gemini key and approved live evaluation are still required before
+  static admission or public enablement.
+
+# Offline browser-pipeline quality evaluation, 2026-07-26
+
+## 1. Goal
+
+Create a repeatable, credit-free evaluation that exercises the real
+browser-created-case pipeline from approved redacted source text through
+analysis and canonical downstream consequences.
+
+## 2. Problem
+
+The repository has focused unit/component coverage and a separate
+provider-admission harness, but it lacks one readable quality report for the
+arbitrary-packet deterministic pipeline. Route rendering alone cannot prove
+source grounding, abstention, privacy blocking, freshness, or downstream
+state integrity.
+
+## 3. Proposed solution
+
+- Run frozen synthetic scenarios with expectations written before execution.
+- Exercise the real corpus preparation, deterministic analysis, canonical case
+  state, commands, freshness checks, persistence projection, and export gate.
+- Measure exact citations, required lane coverage, correct abstention,
+  privacy/stale blocking, audit consequences, and planning-data separation.
+- Emit deterministic JSON and Markdown reports with zero provider calls.
+- Keep the scenario/check format reusable for later admitted-provider
+  comparisons without treating this local run as provider admission.
+
+## 4. Files to change
+
+- Offline evaluation runner under `lib/evaluation`
+- Evaluation command and focused unit tests
+- Frozen safe result artifacts and testing documentation
+
+## 5. Step by step tasks
+
+1. [x] Inspect the existing evaluation and canonical pipeline.
+2. [x] Define frozen relevant, irrelevant, mixed, blocked, stale, and
+   downstream scenarios.
+3. [x] Implement the reusable runner and readable report.
+4. [x] Add focused regression assertions and documentation.
+5. [x] Run the evaluation, focused tests, typecheck, build, and diff check.
+
+## 6. Acceptance criteria
+
+- The suite makes no network or provider call.
+- Relevant synthetic text produces expected source-grounded review structures.
+- Unrelated and advisory material produces no fabricated candidates.
+- Privacy-incomplete and stale inputs fail closed.
+- Canonical commands create audit-backed downstream state without changing
+  evidence or leaking planning text into export projections.
+- Output is deterministic, safe to commit, and honest about its limitations.
+
+## 7. Testing plan
+
+- Run the new offline pipeline evaluation twice and compare canonical digests.
+- Run its focused unit test, TypeScript, production build, and
+  `git diff --check`.
+
+## 8. Open questions
+
+- None for this credit-free deterministic suite. Live-provider quality runs
+  remain separately approved, metered, and admission-gated.
+
+# Packet-wide masking review, 2026-07-26
+
+## 1. Goal
+
+Let a practitioner review every detected identifier across a multi-PDF packet
+quickly, while keeping the existing deterministic privacy gate fail closed.
+
+## 2. Problem
+
+Mask suggestions are currently reviewed one document at a time. A practitioner
+must manually locate each page, and there is no guarded packet-wide approval
+action for already detected suggestions.
+
+## 3. Proposed solution
+
+- Add one packet review queue grouped by document and page, with reviewed
+  progress and previous/next unresolved navigation.
+- Jump from a queue item to its exact PDF page and highlighted overlay.
+- Add an explicitly confirmed `Apply all detected masks` action that approves
+  only current pending automatic detections.
+- Immediately run the existing deterministic leak scan after bulk approval.
+- Keep all masks individually editable or removable and invalidate the privacy
+  result whenever a later decision changes.
+
+## 4. Files to change
+
+- Documents packet workspace and document-card navigation
+- Masked PDF preview
+- A compact packet masking queue component
+- Focused Documents and redaction tests
+
+## 5. Step by step tasks
+
+1. [x] Build the canonical packet-wide queue and progress projection.
+2. [x] Connect queue navigation to the selected document, page, and overlay.
+3. [x] Add guarded bulk approval for current automatic detections.
+4. [x] Run and persist the deterministic leak scan after bulk approval.
+5. [x] Verify individual correction/removal still invalidates the saved result.
+
+## 6. Acceptance criteria
+
+- Every current suggestion appears under its real document and page.
+- Previous/next unresolved controls and queue rows open the exact highlighted
+  location.
+- The bulk action states its limitations and requires explicit confirmation.
+- Manual selections and already reviewed items are not silently bulk changed.
+- Approved overlays become black and remain individually editable/removable.
+- Analysis stays blocked whenever review is unresolved or the leak scan fails.
+
+## 7. Testing plan
+
+- Focused packet queue, visual navigation, bulk approval, and privacy-gate tests.
+- Typecheck, production build, and `git diff --check`.
+
+## 8. Open questions
+
+- None for this browser-local slice. OCR and semantic name detection retain
+  their existing explicit limitations.
+
+# Source-grounded review prioritization, 2026-07-26
+
+## 1. Goal
+
+Make browser-local Structured Analysis results more useful by reducing repeated
+review prompts and placing the clearest source-grounded items first.
+
+## 2. Problem
+
+The hardened deterministic engine now suppresses unrelated technical material,
+but repeated language across pages or documents can still create a noisy queue.
+The current order also does not explain which items deserve earlier human
+attention.
+
+## 3. Proposed solution
+
+- Consolidate genuinely repeated rule matches without losing any exact source
+  locations.
+- Order candidates using transparent deterministic review signals such as an
+  explicit phrase, nearby case context, and multiple independent source
+  locations.
+- Show a plain-language review-order reason. This is not a confidence,
+  credibility, truth, risk, or legal-strength score.
+- Preserve zero-result behavior, exact citations, canonical review commands,
+  dependency recalculation, and the three separate lanes.
+
+## 4. Files to change
+
+- Browser-local deterministic analysis builder and candidate contract
+- Structured Analysis candidate presentation
+- Focused deterministic-analysis and Structured Analysis tests
+
+## 5. Step by step tasks
+
+1. [x] Collect, consolidate, and deterministically order rule matches.
+2. [x] Preserve every exact citation and source dependency after consolidation.
+3. [x] Display transparent review-order labels and reasons.
+4. [x] Verify relevant, irrelevant, duplicate, and mixed packets.
+
+## 6. Acceptance criteria
+
+- Repeated matching text does not create redundant candidate cards.
+- Consolidated candidates retain each distinct exact source location.
+- Explicit, context-rich, or independently repeated source language appears
+  earlier with a truthful reason.
+- The UI states that review order is not evidence strength or a legal finding.
+- Unrelated packets still produce zero candidates.
+- No canonical review, gap, Nexus, Timeline, Export, or Audit behavior weakens.
+
+## 7. Testing plan
+
+- Focused deterministic-analysis and Structured Analysis tests.
+- Typecheck, production build, and `git diff --check`.
+
+## 8. Open questions
+
+- None. Live-provider quality evaluation and admission remain separate.
+
 # Analysis precision hardening, 2026-07-26
 
 ## 1. Goal
@@ -2792,3 +3200,46 @@ Add `.codex/config.toml`, `.env.example`, or `.worktreeinclude` only later if th
 - Resolved product direction: practitioners do not select providers or models. Current public analysis uses only labelled local replay. Future server-managed live routing is ordered OpenAI, Gemini, Mistral, then an evaluated fourth provider; Groq `openai/gpt-oss-120b` is only the current evaluation candidate and remains unavailable until its exact API behavior, structured output, data-use and retention disclosure, evaluation, static admission, credentials, spend, provider-call approval, and deployment approval are all separately satisfied. Deterministic replay remains separate and visibly labelled, never a disguised live fallback result.
 - Resolved for P0: no OCR, no production authentication, no durable server case store, versioned redacted synthetic state in browser session storage, PDF.js text extraction, and local React-pdf plus JSON exports. Exact installed versions and measured model choices will be recorded before dependent tasks launch.
 - The active graph will contain 40 task packets after TASK-039 and TASK-040 are documented. Any later count change requires coordinated updates to the graph, affected packets, ownership rules, and integration order.
+
+---
+
+# Planning record edit and removal pass, 2026-07-28
+
+## 1. Goal
+
+Make Interview Questions, Case Tasks, and Notes editable and safely removable after creation.
+
+## 2. Problem
+
+Questions and Notes already have canonical edit/removal lifecycles, but Case Tasks expose only status changes and do not provide an obvious edit/remove action.
+
+## 3. Proposed solution
+
+Preserve history: remove questions through `removed`, tasks through `cancelled`, and notes through `archived`. Add a canonical task-update command and reuse the compact compose dialog for task editing.
+
+## 4. Files to change
+
+- `lib/contracts/index.ts`
+- `lib/state/index.ts`
+- `features/previews/planning-preview-workspaces.tsx`
+- focused planning tests
+
+## 5. Step by step tasks
+
+1. Add and reduce a canonical `update_case_task` command.
+2. Add visible Edit and Remove task controls.
+3. Verify existing question edit/remove and note edit/archive behavior.
+
+## 6. Acceptance criteria
+
+- Task wording can be edited and persists.
+- Removing a task records `cancelled` without erasing history.
+- Question removal and note archival remain canonical and visible.
+
+## 7. Testing plan
+
+Run focused planning component and reducer tests, typecheck, and `git diff --check`.
+
+## 8. Open questions
+
+None. The user explicitly approved this bounded implementation.

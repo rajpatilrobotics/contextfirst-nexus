@@ -428,16 +428,20 @@ function CaseShellContent({
   }
 
   return (
-    <div className="min-h-screen overflow-x-hidden bg-background text-foreground">
+    <div className="min-h-screen overflow-x-clip bg-background text-foreground lg:flex lg:h-dvh lg:min-h-0 lg:flex-col lg:overflow-hidden">
       <a
         className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-50 focus:rounded-md focus:bg-card focus:px-4 focus:py-2"
         href="#case-workspace"
       >
         Skip to case workspace
       </a>
-      <SyntheticBanner compact />
-      <span className="sr-only">{SYNTHETIC_BANNER_TEXT}</span>
-      <header className="border-b border-border bg-card/60">
+      <div
+        className="sticky top-0 z-40 shrink-0 bg-background shadow-[0_1px_0_var(--border)]"
+        data-testid="workspace-sticky-header"
+      >
+        <SyntheticBanner compact />
+        <span className="sr-only">{SYNTHETIC_BANNER_TEXT}</span>
+        <header className="border-b border-border bg-card/95 backdrop-blur">
         <div className="mx-auto flex flex-wrap items-center justify-between gap-3 px-6 py-3">
           <div className="flex items-center gap-4">
             <Link href="/" className="flex items-baseline gap-2">
@@ -565,15 +569,19 @@ function CaseShellContent({
             })}
           </ol>
         </section>
-      </header>
+        </header>
+      </div>
 
       <div className="border-b border-border bg-muted/40 px-6 py-2 text-xs text-muted-foreground lg:hidden">
         This case workspace is designed for a display of 1280px or wider. Sidebar
         navigation still works on smaller screens.
       </div>
 
-      <div className="mx-auto grid grid-cols-1 gap-0 lg:grid-cols-[240px_1fr]">
-        <aside className="border-r border-border bg-card/40 lg:min-h-[calc(100vh-140px)]">
+      <div className="mx-auto grid w-full grid-cols-1 gap-0 lg:min-h-0 lg:flex-1 lg:grid-cols-[210px_1fr] lg:overflow-hidden">
+        <aside
+          className="border-r border-border bg-card/40 lg:h-full lg:min-h-0 lg:overflow-y-auto lg:overscroll-contain"
+          data-testid="workspace-sticky-sidebar"
+        >
           <nav aria-label="Case workspace" className="p-3">
             {NAVIGATION_GROUPS.map((group) => (
               <div className="mb-4" key={group}>
@@ -632,7 +640,10 @@ function CaseShellContent({
           </nav>
         </aside>
 
-        <main className="min-w-0 px-6 py-6" id="case-workspace">
+        <main
+          className="min-w-0 px-6 py-6 lg:h-full lg:min-h-0 lg:overflow-y-auto lg:overscroll-contain"
+          id="case-workspace"
+        >
           <h2 className="sr-only" id="case-workspace-heading">
             {STEP_NAVIGATION.find((step) => step.id === currentStep)?.label} workspace
           </h2>
